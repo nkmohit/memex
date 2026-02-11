@@ -1,49 +1,54 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import { importClaudeConversations, ImportResult } from "./importer";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  async function handleImport() {
+    setImporting(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const importResult = await importClaudeConversations();
+
+      if (importResult) {
+        setResult(importResult);
+      }
+    } catch (err) {
+      console.error("Import failed:", err);
+      setError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
   }
 
   return (
     <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+      <h1>Memex</h1>
+      <p className="subtitle">Your personal knowledge base</p>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div className="import-section">
+        <button
+          className="import-button"
+          onClick={handleImport}
+          disabled={importing}
+        >
+          {importing ? "Importing..." : "Import Claude Conversations"}
+        </button>
+
+        {result && (
+          <div className="result success">
+            Imported {result.conversationCount} conversations with{" "}
+            {result.messageCount} messages.
+          </div>
+        )}
+
+        {error && <div className="result error">{error}</div>}
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
