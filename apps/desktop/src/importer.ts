@@ -3,22 +3,54 @@ import { readTextFile } from "@tauri-apps/plugin-fs";
 import { parseClaudeConversations } from "@memex/core";
 import { insertConversations } from "./dbInsert";
 
+// ---------------------------------------------------------------------------
+// Source registry — add new sources here as they become available
+// ---------------------------------------------------------------------------
+
+export type ImportSource = "claude" | "chatgpt" | "grok";
+
+export interface SourceMeta {
+  id: ImportSource;
+  label: string;
+  available: boolean;
+}
+
+export const IMPORT_SOURCES: SourceMeta[] = [
+  { id: "claude", label: "Claude", available: true },
+  { id: "chatgpt", label: "ChatGPT", available: false },
+  { id: "grok", label: "Grok", available: false },
+];
+
+// ---------------------------------------------------------------------------
+// Import result
+// ---------------------------------------------------------------------------
+
 export interface ImportResult {
+  source: ImportSource;
   conversationCount: number;
   messageCount: number;
 }
 
-/**
- * Orchestrates the full Claude import flow:
- * 1. Open file picker (JSON only)
- * 2. Read file contents
- * 3. Parse with pure core parser
- * 4. Insert into SQLite
- *
- * Returns null if the user cancelled the file picker.
- */
-export async function importClaudeConversations(): Promise<ImportResult | null> {
-  // Step 1: File picker
+// ---------------------------------------------------------------------------
+// Dispatch
+// ---------------------------------------------------------------------------
+
+export async function importConversations(
+  source: ImportSource
+): Promise<ImportResult | null> {
+  switch (source) {
+    case "claude":
+      return importClaude();
+    default:
+      throw new Error(`Importer for "${source}" is not available yet.`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Claude importer
+// ---------------------------------------------------------------------------
+
+async function importClaude(): Promise<ImportResult | null> {
   const filePath = await open({
     title: "Select Claude Export JSON",
     filters: [{ name: "JSON", extensions: ["json"] }],
@@ -28,10 +60,7 @@ export async function importClaudeConversations(): Promise<ImportResult | null> 
 
   if (!filePath) return null;
 
-  // Step 2: Read file
   const content = await readTextFile(filePath as string);
-
-  // Step 3: Parse JSON and run through pure parser
   const rawData = JSON.parse(content);
 
   if (!Array.isArray(rawData)) {
@@ -46,12 +75,14 @@ export async function importClaudeConversations(): Promise<ImportResult | null> 
     throw new Error("No conversations found in the export file");
   }
 
-  // Step 4: Insert into DB
   const result = await insertConversations(parsed);
 
   console.log(
-    `Import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
+    `Claude import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
   );
 
-  return result;
+  return {
+    source: "claude",
+    ...result,
+  };
 }
