@@ -40,6 +40,8 @@ function App() {
 
   // ---- import state ----
   const [importing, setImporting] = useState(false);
+  const [clearingData, setClearingData] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
@@ -74,11 +76,12 @@ function App() {
       setLoading(true);
       setLoadError(null);
       try {
-        const [statsData, srcStats, convData] = await Promise.all([
-          getStats(),
-          getSourceStats(),
-          getConversations(200, source ?? undefined),
-        ]);
+        // Run queries sequentially to avoid concurrent DB access that can
+        // trigger "database is locked" in SQLite.
+        const statsData = await getStats();
+        const srcStats = await getSourceStats();
+        const convData = await getConversations(200, source ?? undefined);
+
         setStats(statsData);
         setSourceStats(srcStats);
         setConversations(convData);
@@ -162,6 +165,8 @@ function App() {
 
   // ---- import ----
   async function handleImportSource(source: ImportSource) {
+    if (clearingData) return;
+
     setImportMenuOpen(false);
     setImporting(true);
     setImportError(null);
@@ -183,14 +188,24 @@ function App() {
     }
   }
 
-  async function handleClearAllData() {
-    const confirmed = window.confirm("Remove all imported data?");
-    if (!confirmed) return;
+  function handleClearAllDataClick() {
+    if (importing || clearingData || loading) return;
+    setImportMenuOpen(false);
+    setClearConfirmOpen(true);
+  }
+
+  async function handleClearAllDataConfirm() {
+    if (importing || clearingData) return;
+
+    setClearConfirmOpen(false);
+    setClearingData(true);
+    setImportError(null);
+    setImportResult(null);
 
     try {
-      setImportError(null);
-      setImportResult(null);
+      // Actually delete data from DB first — only reset UI state after success.
       await clearAllData();
+
       setSearchQuery("");
       setSearchResults([]);
       setSelectedConvId(null);
@@ -200,6 +215,8 @@ function App() {
     } catch (err) {
       console.error("Clear data failed:", err);
       setImportError(err instanceof Error ? err.message : "Clear data failed");
+    } finally {
+      setClearingData(false);
     }
   }
 
@@ -299,9 +316,10 @@ function App() {
 
           <div className="import-wrapper" ref={importMenuRef}>
             <button
+              type="button"
               className="import-trigger"
               onClick={() => setImportMenuOpen((v) => !v)}
-              disabled={importing}
+              disabled={importing || clearingData}
             >
               {importing ? "Importing..." : "+ Import"}
             </button>
@@ -310,9 +328,10 @@ function App() {
               <div className="import-menu">
                 {IMPORT_SOURCES.map((src) => (
                   <button
+                    type="button"
                     key={src.id}
                     className="import-menu-item"
-                    disabled={!src.available}
+                    disabled={!src.available || clearingData}
                     onClick={() => void handleImportSource(src.id)}
                   >
                     <span>{src.label}</span>
@@ -326,11 +345,12 @@ function App() {
           </div>
 
           <button
+            type="button"
             className="clear-data-trigger"
-            onClick={() => void handleClearAllData()}
-            disabled={importing || loading}
+            onClick={handleClearAllDataClick}
+            disabled={importing || clearingData || loading}
           >
-            Clear Data
+            {clearingData ? "Clearing..." : "Clear Data"}
           </button>
         </div>
       </nav>
@@ -485,6 +505,41 @@ function App() {
             )}
           </main>
         </>
+      )}
+
+      {clearConfirmOpen && (
+        <div className="confirm-overlay" role="presentation">
+          <div
+            className="confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="clear-data-title"
+          >
+            <h3 id="clear-data-title">Clear imported data?</h3>
+            <p>
+              This will permanently remove all imported conversations and
+              messages from this app.
+            </p>
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="confirm-cancel-btn"
+                onClick={() => setClearConfirmOpen(false)}
+                disabled={clearingData}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="confirm-danger-btn"
+                onClick={() => void handleClearAllDataConfirm()}
+                disabled={clearingData}
+              >
+                {clearingData ? "Clearing..." : "Clear Data"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
