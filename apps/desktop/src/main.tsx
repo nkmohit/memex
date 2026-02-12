@@ -21,6 +21,7 @@ async function initDb() {
 
   if (colNames.length > 0 && !colNames.includes("updated_at")) {
     console.log("Migrating: dropping old tables to recreate with new schema");
+    await db.execute("DROP TABLE IF EXISTS messages_fts");
     await db.execute("DROP TABLE IF EXISTS messages");
     await db.execute("DROP TABLE IF EXISTS conversations");
   }
@@ -46,6 +47,32 @@ async function initDb() {
       FOREIGN KEY (conversation_id) REFERENCES conversations(id)
     );
   `);
+
+  await db.execute(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
+    USING fts5(
+      content,
+      conversation_id UNINDEXED,
+      message_id UNINDEXED
+    );
+  `);
+
+  const msgCountRows = await db.select<{ count: number }[]>(
+    "SELECT COUNT(*) AS count FROM messages"
+  );
+  const ftsCountRows = await db.select<{ count: number }[]>(
+    "SELECT COUNT(*) AS count FROM messages_fts"
+  );
+  const msgCount = msgCountRows[0]?.count ?? 0;
+  const ftsCount = ftsCountRows[0]?.count ?? 0;
+
+  if (msgCount > 0 && ftsCount === 0) {
+    console.log("Backfilling FTS index from existing messages");
+    await db.execute(`
+      INSERT INTO messages_fts (content, conversation_id, message_id)
+      SELECT content, conversation_id, id FROM messages
+    `);
+  }
 
   const convCount = await db.select<{ count: number }[]>(
     "SELECT COUNT(*) as count FROM conversations"

@@ -30,6 +30,12 @@ export async function insertConversations(
         ]
       );
 
+      // Re-import can replace an existing conversation. Clear stale FTS rows
+      // so the index mirrors the current message set for this conversation.
+      await db.execute(`DELETE FROM messages_fts WHERE conversation_id = $1`, [
+        conv.id,
+      ]);
+
       for (const msg of conv.messages) {
         await db.execute(
           `INSERT OR REPLACE INTO messages (id, conversation_id, sender, content, created_at)
@@ -41,6 +47,11 @@ export async function insertConversations(
             msg.content,
             msg.createdAt,
           ]
+        );
+        await db.execute(
+          `INSERT INTO messages_fts (content, conversation_id, message_id)
+           VALUES ($1, $2, $3)`,
+          [msg.content, msg.conversationId, msg.id]
         );
         totalMessages++;
       }
