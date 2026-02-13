@@ -52,9 +52,9 @@ export function insertConversations(
             ]
           );
           await db.execute(
-            `INSERT INTO messages_fts (content, conversation_id, message_id)
-             VALUES ($1, $2, $3)`,
-            [msg.content, msg.conversationId, msg.id]
+            `INSERT INTO messages_fts (content, title, conversation_id, message_id)
+             VALUES ($1, $2, $3, $4)`,
+            [msg.content, conv.title ?? "", msg.conversationId, msg.id]
           );
           totalMessages++;
         }

@@ -103,10 +103,20 @@ export function initDatabase(): Promise<void> {
       );
     `);
 
+    const ftsInfo = await database.select<{ name: string }[]>(
+      "PRAGMA table_info(messages_fts)"
+    );
+    const ftsColNames = ftsInfo.map((c) => c.name);
+    if (ftsColNames.length > 0 && !ftsColNames.includes("title")) {
+      console.log("Migrating FTS index to include title column");
+      await database.execute("DROP TABLE IF EXISTS messages_fts");
+    }
+
     await database.execute(`
       CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
       USING fts5(
         content,
+        title,
         conversation_id UNINDEXED,
         message_id UNINDEXED
       );
@@ -125,8 +135,10 @@ export function initDatabase(): Promise<void> {
     if (msgCount > 0 && ftsCount === 0) {
       console.log("Backfilling FTS index from existing messages");
       await database.execute(`
-        INSERT INTO messages_fts (content, conversation_id, message_id)
-        SELECT content, conversation_id, id FROM messages
+        INSERT INTO messages_fts (content, title, conversation_id, message_id)
+        SELECT m.content, COALESCE(c.title, ''), m.conversation_id, m.id
+        FROM messages m
+        JOIN conversations c ON c.id = m.conversation_id
       `);
     }
 
@@ -185,7 +197,10 @@ export interface SearchResultRow {
   title: string;
   source: string;
   snippet: string;
+  snippets: string[];
   created_at: number;
+  last_occurrence: number;
+  occurrence_count: number;
   rank: number;
 }
 
@@ -199,6 +214,13 @@ export interface SearchOptions {
   dateFrom?: number;
   dateTo?: number;
   limit?: number;
+  offset?: number;
+  sort?:
+    | "relevance"
+    | "last_occurrence_desc"
+    | "occurrence_count_desc"
+    | "title_az"
+    | "title_za";
 }
 
 function escapeLikePattern(value: string): string {
@@ -326,6 +348,9 @@ export function searchMessages(
     return Promise.resolve({ rows: [], totalMatches: 0 });
   }
   const normalizedQuery = normalizeQuery(rawQuery);
+  if (!normalizedQuery) {
+    return Promise.resolve({ rows: [], totalMatches: 0 });
+  }
 
   return withDbLock(async () => {
     const database = await getDb();
@@ -333,62 +358,15 @@ export function searchMessages(
     const safeLimit = Number.isFinite(opts.limit)
       ? Math.max(1, Math.min(100, Math.floor(opts.limit as number)))
       : 20;
-
-    if (!normalizedQuery) {
-      let whereClause = "m.content LIKE $1 ESCAPE '\\'";
-      const params: unknown[] = [`%${escapeLikePattern(rawQuery)}%`];
-      let paramIndex = 2;
-
-      if (opts.source) {
-        whereClause += ` AND c.source = $${paramIndex}`;
-        params.push(opts.source);
-        paramIndex += 1;
-      }
-
-      if (typeof opts.dateFrom === "number") {
-        whereClause += ` AND COALESCE(c.created_at, 0) >= $${paramIndex}`;
-        params.push(opts.dateFrom);
-        paramIndex += 1;
-      }
-
-      if (typeof opts.dateTo === "number") {
-        whereClause += ` AND COALESCE(c.created_at, 0) <= $${paramIndex}`;
-        params.push(opts.dateTo);
-        paramIndex += 1;
-      }
-
-      const countSql = `SELECT COUNT(*) AS total
-        FROM messages m
-        JOIN conversations c ON c.id = m.conversation_id
-        WHERE ${whereClause}`;
-
-      const rowsSql = `SELECT
-          c.id AS conversation_id,
-          COALESCE(c.title, 'Untitled') AS title,
-          c.source AS source,
-          SUBSTR(m.content, 1, 220) AS snippet,
-          COALESCE(c.created_at, 0) AS created_at,
-          0.0 AS rank
-        FROM messages m
-        JOIN conversations c ON c.id = m.conversation_id
-        WHERE ${whereClause}
-        ORDER BY COALESCE(c.created_at, 0) DESC
-        LIMIT ${safeLimit}`;
-
-      const [countRows, rows] = await Promise.all([
-        database.select<{ total: number }[]>(countSql, params),
-        database.select<SearchResultRow[]>(rowsSql, params),
-      ]);
-
-      return {
-        rows,
-        totalMatches: countRows[0]?.total ?? 0,
-      };
-    }
+    const safeOffset = Number.isFinite(opts.offset)
+      ? Math.max(0, Math.floor(opts.offset as number))
+      : 0;
+    const sort = opts.sort ?? "last_occurrence_desc";
+    const titleLikeParam = `%${escapeLikePattern(rawQuery.toLowerCase())}%`;
 
     let whereClause = "messages_fts MATCH $1";
-    const params: unknown[] = [normalizedQuery];
-    let paramIndex = 2;
+    const params: unknown[] = [normalizedQuery, titleLikeParam];
+    let paramIndex = 3;
 
     if (opts.source) {
       whereClause += ` AND c.source = $${paramIndex}`;
@@ -397,48 +375,123 @@ export function searchMessages(
     }
 
     if (typeof opts.dateFrom === "number") {
-      whereClause += ` AND COALESCE(c.created_at, 0) >= $${paramIndex}`;
+      whereClause += ` AND COALESCE(m.created_at, 0) >= $${paramIndex}`;
       params.push(opts.dateFrom);
       paramIndex += 1;
     }
 
     if (typeof opts.dateTo === "number") {
-      whereClause += ` AND COALESCE(c.created_at, 0) <= $${paramIndex}`;
+      whereClause += ` AND COALESCE(m.created_at, 0) <= $${paramIndex}`;
       params.push(opts.dateTo);
       paramIndex += 1;
     }
 
-    const countSql = `SELECT COUNT(*) AS total
+    const countSql = `SELECT COUNT(DISTINCT messages_fts.conversation_id) AS total
       FROM messages_fts
       JOIN conversations c ON c.id = messages_fts.conversation_id
+      JOIN messages m ON m.id = messages_fts.message_id
       WHERE ${whereClause}`;
 
-    const rowsSql = `SELECT
-        ranked.conversation_id,
-        ranked.title,
-        ranked.source,
-        ranked.snippet,
-        ranked.created_at,
-        ranked.rank
-      FROM (
+    let orderBy = "last_occurrence DESC, rank ASC";
+    if (sort === "relevance") {
+      orderBy = "rank ASC, last_occurrence DESC";
+    } else if (sort === "occurrence_count_desc") {
+      orderBy = "occurrence_count DESC, rank ASC";
+    } else if (sort === "title_az") {
+      orderBy = "title COLLATE NOCASE ASC, rank ASC";
+    } else if (sort === "title_za") {
+      orderBy = "title COLLATE NOCASE DESC, rank ASC";
+    }
+
+    const rowsSql = `WITH ranked_rows AS (
         SELECT
           c.id AS conversation_id,
           COALESCE(c.title, 'Untitled') AS title,
           c.source AS source,
-          snippet(messages_fts, 0, '<mark>', '</mark>', '...', 10) AS snippet,
           COALESCE(c.created_at, 0) AS created_at,
-          bm25(messages_fts) AS rank
+          COALESCE(m.created_at, 0) AS message_created_at,
+          CASE
+            WHEN LOWER(COALESCE(c.title, '')) LIKE $2 ESCAPE '\\' THEN -5.0
+            ELSE 0.0
+          END AS title_boost
         FROM messages_fts
         JOIN conversations c ON c.id = messages_fts.conversation_id
+        JOIN messages m ON m.id = messages_fts.message_id
         WHERE ${whereClause}
-      ) ranked
-      ORDER BY ranked.rank
-      LIMIT ${safeLimit}`;
+      ),
+      grouped AS (
+        SELECT
+          conversation_id,
+          title,
+          source,
+          created_at,
+          MAX(message_created_at) AS last_occurrence,
+          COUNT(*) AS occurrence_count,
+          (-1.0 * COUNT(*)) + MIN(title_boost) AS rank
+        FROM ranked_rows
+        GROUP BY conversation_id, title, source, created_at
+      )
+      SELECT
+        conversation_id,
+        title,
+        source,
+        created_at,
+        COALESCE(last_occurrence, 0) AS last_occurrence,
+        occurrence_count,
+        rank
+      FROM grouped
+      ORDER BY ${orderBy}
+      LIMIT ${safeLimit}
+      OFFSET ${safeOffset}`;
 
-    const [countRows, rows] = await Promise.all([
+    const [countRows, rawRows] = await Promise.all([
       database.select<{ total: number }[]>(countSql, params),
-      database.select<SearchResultRow[]>(rowsSql, params),
+      database.select<Omit<SearchResultRow, "snippet" | "snippets">[]>(rowsSql, params),
     ]);
+    const rows: SearchResultRow[] = [];
+
+    for (const row of rawRows) {
+      let snippetWhereClause =
+        "messages_fts MATCH $1 AND messages_fts.conversation_id = $2";
+      const snippetParams: unknown[] = [normalizedQuery, row.conversation_id];
+      let snippetParamIndex = 3;
+
+      if (typeof opts.dateFrom === "number") {
+        snippetWhereClause += ` AND COALESCE(m.created_at, 0) >= $${snippetParamIndex}`;
+        snippetParams.push(opts.dateFrom);
+        snippetParamIndex += 1;
+      }
+      if (typeof opts.dateTo === "number") {
+        snippetWhereClause += ` AND COALESCE(m.created_at, 0) <= $${snippetParamIndex}`;
+        snippetParams.push(opts.dateTo);
+      }
+
+      const snippetRows = await database.select<{ snippet: string }[]>(
+        `SELECT snippet(messages_fts, 0, '<mark>', '</mark>', '...', 10) AS snippet
+         FROM messages_fts
+         JOIN messages m ON m.id = messages_fts.message_id
+         WHERE ${snippetWhereClause}
+         ORDER BY COALESCE(m.created_at, 0) DESC
+         LIMIT 3`,
+        snippetParams
+      );
+
+      const snippets = snippetRows
+        .map((snippetRow) => snippetRow.snippet.trim())
+        .filter(Boolean);
+
+      rows.push({
+        conversation_id: row.conversation_id,
+        title: row.title,
+        source: row.source,
+        snippet: snippets[0] ?? "",
+        snippets,
+        created_at: row.created_at,
+        last_occurrence: row.last_occurrence,
+        occurrence_count: row.occurrence_count,
+        rank: row.rank,
+      });
+    }
 
     return {
       rows,

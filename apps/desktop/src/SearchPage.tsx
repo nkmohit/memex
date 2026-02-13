@@ -3,19 +3,29 @@ import { SearchResultRow, searchMessages } from "./db";
 import { formatDate } from "./utils";
 
 interface SearchPageProps {
+  query: string;
+  onQueryChange: (query: string) => void;
   availableSources: string[];
   sourceLabel: (source: string) => string;
   onOpenConversation: (conversationId: string, activeQuery: string) => void;
   focusRequestId?: number | null;
+  snapshot: SearchPageSnapshot;
+  onSnapshotChange: (snapshot: SearchPageSnapshot) => void;
 }
 
-interface GroupedSearchResult {
-  conversationId: string;
-  title: string;
+export interface SearchPageSnapshot {
   source: string;
-  createdAt: number;
-  snippets: string[];
-  occurrenceCount: number;
+  dateFrom: string;
+  dateTo: string;
+  sort:
+    | "relevance"
+    | "last_occurrence_desc"
+    | "occurrence_count_desc"
+    | "title_az"
+    | "title_za";
+  results: SearchResultRow[];
+  totalMatches: number;
+  latencyMs: number | null;
 }
 
 function toStartOfDayTimestamp(dateValue: string): number | undefined {
@@ -52,24 +62,29 @@ function renderHighlightedSnippet(snippet: string) {
 }
 
 export default function SearchPage({
+  query,
+  onQueryChange,
   availableSources,
   sourceLabel,
   onOpenConversation,
   focusRequestId = null,
+  snapshot,
+  onSnapshotChange,
 }: SearchPageProps) {
-  const [query, setQuery] = useState("");
-  const [source, setSource] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [results, setResults] = useState<SearchResultRow[]>([]);
-  const [totalMatches, setTotalMatches] = useState(0);
+  const [source, setSource] = useState(snapshot.source);
+  const [dateFrom, setDateFrom] = useState(snapshot.dateFrom);
+  const [dateTo, setDateTo] = useState(snapshot.dateTo);
+  const [sort, setSort] = useState(snapshot.sort);
+  const [results, setResults] = useState<SearchResultRow[]>(snapshot.results);
+  const [totalMatches, setTotalMatches] = useState(snapshot.totalMatches);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [latencyMs, setLatencyMs] = useState<number | null>(snapshot.latencyMs);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const MAX_SNIPPETS_PER_CONVERSATION = 3;
+  const PAGE_SIZE = 50;
 
   const hasQuery = query.trim().length > 0;
 
@@ -78,8 +93,9 @@ export default function SearchPage({
       source: source || undefined,
       dateFrom: toStartOfDayTimestamp(dateFrom),
       dateTo: toEndOfDayTimestamp(dateTo),
+      sort,
     }),
-    [source, dateFrom, dateTo]
+    [source, dateFrom, dateTo, sort]
   );
 
   useEffect(() => {
@@ -100,6 +116,7 @@ export default function SearchPage({
         setError(null);
         setSelectedIndex(-1);
         setLoading(false);
+        setLoadingMore(false);
         return;
       }
 
@@ -107,10 +124,15 @@ export default function SearchPage({
       const start = performance.now();
 
       try {
-        const response = await searchMessages(query, { ...searchParams, limit: 50 });
+        const response = await searchMessages(query, {
+          ...searchParams,
+          limit: PAGE_SIZE,
+          offset: 0,
+        });
         if (cancelled) return;
         setResults(response.rows);
         setTotalMatches(response.totalMatches);
+        setSelectedIndex(response.rows.length > 0 ? 0 : -1);
         setLatencyMs(Math.round(performance.now() - start));
       } catch (err) {
         if (cancelled) return;
@@ -121,6 +143,7 @@ export default function SearchPage({
       } finally {
         if (!cancelled) {
           setLoading(false);
+          setLoadingMore(false);
         }
       }
     }
@@ -134,37 +157,11 @@ export default function SearchPage({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [hasQuery, query, searchParams]);
-
-  const groupedResults = useMemo<GroupedSearchResult[]>(() => {
-    const byConversation = new Map<string, GroupedSearchResult>();
-
-    for (const row of results) {
-      const existing = byConversation.get(row.conversation_id);
-      if (!existing) {
-        byConversation.set(row.conversation_id, {
-          conversationId: row.conversation_id,
-          title: row.title || "Untitled",
-          source: row.source,
-          createdAt: row.created_at,
-          snippets: [row.snippet],
-          occurrenceCount: 1,
-        });
-        continue;
-      }
-
-      existing.occurrenceCount += 1;
-      if (existing.snippets.length < MAX_SNIPPETS_PER_CONVERSATION) {
-        existing.snippets.push(row.snippet);
-      }
-    }
-
-    return Array.from(byConversation.values());
-  }, [results]);
+  }, [PAGE_SIZE, hasQuery, query, searchParams]);
 
   useEffect(() => {
-    setSelectedIndex(groupedResults.length > 0 ? 0 : -1);
-  }, [groupedResults]);
+    setSelectedIndex(results.length > 0 ? 0 : -1);
+  }, [results]);
 
   useEffect(() => {
     if (selectedIndex < 0) return;
@@ -176,10 +173,10 @@ export default function SearchPage({
 
   useEffect(() => {
     function handleKeyboardNav(event: KeyboardEvent) {
-      if (!hasQuery || loading || groupedResults.length === 0) {
+      if (!hasQuery || loading || results.length === 0) {
         if (event.key === "Escape" && hasQuery) {
           event.preventDefault();
-          setQuery("");
+          onQueryChange("");
           setResults([]);
           setTotalMatches(0);
           setSelectedIndex(-1);
@@ -191,7 +188,7 @@ export default function SearchPage({
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, groupedResults.length - 1));
+        setSelectedIndex((prev) => Math.min(prev + 1, results.length - 1));
         return;
       }
 
@@ -202,16 +199,16 @@ export default function SearchPage({
       }
 
       if (event.key === "Enter" && selectedIndex >= 0) {
-        const selected = groupedResults[selectedIndex];
+        const selected = results[selectedIndex];
         if (!selected) return;
         event.preventDefault();
-        onOpenConversation(selected.conversationId, query);
+        onOpenConversation(selected.conversation_id, query);
         return;
       }
 
       if (event.key === "Escape") {
         event.preventDefault();
-        setQuery("");
+        onQueryChange("");
         setResults([]);
         setTotalMatches(0);
         setSelectedIndex(-1);
@@ -222,7 +219,7 @@ export default function SearchPage({
 
     document.addEventListener("keydown", handleKeyboardNav);
     return () => document.removeEventListener("keydown", handleKeyboardNav);
-  }, [groupedResults, hasQuery, loading, onOpenConversation, selectedIndex]);
+  }, [hasQuery, loading, onOpenConversation, onQueryChange, query, results, selectedIndex]);
 
   const searchContext = source
     ? `Searching in ${sourceLabel(source)}`
@@ -234,6 +231,50 @@ export default function SearchPage({
       : dateTo
         ? `Date range: up to ${dateTo}`
         : null;
+  const loadedOccurrences = useMemo(
+    () => results.reduce((total, row) => total + row.occurrence_count, 0),
+    [results]
+  );
+
+  useEffect(() => {
+    onSnapshotChange({
+      source,
+      dateFrom,
+      dateTo,
+      sort,
+      results,
+      totalMatches,
+      latencyMs,
+    });
+  }, [
+    source,
+    dateFrom,
+    dateTo,
+    sort,
+    results,
+    totalMatches,
+    latencyMs,
+    onSnapshotChange,
+  ]);
+
+  async function handleLoadMore() {
+    if (loading || loadingMore || !hasQuery || results.length >= totalMatches) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const response = await searchMessages(query, {
+        ...searchParams,
+        limit: PAGE_SIZE,
+        offset: results.length,
+      });
+      setResults((prev) => [...prev, ...response.rows]);
+      setTotalMatches(response.totalMatches);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Search failed");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <section className="search-page">
@@ -245,7 +286,7 @@ export default function SearchPage({
           type="search"
           placeholder="Search all messages..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => onQueryChange(e.target.value)}
         />
 
         <div className="search-filters">
@@ -278,6 +319,17 @@ export default function SearchPage({
               onChange={(e) => setDateTo(e.target.value)}
             />
           </label>
+
+          <label>
+            Sort
+            <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+              <option value="last_occurrence_desc">Last occurrence</option>
+              <option value="relevance">Relevance</option>
+              <option value="occurrence_count_desc">Occurrence count</option>
+              <option value="title_az">Title A-Z</option>
+              <option value="title_za">Title Z-A</option>
+            </select>
+          </label>
         </div>
 
         <div className="search-meta">
@@ -290,10 +342,10 @@ export default function SearchPage({
               <span>
                 {totalMatches > results.length
                   ? `Showing top ${results.length} of ${totalMatches} results`
-                  : `${totalMatches} results`}
+                  : `${results.length} results`}
               </span>
               <span>
-                {`${totalMatches} occurrences in ${groupedResults.length} conversations`}
+                {`${loadedOccurrences} occurrences loaded`}
                 {` · ${searchContext}`}
                 {dateContext ? ` · ${dateContext}` : ""}
                 {latencyMs !== null ? ` · ${latencyMs} ms` : ""}
@@ -311,6 +363,7 @@ export default function SearchPage({
             Showing top {results.length} of {totalMatches} results
           </div>
         )}
+
         {hasQuery && !loading && results.length === 0 ? (
           <div className="search-empty-state">
             <p className="search-empty-title">No matches found.</p>
@@ -322,40 +375,62 @@ export default function SearchPage({
             </ul>
           </div>
         ) : (
-          groupedResults.map((group, index) => (
+          results.map((row, index) => (
             <button
               type="button"
-              key={group.conversationId}
+              key={row.conversation_id}
               ref={(element) => {
                 resultRefs.current[index] = element;
               }}
               className={`search-result ${selectedIndex === index ? "selected" : ""}`}
-              onClick={() => onOpenConversation(group.conversationId, query)}
+              onClick={() => onOpenConversation(row.conversation_id, query)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
               <div className="search-result-header">
-                <div className="search-result-title">{group.title}</div>
+                <div className="search-result-title">{row.title || "Untitled"}</div>
                 <div className="search-result-occurrences">
-                  {group.occurrenceCount}{" "}
-                  {group.occurrenceCount === 1 ? "occurrence" : "occurrences"}
+                  {row.occurrence_count}{" "}
+                  {row.occurrence_count === 1 ? "occurrence" : "occurrences"}
                 </div>
               </div>
               <div className="search-result-snippets">
-                {group.snippets.map((snippet, snippetIndex) => (
+                {(row.snippets.length > 0 ? row.snippets : [row.snippet]).map(
+                  (snippet, snippetIndex) => (
                   <div
-                    key={`${group.conversationId}-snippet-${snippetIndex}`}
+                    key={`${row.conversation_id}-snippet-${snippetIndex}`}
                     className="search-result-snippet"
                   >
                     {renderHighlightedSnippet(snippet)}
                   </div>
-                ))}
+                  )
+                )}
               </div>
               <div className="search-result-meta">
-                <span className="source-tag">{sourceLabel(group.source)}</span>
-                <span>{formatDate(group.createdAt)}</span>
+                <span className="source-tag">{sourceLabel(row.source)}</span>
+                <span>{formatDate(row.last_occurrence)}</span>
               </div>
             </button>
           ))
+        )}
+
+        {hasQuery && !loading && results.length > 0 && totalMatches > results.length && (
+          <button
+            type="button"
+            className="search-load-more-btn"
+            onClick={() => void handleLoadMore()}
+            disabled={loadingMore}
+          >
+            {loadingMore ? (
+              "Loading..."
+            ) : (
+              <>
+                <span className="search-load-more-icon" aria-hidden="true">
+                  +
+                </span>{" "}
+                Load more (next 50)
+              </>
+            )}
+          </button>
         )}
       </div>
     </section>

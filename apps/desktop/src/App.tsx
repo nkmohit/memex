@@ -13,7 +13,7 @@ import {
   searchMessages,
 } from "./db";
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
-import SearchPage from "./SearchPage";
+import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
 import { formatDate, formatTimestamp } from "./utils";
 import "./App.css";
 
@@ -35,6 +35,16 @@ function App() {
 
   // ---- search state ----
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchPageQuery, setSearchPageQuery] = useState("");
+  const [searchPageSnapshot, setSearchPageSnapshot] = useState<SearchPageSnapshot>({
+    source: "",
+    dateFrom: "",
+    dateTo: "",
+    sort: "last_occurrence_desc",
+    results: [],
+    totalMatches: 0,
+    latencyMs: null,
+  });
   const [searchResults, setSearchResults] = useState<SearchResultRow[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchFocusRequestId, setSearchFocusRequestId] = useState<number | null>(
@@ -228,6 +238,16 @@ function App() {
       await clearAllData();
 
       setSearchQuery("");
+      setSearchPageQuery("");
+      setSearchPageSnapshot({
+        source: "",
+        dateFrom: "",
+        dateTo: "",
+        sort: "last_occurrence_desc",
+        results: [],
+        totalMatches: 0,
+        latencyMs: null,
+      });
       setSearchResults([]);
       setSelectedConvId(null);
       setMessages([]);
@@ -246,6 +266,7 @@ function App() {
     activeQuery: string
   ) {
     setSearchQuery(activeQuery);
+    setSearchPageQuery(activeQuery);
     setActiveView("conversations");
     if (activeSource !== null) {
       setActiveSource(null);
@@ -383,9 +404,13 @@ function App() {
       {activeView === "search" ? (
         <main className="search-main">
           <SearchPage
+            query={searchPageQuery}
+            onQueryChange={setSearchPageQuery}
             availableSources={availableSources}
             sourceLabel={sourceLabel}
             focusRequestId={searchFocusRequestId}
+            snapshot={searchPageSnapshot}
+            onSnapshotChange={setSearchPageSnapshot}
             onOpenConversation={(conversationId, activeQuery) => {
               void handleOpenConversationFromSearchPage(conversationId, activeQuery);
             }}
