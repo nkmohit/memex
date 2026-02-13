@@ -3,14 +3,12 @@ import {
   ConversationRow,
   DbStats,
   MessageRow,
-  SearchResultRow,
   SourceStats,
   clearAllData,
   getConversations,
   getMessages,
   getSourceStats,
   getStats,
-  searchMessages,
 } from "./db";
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
 import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
@@ -34,7 +32,6 @@ function App() {
   const [activeView, setActiveView] = useState<ActiveView>("conversations");
 
   // ---- search state ----
-  const [searchQuery, setSearchQuery] = useState("");
   const [searchPageQuery, setSearchPageQuery] = useState("");
   const [searchPageSnapshot, setSearchPageSnapshot] = useState<SearchPageSnapshot>({
     source: "",
@@ -45,8 +42,6 @@ function App() {
     totalMatches: 0,
     latencyMs: null,
   });
-  const [searchResults, setSearchResults] = useState<SearchResultRow[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [searchFocusRequestId, setSearchFocusRequestId] = useState<number | null>(
     null
   );
@@ -61,13 +56,13 @@ function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const importMenuRef = useRef<HTMLDivElement>(null);
+  const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   // ---- derived ----
   const selectedConversation = useMemo(
     () => conversations.find((c) => c.id === selectedConvId) ?? null,
     [conversations, selectedConvId]
   );
-  const hasInlineSearchQuery = searchQuery.trim().length > 0;
 
   // ---- close import menu on outside click ----
   useEffect(() => {
@@ -137,49 +132,13 @@ function App() {
     }
   }, []);
 
-  // ---- inline search ----
   useEffect(() => {
-    let cancelled = false;
-    const debounceMs = 300;
-
-    async function runInlineSearch() {
-      const query = searchQuery.trim();
-      if (!query) {
-        setSearchResults([]);
-        setSearchLoading(false);
-        return;
-      }
-
-      setSearchLoading(true);
-      try {
-        const response = await searchMessages(query, {
-          source: activeSource ?? undefined,
-          limit: 20,
-        });
-        if (!cancelled) {
-          setSearchResults(response.rows);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Inline search failed:", err);
-          setSearchResults([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setSearchLoading(false);
-        }
-      }
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void runInlineSearch();
-    }, debounceMs);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [searchQuery, activeSource]);
+    if (activeView !== "conversations" || !selectedConvId) return;
+    convItemRefs.current[selectedConvId]?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [activeView, selectedConvId]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -237,7 +196,6 @@ function App() {
       // Actually delete data from DB first — only reset UI state after success.
       await clearAllData();
 
-      setSearchQuery("");
       setSearchPageQuery("");
       setSearchPageSnapshot({
         source: "",
@@ -248,7 +206,6 @@ function App() {
         totalMatches: 0,
         latencyMs: null,
       });
-      setSearchResults([]);
       setSelectedConvId(null);
       setMessages([]);
       setImportResult("All imported data was removed.");
@@ -265,13 +222,37 @@ function App() {
     conversationId: string,
     activeQuery: string
   ) {
-    setSearchQuery(activeQuery);
     setSearchPageQuery(activeQuery);
     setActiveView("conversations");
     if (activeSource !== null) {
       setActiveSource(null);
       await loadData(null);
     }
+
+    // If the selected conversation is not in the currently loaded list,
+    // inject it from search snapshot so the left panel can highlight it.
+    setConversations((prev) => {
+      if (prev.some((c) => c.id === conversationId)) {
+        return prev;
+      }
+      const fromSearch = searchPageSnapshot.results.find(
+        (row) => row.conversation_id === conversationId
+      );
+      if (!fromSearch) {
+        return prev;
+      }
+      return [
+        {
+          id: fromSearch.conversation_id,
+          source: fromSearch.source,
+          title: fromSearch.title || "Untitled",
+          created_at: fromSearch.created_at,
+          message_count: 0,
+        },
+        ...prev,
+      ];
+    });
+
     await handleConversationClick(conversationId);
   }
 
@@ -423,49 +404,12 @@ function App() {
             <div className="conv-panel-header">
               <div className="conv-header-top">
                 <h2>{activeSource ? sourceLabel(activeSource) : "All Conversations"}</h2>
-                <span className="conv-count">
-                  {hasInlineSearchQuery ? searchResults.length : conversations.length}
-                </span>
+                <span className="conv-count">{conversations.length}</span>
               </div>
-              <input
-                className="conv-search-input"
-                type="search"
-                placeholder="Search messages..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
             </div>
 
             {loading ? (
               <div className="empty-text">Loading...</div>
-            ) : hasInlineSearchQuery ? (
-              searchLoading ? (
-                <div className="empty-text">Searching...</div>
-              ) : searchResults.length === 0 ? (
-                <div className="empty-text">No matching messages found.</div>
-              ) : (
-                <div className="conv-list">
-                  {searchResults.map((r, index) => (
-                    <button
-                      key={`${r.conversation_id}-${index}`}
-                      className={`conv-item ${
-                        selectedConvId === r.conversation_id ? "selected" : ""
-                      }`}
-                      onClick={() => void handleConversationClick(r.conversation_id)}
-                    >
-                      <span className="conv-title">{r.title || "Untitled"}</span>
-                      <span
-                        className="conv-snippet"
-                        dangerouslySetInnerHTML={{ __html: r.snippet }}
-                      />
-                      <span className="conv-meta">
-                        <span className="source-tag">{sourceLabel(r.source)}</span>
-                        <span>{formatDate(r.created_at)}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )
             ) : conversations.length === 0 ? (
               <div className="empty-text">
                 No conversations yet. Import to get started.
@@ -475,6 +419,9 @@ function App() {
                 {conversations.map((c) => (
                   <button
                     key={c.id}
+                    ref={(element) => {
+                      convItemRefs.current[c.id] = element;
+                    }}
                     className={`conv-item ${selectedConvId === c.id ? "selected" : ""}`}
                     onClick={() => void handleConversationClick(c.id)}
                   >

@@ -339,11 +339,7 @@ export default function SearchPage({
             <span>Searching... · {searchContext}{dateContext ? ` · ${dateContext}` : ""}</span>
           ) : (
             <>
-              <span>
-                {totalMatches > results.length
-                  ? `Showing top ${results.length} of ${totalMatches} results`
-                  : `${results.length} results`}
-              </span>
+              <span>{`Showing top ${results.length} of ${totalMatches} conversations`}</span>
               <span>
                 {`${loadedOccurrences} occurrences loaded`}
                 {` · ${searchContext}`}
@@ -358,12 +354,6 @@ export default function SearchPage({
       </header>
 
       <div className="search-results">
-        {hasQuery && !loading && totalMatches > results.length && results.length > 0 && (
-          <div className="search-truncation-notice">
-            Showing top {results.length} of {totalMatches} results
-          </div>
-        )}
-
         {hasQuery && !loading && results.length === 0 ? (
           <div className="search-empty-state">
             <p className="search-empty-title">No matches found.</p>
@@ -424,10 +414,10 @@ export default function SearchPage({
               "Loading..."
             ) : (
               <>
-                <span className="search-load-more-icon" aria-hidden="true">
-                  +
+                <span className="load-more-icon" aria-hidden="true">
+                  v
                 </span>{" "}
-                Load more (next 50)
+                Load more
               </>
             )}
           </button>

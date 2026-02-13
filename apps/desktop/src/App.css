@@ -632,6 +632,12 @@
   cursor: default;
 }
 
+.load-more-icon {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 12px;
+}
+
 .search-result-meta {
   display: flex;
   align-items: center;
