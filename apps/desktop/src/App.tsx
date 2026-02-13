@@ -37,6 +37,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultRow[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchFocusRequestId, setSearchFocusRequestId] = useState<number | null>(
+    null
+  );
 
   // ---- import state ----
   const [importing, setImporting] = useState(false);
@@ -127,6 +130,7 @@ function App() {
   // ---- inline search ----
   useEffect(() => {
     let cancelled = false;
+    const debounceMs = 300;
 
     async function runInlineSearch() {
       const query = searchQuery.trim();
@@ -138,12 +142,12 @@ function App() {
 
       setSearchLoading(true);
       try {
-        const rows = await searchMessages(query, {
+        const response = await searchMessages(query, {
           source: activeSource ?? undefined,
           limit: 20,
         });
         if (!cancelled) {
-          setSearchResults(rows);
+          setSearchResults(response.rows);
         }
       } catch (err) {
         if (!cancelled) {
@@ -157,11 +161,28 @@ function App() {
       }
     }
 
-    void runInlineSearch();
+    const timeoutId = window.setTimeout(() => {
+      void runInlineSearch();
+    }, debounceMs);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
   }, [searchQuery, activeSource]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setActiveView("search");
+        setSearchFocusRequestId(Date.now());
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // ---- import ----
   async function handleImportSource(source: ImportSource) {
@@ -220,7 +241,11 @@ function App() {
     }
   }
 
-  async function handleOpenConversationFromSearchPage(conversationId: string) {
+  async function handleOpenConversationFromSearchPage(
+    conversationId: string,
+    activeQuery: string
+  ) {
+    setSearchQuery(activeQuery);
     setActiveView("conversations");
     if (activeSource !== null) {
       setActiveSource(null);
@@ -360,8 +385,9 @@ function App() {
           <SearchPage
             availableSources={availableSources}
             sourceLabel={sourceLabel}
-            onOpenConversation={(conversationId) => {
-              void handleOpenConversationFromSearchPage(conversationId);
+            focusRequestId={searchFocusRequestId}
+            onOpenConversation={(conversationId, activeQuery) => {
+              void handleOpenConversationFromSearchPage(conversationId, activeQuery);
             }}
           />
         </main>

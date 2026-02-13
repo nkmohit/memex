@@ -189,11 +189,25 @@ export interface SearchResultRow {
   rank: number;
 }
 
+export interface SearchMessagesResult {
+  rows: SearchResultRow[];
+  totalMatches: number;
+}
+
 export interface SearchOptions {
   source?: string;
   dateFrom?: number;
   dateTo?: number;
   limit?: number;
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+export function normalizeQuery(rawQuery: string): string {
+  const tokens = rawQuery.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return tokens.map((term) => `${term.replace(/\*+$/g, "")}*`).join(" ");
 }
 
 // ---------------------------------------------------------------------------
@@ -306,9 +320,12 @@ export function getMessages(
 export function searchMessages(
   query: string,
   opts: SearchOptions = {}
-): Promise<SearchResultRow[]> {
-  const normalizedQuery = query.trim();
-  if (!normalizedQuery) return Promise.resolve([]);
+): Promise<SearchMessagesResult> {
+  const rawQuery = query.trim();
+  if (!rawQuery) {
+    return Promise.resolve({ rows: [], totalMatches: 0 });
+  }
+  const normalizedQuery = normalizeQuery(rawQuery);
 
   return withDbLock(async () => {
     const database = await getDb();
@@ -317,40 +334,116 @@ export function searchMessages(
       ? Math.max(1, Math.min(100, Math.floor(opts.limit as number)))
       : 20;
 
-    let sql = `SELECT
-        c.id AS conversation_id,
-        COALESCE(c.title, 'Untitled') AS title,
-        c.source AS source,
-        snippet(messages_fts, 0, '<mark>', '</mark>', '...', 10) AS snippet,
-        COALESCE(c.created_at, 0) AS created_at,
-        bm25(messages_fts) AS rank
-      FROM messages_fts
-      JOIN conversations c ON c.id = messages_fts.conversation_id
-      WHERE messages_fts MATCH $1`;
+    if (!normalizedQuery) {
+      let whereClause = "m.content LIKE $1 ESCAPE '\\'";
+      const params: unknown[] = [`%${escapeLikePattern(rawQuery)}%`];
+      let paramIndex = 2;
+
+      if (opts.source) {
+        whereClause += ` AND c.source = $${paramIndex}`;
+        params.push(opts.source);
+        paramIndex += 1;
+      }
+
+      if (typeof opts.dateFrom === "number") {
+        whereClause += ` AND COALESCE(c.created_at, 0) >= $${paramIndex}`;
+        params.push(opts.dateFrom);
+        paramIndex += 1;
+      }
+
+      if (typeof opts.dateTo === "number") {
+        whereClause += ` AND COALESCE(c.created_at, 0) <= $${paramIndex}`;
+        params.push(opts.dateTo);
+        paramIndex += 1;
+      }
+
+      const countSql = `SELECT COUNT(*) AS total
+        FROM messages m
+        JOIN conversations c ON c.id = m.conversation_id
+        WHERE ${whereClause}`;
+
+      const rowsSql = `SELECT
+          c.id AS conversation_id,
+          COALESCE(c.title, 'Untitled') AS title,
+          c.source AS source,
+          SUBSTR(m.content, 1, 220) AS snippet,
+          COALESCE(c.created_at, 0) AS created_at,
+          0.0 AS rank
+        FROM messages m
+        JOIN conversations c ON c.id = m.conversation_id
+        WHERE ${whereClause}
+        ORDER BY COALESCE(c.created_at, 0) DESC
+        LIMIT ${safeLimit}`;
+
+      const [countRows, rows] = await Promise.all([
+        database.select<{ total: number }[]>(countSql, params),
+        database.select<SearchResultRow[]>(rowsSql, params),
+      ]);
+
+      return {
+        rows,
+        totalMatches: countRows[0]?.total ?? 0,
+      };
+    }
+
+    let whereClause = "messages_fts MATCH $1";
     const params: unknown[] = [normalizedQuery];
     let paramIndex = 2;
 
     if (opts.source) {
-      sql += ` AND c.source = $${paramIndex}`;
+      whereClause += ` AND c.source = $${paramIndex}`;
       params.push(opts.source);
       paramIndex += 1;
     }
 
     if (typeof opts.dateFrom === "number") {
-      sql += ` AND COALESCE(c.created_at, 0) >= $${paramIndex}`;
+      whereClause += ` AND COALESCE(c.created_at, 0) >= $${paramIndex}`;
       params.push(opts.dateFrom);
       paramIndex += 1;
     }
 
     if (typeof opts.dateTo === "number") {
-      sql += ` AND COALESCE(c.created_at, 0) <= $${paramIndex}`;
+      whereClause += ` AND COALESCE(c.created_at, 0) <= $${paramIndex}`;
       params.push(opts.dateTo);
       paramIndex += 1;
     }
 
-    sql += ` ORDER BY bm25(messages_fts) LIMIT ${safeLimit}`;
+    const countSql = `SELECT COUNT(*) AS total
+      FROM messages_fts
+      JOIN conversations c ON c.id = messages_fts.conversation_id
+      WHERE ${whereClause}`;
 
-    return database.select<SearchResultRow[]>(sql, params);
+    const rowsSql = `SELECT
+        ranked.conversation_id,
+        ranked.title,
+        ranked.source,
+        ranked.snippet,
+        ranked.created_at,
+        ranked.rank
+      FROM (
+        SELECT
+          c.id AS conversation_id,
+          COALESCE(c.title, 'Untitled') AS title,
+          c.source AS source,
+          snippet(messages_fts, 0, '<mark>', '</mark>', '...', 10) AS snippet,
+          COALESCE(c.created_at, 0) AS created_at,
+          bm25(messages_fts) AS rank
+        FROM messages_fts
+        JOIN conversations c ON c.id = messages_fts.conversation_id
+        WHERE ${whereClause}
+      ) ranked
+      ORDER BY ranked.rank
+      LIMIT ${safeLimit}`;
+
+    const [countRows, rows] = await Promise.all([
+      database.select<{ total: number }[]>(countSql, params),
+      database.select<SearchResultRow[]>(rowsSql, params),
+    ]);
+
+    return {
+      rows,
+      totalMatches: countRows[0]?.total ?? 0,
+    };
   });
 }
 

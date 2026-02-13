@@ -433,8 +433,8 @@
 }
 
 .conv-snippet mark {
-  background: #fde68a;
-  color: inherit;
+  background: #f97316;
+  color: #ffffff;
   padding: 0 1px;
   border-radius: 2px;
 }
@@ -501,6 +501,9 @@
 .search-meta {
   font-size: 12px;
   color: #6b7280;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .search-results {
@@ -526,15 +529,39 @@
   font-family: inherit;
 }
 
+.search-result.selected {
+  border-color: #60a5fa;
+  background: #eff6ff;
+}
+
 .search-result:hover {
   border-color: #bfdbfe;
   background: #f8fbff;
+}
+
+.search-result-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .search-result-title {
   font-size: 14px;
   font-weight: 600;
   color: #111827;
+}
+
+.search-result-occurrences {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.search-result-snippets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .search-result-snippet {
@@ -544,10 +571,44 @@
 }
 
 .search-result-snippet mark {
-  background: #fde68a;
-  color: inherit;
+  background: #f97316;
+  color: #ffffff;
   padding: 0 1px;
   border-radius: 2px;
+}
+
+.search-truncation-notice {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.search-empty-state {
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  padding: 14px;
+  color: #4b5563;
+  background: #f9fafb;
+  line-height: 1.5;
+}
+
+.search-empty-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.search-empty-state p {
+  margin: 0;
+}
+
+.search-empty-tips {
+  margin: 6px 0 0;
+  padding-left: 18px;
 }
 
 .search-result-meta {
@@ -776,8 +837,8 @@
 
   .conv-snippet mark,
   .search-result-snippet mark {
-    background: #92400e;
-    color: #fef3c7;
+    background: #fb923c;
+    color: #000000;
   }
 
   .source-tag {
@@ -924,8 +985,17 @@
     background: #233247;
   }
 
+  .search-result.selected {
+    border-color: #93c5fd;
+    background: #1e3a5f;
+  }
+
   .search-result-title {
     color: #f1f5f9;
+  }
+
+  .search-result-occurrences {
+    color: #94a3b8;
   }
 
   .search-result-snippet {
@@ -934,5 +1004,21 @@
 
   .search-result-meta {
     color: #94a3b8;
+  }
+
+  .search-truncation-notice {
+    border-color: #9a3412;
+    background: #431407;
+    color: #fdba74;
+  }
+
+  .search-empty-state {
+    border-color: #475569;
+    background: #1e293b;
+    color: #cbd5e1;
+  }
+
+  .search-empty-title {
+    color: #f1f5f9;
   }
 }
