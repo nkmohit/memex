@@ -30,6 +30,7 @@ function App() {
   // ---- source filter ----
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("conversations");
+  const [convFilter, setConvFilter] = useState("");
 
   // ---- search state ----
   const [searchPageQuery, setSearchPageQuery] = useState("");
@@ -67,6 +68,15 @@ function App() {
     () => conversations.find((c) => c.id === selectedConvId) ?? null,
     [conversations, selectedConvId]
   );
+
+  const filteredConversations = useMemo(() => {
+    if (!convFilter.trim()) return conversations;
+    
+    const filterLower = convFilter.toLowerCase();
+    return conversations.filter((c) =>
+      c.title.toLowerCase().includes(filterLower)
+    );
+  }, [conversations, convFilter]);
 
   // ---- close import menu on outside click ----
   useEffect(() => {
@@ -415,8 +425,15 @@ function App() {
             <div className="conv-panel-header">
               <div className="conv-header-top">
                 <h2>{activeSource ? sourceLabel(activeSource) : "All Conversations"}</h2>
-                <span className="conv-count">{conversations.length}</span>
+                <span className="conv-count">{filteredConversations.length}</span>
               </div>
+              <input
+                type="search"
+                className="conv-search-input"
+                placeholder="Filter conversations..."
+                value={convFilter}
+                onChange={(e) => setConvFilter(e.target.value)}
+              />
             </div>
 
             {loading ? (
@@ -425,9 +442,13 @@ function App() {
               <div className="empty-text">
                 No conversations yet. Import to get started.
               </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="empty-text">
+                No conversations match your filter.
+              </div>
             ) : (
               <div className="conv-list">
-                {conversations.map((c) => (
+                {filteredConversations.map((c) => (
                   <button
                     key={c.id}
                     ref={(element) => {
