@@ -119,9 +119,14 @@ function App() {
     if (!messageSearchQuery.trim()) setHighlightedMessageId(null);
   }, [messageSearchQuery, matchCount]);
 
-  // Scroll to the specific occurrence (Nth <mark> in the message)
+  // Scroll to the specific occurrence and mark it as current (others dimmed via CSS)
   useEffect(() => {
-    if (!messageSearchQuery.trim() || matchCount === 0) return;
+    if (!messageSearchQuery.trim()) return;
+    // Clear current-match from all marks
+    Object.values(messageRefs.current).forEach((msgEl) => {
+      msgEl?.querySelectorAll("mark").forEach((m) => m.classList.remove("current-match"));
+    });
+    if (matchCount === 0) return;
     const occ = occurrences[currentMatchIndex];
     if (!occ) return;
     setHighlightedMessageId(occ.messageId);
@@ -129,6 +134,7 @@ function App() {
     if (el) {
       const marks = el.querySelectorAll("mark");
       const mark = marks[occ.localIndex] ?? marks[0];
+      if (mark) mark.classList.add("current-match");
       (mark || el).scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
@@ -548,7 +554,7 @@ function App() {
           </aside>
 
           {/* ---- MESSAGE VIEWER ---- */}
-          <main className="viewer">
+          <main className={`viewer${messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
             {/* banner messages */}
             {(importResult || importError || loadError) && (
               <div className="banner-area">
@@ -628,6 +634,11 @@ function App() {
                     )}
                   </div>
                 </div>
+                {messageSearchQuery.trim() && matchCount === 0 && (
+                  <div className="viewer-no-results">
+                    No results for “{messageSearchQuery}”
+                  </div>
+                )}
                 <div className="msg-list">
                   {messages.map((m) => (
                     <article

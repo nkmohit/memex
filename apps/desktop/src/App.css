@@ -862,6 +862,26 @@
   font-weight: 600;
 }
 
+.viewer-has-search .msg-body mark {
+  opacity: 0.4;
+  background: #fde68a;
+}
+
+.viewer-has-search .msg-body mark.current-match {
+  opacity: 1;
+  background: #facc15;
+  color: #713f12;
+  box-shadow: 0 0 0 2px #eab308;
+}
+
+.viewer-no-results {
+  padding: 10px 20px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 13px;
+  border-bottom: 1px solid #fde68a;
+}
+
 .msg.highlighted {
   animation: highlight-pulse 2s ease-in-out;
   box-shadow: 0 0 0 3px #3b82f6;
@@ -1051,6 +1071,25 @@
   .msg-body mark {
     background: #713f12;
     color: #fef08a;
+  }
+
+  .viewer-has-search .msg-body mark {
+    opacity: 0.4;
+    background: #78350f;
+    color: #fde68a;
+  }
+
+  .viewer-has-search .msg-body mark.current-match {
+    opacity: 1;
+    background: #a16207;
+    color: #fef08a;
+    box-shadow: 0 0 0 2px #ca8a04;
+  }
+
+  .viewer-no-results {
+    background: #422006;
+    color: #fde68a;
+    border-bottom-color: #78350f;
   }
 
   .msg.highlighted {
