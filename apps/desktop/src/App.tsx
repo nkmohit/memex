@@ -251,7 +251,7 @@ function App() {
 
   // Scroll to the specific occurrence and mark it as current (others dimmed via CSS)
   useEffect(() => {
-    if (!messageSearchQuery.trim()) return;
+    if (!viewerSearchOpen || !messageSearchQuery.trim()) return;
     // Clear current-match from all marks
     Object.values(messageRefs.current).forEach((msgEl) => {
       msgEl?.querySelectorAll("mark").forEach((m) => m.classList.remove("current-match"));
@@ -267,7 +267,7 @@ function App() {
       if (mark) mark.classList.add("current-match");
       (mark || el).scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
+  }, [viewerSearchOpen, messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
 
   // Focus viewer search input when search panel opens
   useEffect(() => {
@@ -447,14 +447,23 @@ function App() {
       if (key === "f") {
         event.preventDefault();
         if (activeView === "conversations" && selectedConvId) {
-          setViewerSearchOpen(true);
+          const searchInput = viewerSearchInputRef.current;
+          const searchIsFocused = searchInput && document.activeElement === searchInput;
+          if (!viewerSearchOpen) {
+            setViewerSearchOpen(true);
+          } else if (searchIsFocused) {
+            setViewerSearchOpen(false);
+          } else {
+            searchInput?.focus();
+            searchInput?.select();
+          }
         }
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [activeView, selectedConvId, openedConversationFromSearch, goBackToSearch]);
+  }, [activeView, selectedConvId, openedConversationFromSearch, goBackToSearch, viewerSearchOpen]);
 
   // ---- import ----
   async function handleImportSource(source: ImportSource) {
@@ -754,7 +763,7 @@ function App() {
           </aside>
 
           {/* ---- MESSAGE VIEWER ---- */}
-          <main className={`viewer${messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
+          <main className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
             {/* banner messages */}
             {(importResult || importError || loadError) && (
               <div className="banner-area">
@@ -795,8 +804,9 @@ function App() {
                         className="viewer-back-to-search-btn"
                         onClick={goBackToSearch}
                         title="Back to search (Backspace)"
+                        aria-label="Back to search"
                       >
-                        ← Back to search
+                        ←
                       </button>
                     )}
                     <div>
@@ -805,7 +815,7 @@ function App() {
                         <span className="source-tag">
                           {sourceLabel(selectedConversation.source)}
                         </span>
-                        <span>{messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
+                        <span>{viewerSearchOpen && messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
                         <span>{formatDate(selectedConversation.created_at)}</span>
                       </p>
                     </div>
@@ -904,7 +914,7 @@ function App() {
                           </button>
                         </span>
                       </div>
-                      <div className="msg-body">{highlightText(m.content, messageSearchQuery)}</div>
+                      <div className="msg-body">{highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}</div>
                     </article>
                   ))}
                 </div>
