@@ -7,7 +7,7 @@ interface SearchPageProps {
   onQueryChange: (query: string) => void;
   availableSources: string[];
   sourceLabel: (source: string) => string;
-  onOpenConversation: (conversationId: string, activeQuery: string) => void;
+  onOpenConversation: (conversationId: string, activeQuery: string, messageId?: string | null) => void;
   focusRequestId?: number | null;
   snapshot: SearchPageSnapshot;
   onSnapshotChange: (snapshot: SearchPageSnapshot) => void;
@@ -207,7 +207,7 @@ export default function SearchPage({
         const selected = results[selectedIndex];
         if (!selected) return;
         event.preventDefault();
-        onOpenConversation(selected.conversation_id, query);
+        onOpenConversation(selected.conversation_id, query, selected.first_match_message_id);
         return;
       }
 
@@ -381,7 +381,7 @@ export default function SearchPage({
                 resultRefs.current[index] = element;
               }}
               className={`search-result ${selectedIndex === index ? "selected" : ""}`}
-              onClick={() => onOpenConversation(row.conversation_id, query)}
+              onClick={() => onOpenConversation(row.conversation_id, query, row.first_match_message_id)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
               <div className="search-result-header">

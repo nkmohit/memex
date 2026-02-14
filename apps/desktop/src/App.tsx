@@ -57,6 +57,10 @@ function App() {
 
   const importMenuRef = useRef<HTMLDivElement>(null);
   const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const messageRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  // ---- highlight state ----
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   // ---- derived ----
   const selectedConversation = useMemo(
@@ -118,12 +122,29 @@ function App() {
   }, [activeSource]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- conversation click ----
-  const handleConversationClick = useCallback(async (convId: string) => {
+  const handleConversationClick = useCallback(async (convId: string, scrollToMessageId?: string | null) => {
     setSelectedConvId(convId);
     setMessagesLoading(true);
+    setHighlightedMessageId(null);
     try {
       const data = await getMessages(convId);
       setMessages(data);
+      
+      // Scroll to and highlight the target message after a brief delay
+      if (scrollToMessageId) {
+        setTimeout(() => {
+          const messageEl = messageRefs.current[scrollToMessageId];
+          if (messageEl) {
+            messageEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            setHighlightedMessageId(scrollToMessageId);
+            
+            // Remove highlight after 2 seconds
+            setTimeout(() => {
+              setHighlightedMessageId(null);
+            }, 2000);
+          }
+        }, 100);
+      }
     } catch (err) {
       console.error("Failed to load messages:", err);
       setMessages([]);
@@ -220,7 +241,8 @@ function App() {
 
   async function handleOpenConversationFromSearchPage(
     conversationId: string,
-    activeQuery: string
+    activeQuery: string,
+    messageId?: string | null
   ) {
     setSearchPageQuery(activeQuery);
     setActiveView("conversations");
@@ -253,7 +275,7 @@ function App() {
       ];
     });
 
-    await handleConversationClick(conversationId);
+    await handleConversationClick(conversationId, messageId);
   }
 
   // ---- source helpers ----
@@ -392,8 +414,8 @@ function App() {
             focusRequestId={searchFocusRequestId}
             snapshot={searchPageSnapshot}
             onSnapshotChange={setSearchPageSnapshot}
-            onOpenConversation={(conversationId, activeQuery) => {
-              void handleOpenConversationFromSearchPage(conversationId, activeQuery);
+            onOpenConversation={(conversationId, activeQuery, messageId) => {
+              void handleOpenConversationFromSearchPage(conversationId, activeQuery, messageId);
             }}
           />
         </main>
@@ -487,7 +509,12 @@ function App() {
                   {messages.map((m) => (
                     <article
                       key={m.id}
-                      className={`msg ${m.sender === "human" ? "human" : "assistant"}`}
+                      ref={(el) => {
+                        messageRefs.current[m.id] = el;
+                      }}
+                      className={`msg ${m.sender === "human" ? "human" : "assistant"}${
+                        highlightedMessageId === m.id ? " highlighted" : ""
+                      }`}
                     >
                       <div className="msg-top">
                         <span className="sender-pill">

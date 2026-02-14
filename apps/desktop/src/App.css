@@ -791,6 +791,26 @@
   word-break: break-word;
 }
 
+.msg.highlighted {
+  animation: highlight-pulse 2s ease-in-out;
+  box-shadow: 0 0 0 3px #3b82f6;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+  10% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
 /* ---- Banners ---- */
 
 .banner-area {
@@ -925,6 +945,25 @@
 
   .msg-body {
     color: #e2e8f0;
+  }
+
+  .msg.highlighted {
+    box-shadow: 0 0 0 3px #60a5fa;
+  }
+
+  @keyframes highlight-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+    }
+    10% {
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.6);
+    }
+    50% {
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.4);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+    }
   }
 
   .msg-top {

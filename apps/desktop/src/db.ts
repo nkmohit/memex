@@ -202,6 +202,7 @@ export interface SearchResultRow {
   last_occurrence: number;
   occurrence_count: number;
   rank: number;
+  first_match_message_id: string | null;
 }
 
 export interface SearchMessagesResult {
@@ -410,6 +411,7 @@ export function searchMessages(
           c.source AS source,
           COALESCE(c.created_at, 0) AS created_at,
           COALESCE(m.created_at, 0) AS message_created_at,
+          m.id AS message_id,
           CASE
             WHEN LOWER(COALESCE(c.title, '')) LIKE $2 ESCAPE '\\' THEN -5.0
             ELSE 0.0
@@ -427,7 +429,11 @@ export function searchMessages(
           created_at,
           MAX(message_created_at) AS last_occurrence,
           COUNT(*) AS occurrence_count,
-          (-1.0 * COUNT(*)) + MIN(title_boost) AS rank
+          (-1.0 * COUNT(*)) + MIN(title_boost) AS rank,
+          (SELECT message_id FROM ranked_rows r2
+           WHERE r2.conversation_id = ranked_rows.conversation_id
+           ORDER BY r2.message_created_at ASC
+           LIMIT 1) AS first_match_message_id
         FROM ranked_rows
         GROUP BY conversation_id, title, source, created_at
       )
@@ -438,7 +444,8 @@ export function searchMessages(
         created_at,
         COALESCE(last_occurrence, 0) AS last_occurrence,
         occurrence_count,
-        rank
+        rank,
+        first_match_message_id
       FROM grouped
       ORDER BY ${orderBy}
       LIMIT ${safeLimit}
@@ -490,6 +497,7 @@ export function searchMessages(
         last_occurrence: row.last_occurrence,
         occurrence_count: row.occurrence_count,
         rank: row.rank,
+        first_match_message_id: row.first_match_message_id,
       });
     }
 
