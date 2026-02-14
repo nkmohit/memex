@@ -182,6 +182,7 @@ export interface ConversationRow {
   source: string;
   title: string;
   created_at: number;
+  last_message_at: number;
   message_count: number;
 }
 
@@ -295,14 +296,20 @@ export function getConversations(
     if (source) {
       return database.select<ConversationRow[]>(
         `SELECT
-           id,
-           source,
-           COALESCE(title, 'Untitled') AS title,
-           COALESCE(created_at, 0) AS created_at,
-           COALESCE(message_count, 0) AS message_count
-         FROM conversations
-         WHERE source = $1
-         ORDER BY created_at DESC
+           c.id,
+           c.source,
+           COALESCE(c.title, 'Untitled') AS title,
+           COALESCE(c.created_at, 0) AS created_at,
+           COALESCE(m.last_msg_time, c.created_at, 0) AS last_message_at,
+           COALESCE(c.message_count, 0) AS message_count
+         FROM conversations c
+         LEFT JOIN (
+           SELECT conversation_id, MAX(created_at) AS last_msg_time
+           FROM messages
+           GROUP BY conversation_id
+         ) m ON m.conversation_id = c.id
+         WHERE c.source = $1
+         ORDER BY last_message_at DESC
          LIMIT ${safeLimit}`,
         [source]
       );
@@ -310,13 +317,19 @@ export function getConversations(
 
     return database.select<ConversationRow[]>(
       `SELECT
-         id,
-         source,
-         COALESCE(title, 'Untitled') AS title,
-         COALESCE(created_at, 0) AS created_at,
-         COALESCE(message_count, 0) AS message_count
-       FROM conversations
-       ORDER BY created_at DESC
+         c.id,
+         c.source,
+         COALESCE(c.title, 'Untitled') AS title,
+         COALESCE(c.created_at, 0) AS created_at,
+         COALESCE(m.last_msg_time, c.created_at, 0) AS last_message_at,
+         COALESCE(c.message_count, 0) AS message_count
+       FROM conversations c
+       LEFT JOIN (
+         SELECT conversation_id, MAX(created_at) AS last_msg_time
+         FROM messages
+         GROUP BY conversation_id
+       ) m ON m.conversation_id = c.id
+       ORDER BY last_message_at DESC
        LIMIT ${safeLimit}`
     );
   });

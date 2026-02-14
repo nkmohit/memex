@@ -573,6 +573,7 @@ function App() {
           source: fromSearch.source,
           title: fromSearch.title || "Untitled",
           created_at: fromSearch.created_at,
+          last_message_at: fromSearch.last_occurrence,
           message_count: 0,
         },
         ...prev,
@@ -760,7 +761,7 @@ function App() {
                     <span className="conv-meta">
                       <span className="source-tag">{sourceLabel(c.source)}</span>
                       <span>{c.message_count} msgs</span>
-                      <span>{formatDate(c.created_at)}</span>
+                      <span>{formatDate(c.last_message_at)}</span>
                     </span>
                   </button>
                 ))}
@@ -822,7 +823,7 @@ function App() {
                           {sourceLabel(selectedConversation.source)}
                         </span>
                         <span>{viewerSearchOpen && messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
-                        <span>{formatDate(selectedConversation.created_at)}</span>
+                        <span>{formatDate(selectedConversation.last_message_at)}</span>
                       </p>
                     </div>
                   </div>
