@@ -757,13 +757,13 @@
 .viewer-search-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .viewer-search-count {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
-  min-width: 3ch;
+  min-width: 2.5ch;
   text-align: center;
 }
 
@@ -771,14 +771,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 4px;
   background: #ffffff;
   color: #374151;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;

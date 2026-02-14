@@ -111,7 +111,7 @@ function App() {
     if (!messageSearchQuery.trim()) setHighlightedMessageId(null);
   }, [messageSearchQuery, matchCount]);
 
-  // Scroll to and highlight the message at current match index
+  // Scroll to the highlighted text (first <mark>) in the current match
   useEffect(() => {
     if (!messageSearchQuery.trim() || matchCount === 0) return;
     const msg = filteredMessages[currentMatchIndex];
@@ -119,7 +119,8 @@ function App() {
     setHighlightedMessageId(msg.id);
     const el = messageRefs.current[msg.id];
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      const mark = el.querySelector("mark");
+      (mark || el).scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [messageSearchQuery, currentMatchIndex, matchCount, filteredMessages]);
 
@@ -559,7 +560,7 @@ function App() {
                       <span className="source-tag">
                         {sourceLabel(selectedConversation.source)}
                       </span>
-                      <span>{filteredMessages.length}{messageSearchQuery ? ` of ${messages.length}` : ""} messages</span>
+                      <span>{messageSearchQuery.trim() ? `${matchCount} of ${messages.length} matches` : `${messages.length} messages`}</span>
                       <span>{formatDate(selectedConversation.created_at)}</span>
                     </p>
                   </div>
@@ -599,33 +600,27 @@ function App() {
                     )}
                   </div>
                 </div>
-                {filteredMessages.length === 0 ? (
-                  <div className="viewer-empty">
-                    <p className="viewer-empty-text">No messages match your search.</p>
-                  </div>
-                ) : (
-                  <div className="msg-list">
-                    {filteredMessages.map((m) => (
-                      <article
-                        key={m.id}
-                        ref={(el) => {
-                          messageRefs.current[m.id] = el;
-                        }}
-                        className={`msg ${m.sender === "human" ? "human" : "assistant"}${
-                          highlightedMessageId === m.id ? " highlighted" : ""
-                        }`}
-                      >
-                        <div className="msg-top">
-                          <span className="sender-pill">
-                            {m.sender === "human" ? "You" : "Assistant"}
-                          </span>
-                          <time>{formatTimestamp(m.created_at)}</time>
-                        </div>
-                        <div className="msg-body">{highlightText(m.content, messageSearchQuery)}</div>
-                      </article>
-                    ))}
-                  </div>
-                )}
+                <div className="msg-list">
+                  {messages.map((m) => (
+                    <article
+                      key={m.id}
+                      ref={(el) => {
+                        messageRefs.current[m.id] = el;
+                      }}
+                      className={`msg ${m.sender === "human" ? "human" : "assistant"}${
+                        highlightedMessageId === m.id ? " highlighted" : ""
+                      }`}
+                    >
+                      <div className="msg-top">
+                        <span className="sender-pill">
+                          {m.sender === "human" ? "You" : "Assistant"}
+                        </span>
+                        <time>{formatTimestamp(m.created_at)}</time>
+                      </div>
+                      <div className="msg-body">{highlightText(m.content, messageSearchQuery)}</div>
+                    </article>
+                  ))}
+                </div>
               </>
             )}
           </main>
