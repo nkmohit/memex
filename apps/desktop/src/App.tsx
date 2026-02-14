@@ -30,7 +30,7 @@ function App() {
   // ---- source filter ----
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("conversations");
-  const [convFilter, setConvFilter] = useState("");
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
 
   // ---- search state ----
   const [searchPageQuery, setSearchPageQuery] = useState("");
@@ -69,14 +69,26 @@ function App() {
     [conversations, selectedConvId]
   );
 
-  const filteredConversations = useMemo(() => {
-    if (!convFilter.trim()) return conversations;
+  const filteredMessages = useMemo(() => {
+    if (!messageSearchQuery.trim()) return messages;
     
-    const filterLower = convFilter.toLowerCase();
-    return conversations.filter((c) =>
-      c.title.toLowerCase().includes(filterLower)
+    const queryLower = messageSearchQuery.toLowerCase();
+    return messages.filter((m) =>
+      m.content.toLowerCase().includes(queryLower)
     );
-  }, [conversations, convFilter]);
+  }, [messages, messageSearchQuery]);
+
+  // Helper to highlight search query in text
+  const highlightText = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    
+    const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() 
+        ? <mark key={i}>{part}</mark> 
+        : part
+    );
+  };
 
   // ---- close import menu on outside click ----
   useEffect(() => {
@@ -425,15 +437,8 @@ function App() {
             <div className="conv-panel-header">
               <div className="conv-header-top">
                 <h2>{activeSource ? sourceLabel(activeSource) : "All Conversations"}</h2>
-                <span className="conv-count">{filteredConversations.length}</span>
+                <span className="conv-count">{conversations.length}</span>
               </div>
-              <input
-                type="search"
-                className="conv-search-input"
-                placeholder="Filter conversations..."
-                value={convFilter}
-                onChange={(e) => setConvFilter(e.target.value)}
-              />
             </div>
 
             {loading ? (
@@ -442,13 +447,9 @@ function App() {
               <div className="empty-text">
                 No conversations yet. Import to get started.
               </div>
-            ) : filteredConversations.length === 0 ? (
-              <div className="empty-text">
-                No conversations match your filter.
-              </div>
             ) : (
               <div className="conv-list">
-                {filteredConversations.map((c) => (
+                {conversations.map((c) => (
                   <button
                     key={c.id}
                     ref={(element) => {
@@ -510,32 +511,47 @@ function App() {
                       <span className="source-tag">
                         {sourceLabel(selectedConversation.source)}
                       </span>
-                      <span>{messages.length} messages</span>
+                      <span>{filteredMessages.length}{messageSearchQuery ? ` of ${messages.length}` : ""} messages</span>
                       <span>{formatDate(selectedConversation.created_at)}</span>
                     </p>
                   </div>
+                  <div className="viewer-search">
+                    <input
+                      type="search"
+                      className="viewer-search-input"
+                      placeholder="Search in conversation..."
+                      value={messageSearchQuery}
+                      onChange={(e) => setMessageSearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="msg-list">
-                  {messages.map((m) => (
-                    <article
-                      key={m.id}
-                      ref={(el) => {
-                        messageRefs.current[m.id] = el;
-                      }}
-                      className={`msg ${m.sender === "human" ? "human" : "assistant"}${
-                        highlightedMessageId === m.id ? " highlighted" : ""
-                      }`}
-                    >
-                      <div className="msg-top">
-                        <span className="sender-pill">
-                          {m.sender === "human" ? "You" : "Assistant"}
-                        </span>
-                        <time>{formatTimestamp(m.created_at)}</time>
-                      </div>
-                      <div className="msg-body">{m.content}</div>
-                    </article>
-                  ))}
-                </div>
+                {filteredMessages.length === 0 ? (
+                  <div className="viewer-empty">
+                    <p className="viewer-empty-text">No messages match your search.</p>
+                  </div>
+                ) : (
+                  <div className="msg-list">
+                    {filteredMessages.map((m) => (
+                      <article
+                        key={m.id}
+                        ref={(el) => {
+                          messageRefs.current[m.id] = el;
+                        }}
+                        className={`msg ${m.sender === "human" ? "human" : "assistant"}${
+                          highlightedMessageId === m.id ? " highlighted" : ""
+                        }`}
+                      >
+                        <div className="msg-top">
+                          <span className="sender-pill">
+                            {m.sender === "human" ? "You" : "Assistant"}
+                          </span>
+                          <time>{formatTimestamp(m.created_at)}</time>
+                        </div>
+                        <div className="msg-body">{highlightText(m.content, messageSearchQuery)}</div>
+                      </article>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </main>

@@ -731,6 +731,28 @@
   color: #9ca3af;
 }
 
+.viewer-search {
+  display: flex;
+  align-items: center;
+}
+
+.viewer-search-input {
+  width: 240px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #111827;
+  background: #ffffff;
+}
+
+.viewer-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 .msg-list {
   flex: 1;
   overflow-y: auto;
@@ -789,6 +811,14 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.msg-body mark {
+  background: #fef08a;
+  color: #854d0e;
+  padding: 1px 2px;
+  border-radius: 2px;
+  font-weight: 600;
 }
 
 .msg.highlighted {
@@ -926,6 +956,17 @@
     color: #f1f5f9;
   }
 
+  .viewer-search-input {
+    background: #0f172a;
+    border-color: #475569;
+    color: #e2e8f0;
+  }
+
+  .viewer-search-input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+  }
+
   .msg.human {
     background: #312e81;
   }
@@ -945,6 +986,11 @@
 
   .msg-body {
     color: #e2e8f0;
+  }
+
+  .msg-body mark {
+    background: #713f12;
+    color: #fef08a;
   }
 
   .msg.highlighted {
