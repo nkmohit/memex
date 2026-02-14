@@ -38,8 +38,19 @@ export function formatDate(ts: number): string {
   const date = new Date(ts);
   if (Number.isNaN(date.getTime())) return "Unknown date";
 
+  const now = new Date();
+  const sameYear = date.getFullYear() === now.getFullYear();
+
+  if (sameYear) {
+    return date.toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+    });
+  }
+
   return date.toLocaleDateString([], {
     month: "short",
+    day: "numeric",
     year: "numeric",
   });
 }

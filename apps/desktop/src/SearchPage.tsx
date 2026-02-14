@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SearchResultRow, searchMessages } from "./db";
+import { SearchResultRow, getAllConversationsForSearch, searchMessages } from "./db";
 import { formatDate } from "./utils";
 
 interface SearchPageProps {
@@ -110,13 +110,49 @@ export default function SearchPage({
 
     async function runSearch() {
       if (!hasQuery) {
-        setResults([]);
-        setTotalMatches(0);
-        setLatencyMs(null);
+        // Load all conversations sorted by last message date when no query
         setError(null);
-        setSelectedIndex(-1);
-        setLoading(false);
-        setLoadingMore(false);
+        setLoading(true);
+        const start = performance.now();
+
+        try {
+          const response = await getAllConversationsForSearch({
+            ...searchParams,
+            limit: PAGE_SIZE,
+            offset: 0,
+          });
+          if (cancelled) return;
+          
+          // Convert ConversationListRow to SearchResultRow format
+          const convertedResults: SearchResultRow[] = response.rows.map(row => ({
+            conversation_id: row.conversation_id,
+            title: row.title,
+            source: row.source,
+            snippet: "",
+            snippets: [],
+            created_at: row.created_at,
+            last_occurrence: row.last_message_at,
+            occurrence_count: row.message_count,
+            rank: 0,
+            first_match_message_id: null,
+          }));
+          
+          setResults(convertedResults);
+          setTotalMatches(response.totalMatches);
+          setSelectedIndex(convertedResults.length > 0 ? 0 : -1);
+          setLatencyMs(Math.round(performance.now() - start));
+        } catch (err) {
+          if (cancelled) return;
+          setResults([]);
+          setTotalMatches(0);
+          setLatencyMs(null);
+          setError(err instanceof Error ? err.message : "Failed to load conversations");
+        } finally {
+          if (!cancelled) {
+            setLoading(false);
+            setLoadingMore(false);
+          }
+        }
         return;
       }
 
@@ -149,10 +185,8 @@ export default function SearchPage({
       }
     }
 
-    // Show loading state immediately if there's a query
-    if (hasQuery) {
-      setLoading(true);
-    }
+    // Show loading state immediately
+    setLoading(true);
 
     const timeoutId = window.setTimeout(() => {
       void runSearch();
@@ -263,17 +297,43 @@ export default function SearchPage({
   ]);
 
   async function handleLoadMore() {
-    if (loading || loadingMore || !hasQuery || results.length >= totalMatches) return;
+    if (loading || loadingMore || results.length >= totalMatches) return;
     setLoadingMore(true);
     setError(null);
     try {
-      const response = await searchMessages(query, {
-        ...searchParams,
-        limit: PAGE_SIZE,
-        offset: results.length,
-      });
-      setResults((prev) => [...prev, ...response.rows]);
-      setTotalMatches(response.totalMatches);
+      if (!hasQuery) {
+        // Load more conversations (browse mode)
+        const response = await getAllConversationsForSearch({
+          ...searchParams,
+          limit: PAGE_SIZE,
+          offset: results.length,
+        });
+        
+        const convertedResults: SearchResultRow[] = response.rows.map(row => ({
+          conversation_id: row.conversation_id,
+          title: row.title,
+          source: row.source,
+          snippet: "",
+          snippets: [],
+          created_at: row.created_at,
+          last_occurrence: row.last_message_at,
+          occurrence_count: row.message_count,
+          rank: 0,
+          first_match_message_id: null,
+        }));
+        
+        setResults((prev) => [...prev, ...convertedResults]);
+        setTotalMatches(response.totalMatches);
+      } else {
+        // Load more search results
+        const response = await searchMessages(query, {
+          ...searchParams,
+          limit: PAGE_SIZE,
+          offset: results.length,
+        });
+        setResults((prev) => [...prev, ...response.rows]);
+        setTotalMatches(response.totalMatches);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     } finally {
@@ -338,10 +398,21 @@ export default function SearchPage({
         </div>
 
         <div className="search-meta">
-          {!hasQuery ? (
-            <span>Enter a query to search your imported messages.</span>
-          ) : loading && results.length === 0 ? (
-            <span className="search-loading">Searching... · {searchContext}{dateContext ? ` · ${dateContext}` : ""}</span>
+          {loading && results.length === 0 ? (
+            <span className="search-loading">{hasQuery ? "Searching" : "Loading"}... · {searchContext}{dateContext ? ` · ${dateContext}` : ""}</span>
+          ) : !hasQuery ? (
+            <>
+              <span>
+                {loading && <span className="search-loading-indicator">⟳ </span>}
+                {`Showing ${results.length} of ${totalMatches} conversations`}
+              </span>
+              <span>
+                {`All conversations sorted by last message`}
+                {` · ${searchContext}`}
+                {dateContext ? ` · ${dateContext}` : ""}
+                {latencyMs !== null ? ` · ${latencyMs} ms` : ""}
+              </span>
+            </>
           ) : (
             <>
               <span>
@@ -386,23 +457,32 @@ export default function SearchPage({
             >
               <div className="search-result-header">
                 <div className="search-result-title">{row.title || "Untitled"}</div>
-                <div className="search-result-occurrences">
-                  {row.occurrence_count}{" "}
-                  {row.occurrence_count === 1 ? "occurrence" : "occurrences"}
-                </div>
-              </div>
-              <div className="search-result-snippets">
-                {(row.snippets.length > 0 ? row.snippets : [row.snippet]).map(
-                  (snippet, snippetIndex) => (
-                  <div
-                    key={`${row.conversation_id}-snippet-${snippetIndex}`}
-                    className="search-result-snippet"
-                  >
-                    {renderHighlightedSnippet(snippet)}
+                {hasQuery ? (
+                  <div className="search-result-occurrences">
+                    {row.occurrence_count}{" "}
+                    {row.occurrence_count === 1 ? "occurrence" : "occurrences"}
                   </div>
-                  )
+                ) : (
+                  <div className="search-result-occurrences">
+                    {row.occurrence_count}{" "}
+                    {row.occurrence_count === 1 ? "message" : "messages"}
+                  </div>
                 )}
               </div>
+              {hasQuery && (
+                <div className="search-result-snippets">
+                  {(row.snippets.length > 0 ? row.snippets : [row.snippet]).map(
+                    (snippet, snippetIndex) => (
+                    <div
+                      key={`${row.conversation_id}-snippet-${snippetIndex}`}
+                      className="search-result-snippet"
+                    >
+                      {renderHighlightedSnippet(snippet)}
+                    </div>
+                    )
+                  )}
+                </div>
+              )}
               <div className="search-result-meta">
                 <span className="source-tag">{sourceLabel(row.source)}</span>
                 <span>{formatDate(row.last_occurrence)}</span>
@@ -411,7 +491,7 @@ export default function SearchPage({
           ))
         )}
 
-        {hasQuery && !loading && results.length > 0 && totalMatches > results.length && (
+        {!loading && results.length > 0 && totalMatches > results.length && (
           <button
             type="button"
             className="search-load-more-btn"

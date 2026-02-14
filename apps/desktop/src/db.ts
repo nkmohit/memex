@@ -320,6 +320,95 @@ export function getConversations(
   });
 }
 
+export interface ConversationListRow {
+  conversation_id: string;
+  title: string;
+  source: string;
+  created_at: number;
+  last_message_at: number;
+  message_count: number;
+}
+
+export function getAllConversationsForSearch(
+  opts: {
+    source?: string;
+    dateFrom?: number;
+    dateTo?: number;
+    limit?: number;
+    offset?: number;
+  } = {}
+): Promise<{ rows: ConversationListRow[]; totalMatches: number }> {
+  return withDbLock(async () => {
+    const database = await getDb();
+
+    const safeLimit = Number.isFinite(opts.limit)
+      ? Math.max(1, Math.min(100, Math.floor(opts.limit as number)))
+      : 50;
+    const safeOffset = Number.isFinite(opts.offset)
+      ? Math.max(0, Math.floor(opts.offset as number))
+      : 0;
+
+    let whereClause = "1=1";
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (opts.source) {
+      whereClause += ` AND c.source = $${paramIndex}`;
+      params.push(opts.source);
+      paramIndex += 1;
+    }
+
+    if (typeof opts.dateFrom === "number") {
+      whereClause += ` AND COALESCE(last_msg_time, 0) >= $${paramIndex}`;
+      params.push(opts.dateFrom);
+      paramIndex += 1;
+    }
+
+    if (typeof opts.dateTo === "number") {
+      whereClause += ` AND COALESCE(last_msg_time, 0) <= $${paramIndex}`;
+      params.push(opts.dateTo);
+      paramIndex += 1;
+    }
+
+    const countSql = `SELECT COUNT(*) AS total
+      FROM conversations c
+      LEFT JOIN (
+        SELECT conversation_id, MAX(created_at) AS last_msg_time
+        FROM messages
+        GROUP BY conversation_id
+      ) m ON m.conversation_id = c.id
+      WHERE ${whereClause}`;
+
+    const rowsSql = `SELECT
+        c.id AS conversation_id,
+        COALESCE(c.title, 'Untitled') AS title,
+        c.source AS source,
+        COALESCE(c.created_at, 0) AS created_at,
+        COALESCE(m.last_msg_time, c.created_at, 0) AS last_message_at,
+        COALESCE(c.message_count, 0) AS message_count
+      FROM conversations c
+      LEFT JOIN (
+        SELECT conversation_id, MAX(created_at) AS last_msg_time
+        FROM messages
+        GROUP BY conversation_id
+      ) m ON m.conversation_id = c.id
+      WHERE ${whereClause}
+      ORDER BY last_message_at DESC
+      LIMIT ${safeLimit}
+      OFFSET ${safeOffset}`;
+
+    const [countRows, rows] = await Promise.all([
+      database.select<{ total: number }[]>(countSql, params),
+      database.select<ConversationListRow[]>(rowsSql, params),
+    ]);
+
+    return {
+      rows,
+      totalMatches: countRows[0]?.total ?? 0,
+    };
+  });
+}
+
 export function getMessages(
   conversationId: string
 ): Promise<MessageRow[]> {
