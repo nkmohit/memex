@@ -224,19 +224,18 @@ export default function SearchPage({
 
   useEffect(() => {
     function handleKeyboardNav(event: KeyboardEvent) {
-      if (!hasQuery || loading || results.length === 0) {
-        if (event.key === "Escape" && hasQuery) {
+      // Escape: only remove selection / blur search input, do not clear the query
+      if (event.key === "Escape") {
+        const searchInput = searchInputRef.current;
+        if (searchInput && document.activeElement === searchInput) {
           event.preventDefault();
-          onQueryChange("");
-          setResults([]);
-          setTotalMatches(0);
-          setTotalOccurrences(0);
-          setSelectedIndex(-1);
-          setLatencyMs(null);
-          searchInputRef.current?.focus();
+          searchInput.blur();
+          searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
         }
         return;
       }
+
+      if (!hasQuery || loading || results.length === 0) return;
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -255,24 +254,12 @@ export default function SearchPage({
         if (!selected) return;
         event.preventDefault();
         onOpenConversation(selected.conversation_id, query, selected.first_match_message_id);
-        return;
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onQueryChange("");
-        setResults([]);
-        setTotalMatches(0);
-        setTotalOccurrences(0);
-        setSelectedIndex(-1);
-        setLatencyMs(null);
-        searchInputRef.current?.focus();
       }
     }
 
     document.addEventListener("keydown", handleKeyboardNav);
     return () => document.removeEventListener("keydown", handleKeyboardNav);
-  }, [hasQuery, loading, onOpenConversation, onQueryChange, query, results, selectedIndex]);
+  }, [hasQuery, loading, onOpenConversation, query, results, selectedIndex]);
 
   const searchContext = source
     ? `Searching in ${sourceLabel(source)}`

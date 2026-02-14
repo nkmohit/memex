@@ -75,6 +75,7 @@ function App() {
   const [activeView, setActiveView] = useState<ActiveView>("conversations");
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
+  const [viewerSearchOpen, setViewerSearchOpen] = useState(false);
   const viewerSearchInputRef = useRef<HTMLInputElement>(null);
 
   // ---- search state (initialized from persisted state if present) ----
@@ -174,22 +175,19 @@ function App() {
     };
   }, []);
 
-  function copyMessageToClipboard(m: MessageRow) {
-    const sender = m.sender === "human" ? "You" : "Assistant";
+  function copyMessageToClipboard(m: MessageRow, assistantLabel: string) {
+    const sender = m.sender === "human" ? "You" : assistantLabel;
     const line = `${sender} (${formatTimestamp(m.created_at)}): ${m.content}`;
     copyToClipboard(line).then((ok) => ok && showCopyToast("Copied"));
   }
 
-  function copyConversationToClipboard(format: "plain" | "markdown" = "plain") {
+  function copyConversationToClipboard(assistantLabel: string) {
     const lines = messages.map((m) => {
-      const sender = m.sender === "human" ? "You" : "Assistant";
+      const sender = m.sender === "human" ? "You" : assistantLabel;
       const ts = formatTimestamp(m.created_at);
-      if (format === "markdown") {
-        return `**${sender}** (${ts}):\n\n${m.content}`;
-      }
-      return `${sender} (${ts}): ${m.content}`;
+      return `**${sender}** (${ts}):\n\n${m.content}`;
     });
-    const text = format === "markdown" ? lines.join("\n\n") : lines.join("\n\n");
+    const text = lines.join("\n\n");
     copyToClipboard(text).then((ok) => ok && showCopyToast("Copied"));
   }
 
@@ -271,27 +269,37 @@ function App() {
     }
   }, [messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
 
-  // Keyboard: Up/Down/Enter navigate between occurrences; Escape blurs search (keeps query)
+  // Focus viewer search input when search panel opens
+  useEffect(() => {
+    if (viewerSearchOpen && selectedConvId) {
+      const id = setTimeout(() => {
+        viewerSearchInputRef.current?.focus();
+        viewerSearchInputRef.current?.select();
+      }, 0);
+      return () => clearTimeout(id);
+    }
+  }, [viewerSearchOpen, selectedConvId]);
+
+  // Keyboard: Up/Down/Enter navigate between occurrences; Escape closes search UI (keeps query)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const inViewer = (e.target as Node)?.parentElement?.closest(".viewer");
       if (!inViewer) return;
 
       if (e.key === "Escape") {
-        const searchInput = viewerSearchInputRef.current;
-        if (searchInput && document.activeElement === searchInput) {
+        if (viewerSearchOpen) {
           e.preventDefault();
-          searchInput.blur();
-          searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
-        } else if (messageSearchQuery.trim()) {
-          e.preventDefault();
-          setMessageSearchQuery("");
-          setMessageSearchMatchIndex(0);
+          const searchInput = viewerSearchInputRef.current;
+          if (searchInput) {
+            searchInput.blur();
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+          }
+          setViewerSearchOpen(false);
         }
         return;
       }
 
-      if (!messageSearchQuery.trim() || matchCount <= 0) return;
+      if (!viewerSearchOpen || !messageSearchQuery.trim() || matchCount <= 0) return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
         goToPrevMatch();
@@ -310,7 +318,7 @@ function App() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
+  }, [viewerSearchOpen, messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
 
   // ---- close import menu on outside click ----
   useEffect(() => {
@@ -439,8 +447,7 @@ function App() {
       if (key === "f") {
         event.preventDefault();
         if (activeView === "conversations" && selectedConvId) {
-          viewerSearchInputRef.current?.focus();
-          viewerSearchInputRef.current?.select();
+          setViewerSearchOpen(true);
         }
       }
     }
@@ -561,7 +568,8 @@ function App() {
 
     await handleConversationClick(conversationId, messageId);
 
-    // Focus the conversation search bar and select its text so it stays "selected"
+    // Open and focus the conversation search bar with the query pre-filled
+    setViewerSearchOpen(true);
     setTimeout(() => {
       viewerSearchInputRef.current?.focus();
       viewerSearchInputRef.current?.select();
@@ -803,67 +811,63 @@ function App() {
                     </div>
                   </div>
                   <div className="viewer-header-actions">
-                    <div className="viewer-copy-conv-wrapper">
+                    <button
+                      type="button"
+                      className="viewer-copy-conv-btn"
+                      onClick={() => copyConversationToClipboard(sourceLabel(selectedConversation.source))}
+                      title="Copy conversation (Markdown)"
+                    >
+                      Copy conversation
+                    </button>
+                    {viewerSearchOpen ? (
+                      <div className="viewer-search">
+                        <input
+                          ref={viewerSearchInputRef}
+                          type="search"
+                          className="viewer-search-input"
+                          placeholder="Search in conversation..."
+                          value={messageSearchQuery}
+                          onChange={(e) => setMessageSearchQuery(e.target.value)}
+                        />
+                        {messageSearchQuery.trim() && matchCount > 0 && (
+                          <div className="viewer-search-nav">
+                            <span className="viewer-search-count">
+                              {currentMatchIndex + 1} of {matchCount}
+                            </span>
+                            <button
+                              type="button"
+                              className="viewer-search-nav-btn"
+                              onClick={goToPrevMatch}
+                              title="Previous match"
+                              aria-label="Previous match"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="viewer-search-nav-btn"
+                              onClick={goToNextMatch}
+                              title="Next match"
+                              aria-label="Next match"
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        )}
+                        {messageSearchQuery.trim() && matchCount === 0 && (
+                          <span className="viewer-search-no-results">No results</span>
+                        )}
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        className="viewer-copy-conv-btn"
-                        onClick={() => copyConversationToClipboard("plain")}
-                        title="Copy conversation (plain text)"
+                        className="viewer-search-icon-btn"
+                        onClick={() => setViewerSearchOpen(true)}
+                        title="Search in conversation (⌘F)"
+                        aria-label="Search in conversation"
                       >
-                        Copy conversation
+                        <span className="viewer-search-icon" aria-hidden="true">⌕</span>
                       </button>
-                      <select
-                        className="viewer-copy-conv-format"
-                        aria-label="Copy format"
-                        value=""
-                        onChange={(e) => {
-                          const v = e.target.value as "plain" | "markdown";
-                          if (v) copyConversationToClipboard(v);
-                          e.target.value = "";
-                        }}
-                      >
-                        <option value="">▼</option>
-                        <option value="plain">Plain text</option>
-                        <option value="markdown">Markdown</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="viewer-search">
-                    <input
-                      ref={viewerSearchInputRef}
-                      type="search"
-                      className="viewer-search-input"
-                      placeholder="Search in conversation..."
-                      value={messageSearchQuery}
-                      onChange={(e) => setMessageSearchQuery(e.target.value)}
-                    />
-                    {messageSearchQuery.trim() && matchCount > 0 && (
-                      <div className="viewer-search-nav">
-                        <span className="viewer-search-count">
-                          {currentMatchIndex + 1} of {matchCount}
-                        </span>
-                        <button
-                          type="button"
-                          className="viewer-search-nav-btn"
-                          onClick={goToPrevMatch}
-                          title="Previous match"
-                          aria-label="Previous match"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="viewer-search-nav-btn"
-                          onClick={goToNextMatch}
-                          title="Next match"
-                          aria-label="Next match"
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    )}
-                    {messageSearchQuery.trim() && matchCount === 0 && (
-                      <span className="viewer-search-no-results">No results</span>
                     )}
                   </div>
                 </div>
@@ -885,14 +889,14 @@ function App() {
                     >
                       <div className="msg-top">
                         <span className="sender-pill">
-                          {m.sender === "human" ? "You" : "Assistant"}
+                          {m.sender === "human" ? "You" : sourceLabel(selectedConversation.source)}
                         </span>
                         <span className="msg-top-right">
                           <time>{formatTimestamp(m.created_at)}</time>
                           <button
                             type="button"
                             className="msg-copy-btn"
-                            onClick={() => copyMessageToClipboard(m)}
+                            onClick={() => copyMessageToClipboard(m, sourceLabel(selectedConversation.source))}
                             title="Copy message"
                             aria-label="Copy message"
                           >
