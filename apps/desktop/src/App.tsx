@@ -31,6 +31,8 @@ function App() {
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("conversations");
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
+  const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
+  const viewerSearchInputRef = useRef<HTMLInputElement>(null);
 
   // ---- search state ----
   const [searchPageQuery, setSearchPageQuery] = useState("");
@@ -89,6 +91,52 @@ function App() {
         : part
     );
   };
+
+  const matchCount = filteredMessages.length;
+  const currentMatchIndex = Math.min(messageSearchMatchIndex, Math.max(0, matchCount - 1));
+
+  const goToPrevMatch = useCallback(() => {
+    if (matchCount <= 0) return;
+    setMessageSearchMatchIndex((i) => (i <= 0 ? matchCount - 1 : i - 1));
+  }, [matchCount]);
+
+  const goToNextMatch = useCallback(() => {
+    if (matchCount <= 0) return;
+    setMessageSearchMatchIndex((i) => (i >= matchCount - 1 ? 0 : i + 1));
+  }, [matchCount]);
+
+  // When query or filtered list changes, reset to first match
+  useEffect(() => {
+    setMessageSearchMatchIndex(0);
+    if (!messageSearchQuery.trim()) setHighlightedMessageId(null);
+  }, [messageSearchQuery, matchCount]);
+
+  // Scroll to and highlight the message at current match index
+  useEffect(() => {
+    if (!messageSearchQuery.trim() || matchCount === 0) return;
+    const msg = filteredMessages[currentMatchIndex];
+    if (!msg) return;
+    setHighlightedMessageId(msg.id);
+    const el = messageRefs.current[msg.id];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [messageSearchQuery, currentMatchIndex, matchCount, filteredMessages]);
+
+  // Keyboard: Up/Down navigate between matches when searching in conversation
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!messageSearchQuery.trim() || matchCount <= 0) return;
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      const inViewer = (e.target as Node)?.parentElement?.closest(".viewer");
+      if (!inViewer) return;
+      e.preventDefault();
+      if (e.key === "ArrowUp") goToPrevMatch();
+      else goToNextMatch();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
 
   // ---- close import menu on outside click ----
   useEffect(() => {
@@ -517,12 +565,38 @@ function App() {
                   </div>
                   <div className="viewer-search">
                     <input
+                      ref={viewerSearchInputRef}
                       type="search"
                       className="viewer-search-input"
                       placeholder="Search in conversation..."
                       value={messageSearchQuery}
                       onChange={(e) => setMessageSearchQuery(e.target.value)}
                     />
+                    {messageSearchQuery.trim() && matchCount > 0 && (
+                      <div className="viewer-search-nav">
+                        <span className="viewer-search-count">
+                          {currentMatchIndex + 1} of {matchCount}
+                        </span>
+                        <button
+                          type="button"
+                          className="viewer-search-nav-btn"
+                          onClick={goToPrevMatch}
+                          title="Previous match"
+                          aria-label="Previous match"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="viewer-search-nav-btn"
+                          onClick={goToNextMatch}
+                          title="Next match"
+                          aria-label="Next match"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {filteredMessages.length === 0 ? (
