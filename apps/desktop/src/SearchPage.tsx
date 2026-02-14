@@ -106,7 +106,7 @@ export default function SearchPage({
 
   useEffect(() => {
     let cancelled = false;
-    const debounceMs = 300;
+    const debounceMs = 250;
 
     async function runSearch() {
       if (!hasQuery) {
@@ -121,6 +121,7 @@ export default function SearchPage({
       }
 
       setError(null);
+      setLoading(true);
       const start = performance.now();
 
       try {
@@ -148,8 +149,12 @@ export default function SearchPage({
       }
     }
 
-    const timeoutId = window.setTimeout(() => {
+    // Show loading state immediately if there's a query
+    if (hasQuery) {
       setLoading(true);
+    }
+
+    const timeoutId = window.setTimeout(() => {
       void runSearch();
     }, debounceMs);
 
@@ -335,11 +340,14 @@ export default function SearchPage({
         <div className="search-meta">
           {!hasQuery ? (
             <span>Enter a query to search your imported messages.</span>
-          ) : loading ? (
-            <span>Searching... · {searchContext}{dateContext ? ` · ${dateContext}` : ""}</span>
+          ) : loading && results.length === 0 ? (
+            <span className="search-loading">Searching... · {searchContext}{dateContext ? ` · ${dateContext}` : ""}</span>
           ) : (
             <>
-              <span>{`Showing top ${results.length} of ${totalMatches} conversations`}</span>
+              <span>
+                {loading && <span className="search-loading-indicator">⟳ </span>}
+                {`Showing top ${results.length} of ${totalMatches} conversations`}
+              </span>
               <span>
                 {`${loadedOccurrences} occurrences loaded`}
                 {` · ${searchContext}`}

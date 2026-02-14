@@ -506,6 +506,26 @@
   gap: 2px;
 }
 
+.search-loading {
+  color: #3b82f6;
+}
+
+.search-loading-indicator {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .search-results {
   flex: 1;
   overflow-y: auto;
@@ -1000,6 +1020,14 @@
   .search-meta,
   .search-filters label {
     color: #94a3b8;
+  }
+
+  .search-loading {
+    color: #60a5fa;
+  }
+
+  .search-loading-indicator {
+    color: #60a5fa;
   }
 
   .search-result {
