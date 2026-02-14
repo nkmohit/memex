@@ -77,6 +77,7 @@ export default function SearchPage({
   const [sort, setSort] = useState(snapshot.sort);
   const [results, setResults] = useState<SearchResultRow[]>(snapshot.results);
   const [totalMatches, setTotalMatches] = useState(snapshot.totalMatches);
+  const [totalOccurrences, setTotalOccurrences] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,20 +134,23 @@ export default function SearchPage({
             created_at: row.created_at,
             last_occurrence: row.last_message_at,
             occurrence_count: row.message_count,
+            message_match_count: 0,
             rank: 0,
             first_match_message_id: null,
           }));
           
           setResults(convertedResults);
           setTotalMatches(response.totalMatches);
+          setTotalOccurrences(0);
           setSelectedIndex(convertedResults.length > 0 ? 0 : -1);
           setLatencyMs(Math.round(performance.now() - start));
         } catch (err) {
-          if (cancelled) return;
-          setResults([]);
-          setTotalMatches(0);
-          setLatencyMs(null);
-          setError(err instanceof Error ? err.message : "Failed to load conversations");
+        if (cancelled) return;
+        setResults([]);
+        setTotalMatches(0);
+        setTotalOccurrences(0);
+        setLatencyMs(null);
+        setError(err instanceof Error ? err.message : "Failed to load conversations");
         } finally {
           if (!cancelled) {
             setLoading(false);
@@ -169,12 +173,14 @@ export default function SearchPage({
         if (cancelled) return;
         setResults(response.rows);
         setTotalMatches(response.totalMatches);
+        setTotalOccurrences(response.totalOccurrences ?? 0);
         setSelectedIndex(response.rows.length > 0 ? 0 : -1);
         setLatencyMs(Math.round(performance.now() - start));
       } catch (err) {
         if (cancelled) return;
         setResults([]);
         setTotalMatches(0);
+        setTotalOccurrences(0);
         setLatencyMs(null);
         setError(err instanceof Error ? err.message : "Search failed");
       } finally {
@@ -218,6 +224,7 @@ export default function SearchPage({
           onQueryChange("");
           setResults([]);
           setTotalMatches(0);
+          setTotalOccurrences(0);
           setSelectedIndex(-1);
           setLatencyMs(null);
           searchInputRef.current?.focus();
@@ -250,6 +257,7 @@ export default function SearchPage({
         onQueryChange("");
         setResults([]);
         setTotalMatches(0);
+        setTotalOccurrences(0);
         setSelectedIndex(-1);
         setLatencyMs(null);
         searchInputRef.current?.focus();
@@ -270,10 +278,6 @@ export default function SearchPage({
       : dateTo
         ? `Date range: up to ${dateTo}`
         : null;
-  const loadedOccurrences = useMemo(
-    () => results.reduce((total, row) => total + row.occurrence_count, 0),
-    [results]
-  );
 
   useEffect(() => {
     onSnapshotChange({
@@ -318,6 +322,7 @@ export default function SearchPage({
           created_at: row.created_at,
           last_occurrence: row.last_message_at,
           occurrence_count: row.message_count,
+          message_match_count: 0,
           rank: 0,
           first_match_message_id: null,
         }));
@@ -420,7 +425,7 @@ export default function SearchPage({
                 {`Showing top ${results.length} of ${totalMatches} conversations`}
               </span>
               <span>
-                {`${loadedOccurrences} occurrence${loadedOccurrences !== 1 ? "s" : ""} in ${results.length} conversation${results.length !== 1 ? "s" : ""}`}
+                {`${totalOccurrences} occurrence${totalOccurrences !== 1 ? "s" : ""} in ${totalMatches} conversation${totalMatches !== 1 ? "s" : ""}`}
                 {` · ${searchContext}`}
                 {dateContext ? ` · ${dateContext}` : ""}
                 {latencyMs !== null ? ` · ${latencyMs} ms` : ""}
@@ -461,6 +466,9 @@ export default function SearchPage({
                   <div className="search-result-occurrences">
                     {row.occurrence_count}{" "}
                     {row.occurrence_count === 1 ? "occurrence" : "occurrences"}
+                    {" in "}
+                    {row.message_match_count}{" "}
+                    {row.message_match_count === 1 ? "message" : "messages"}
                   </div>
                 ) : (
                   <div className="search-result-occurrences">

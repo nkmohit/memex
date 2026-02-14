@@ -201,6 +201,7 @@ export interface SearchResultRow {
   created_at: number;
   last_occurrence: number;
   occurrence_count: number;
+  message_match_count: number;
   rank: number;
   first_match_message_id: string | null;
 }
@@ -208,6 +209,7 @@ export interface SearchResultRow {
 export interface SearchMessagesResult {
   rows: SearchResultRow[];
   totalMatches: number;
+  totalOccurrences: number;
 }
 
 export interface SearchOptions {
@@ -435,11 +437,11 @@ export function searchMessages(
 ): Promise<SearchMessagesResult> {
   const rawQuery = query.trim();
   if (!rawQuery) {
-    return Promise.resolve({ rows: [], totalMatches: 0 });
+    return Promise.resolve({ rows: [], totalMatches: 0, totalOccurrences: 0 });
   }
   const normalizedQuery = normalizeQuery(rawQuery);
   if (!normalizedQuery) {
-    return Promise.resolve({ rows: [], totalMatches: 0 });
+    return Promise.resolve({ rows: [], totalMatches: 0, totalOccurrences: 0 });
   }
 
   return withDbLock(async () => {
@@ -455,8 +457,9 @@ export function searchMessages(
     const titleLikeParam = `%${escapeLikePattern(rawQuery.toLowerCase())}%`;
 
     let whereClause = "messages_fts MATCH $1";
-    const params: unknown[] = [normalizedQuery, titleLikeParam];
-    let paramIndex = 3;
+    const rawQueryLower = rawQuery.toLowerCase();
+    const params: unknown[] = [normalizedQuery, titleLikeParam, rawQueryLower];
+    let paramIndex = 4;
 
     if (opts.source) {
       whereClause += ` AND c.source = $${paramIndex}`;
@@ -482,6 +485,14 @@ export function searchMessages(
       JOIN messages m ON m.id = messages_fts.message_id
       WHERE ${whereClause}`;
 
+    const totalOccurrencesSql = `SELECT COALESCE(CAST(SUM(
+        (LENGTH(LOWER(m.content)) - LENGTH(REPLACE(LOWER(m.content), $3, ''))) / NULLIF(LENGTH($3), 0)
+      ) AS INTEGER), 0) AS total
+      FROM messages_fts
+      JOIN conversations c ON c.id = messages_fts.conversation_id
+      JOIN messages m ON m.id = messages_fts.message_id
+      WHERE ${whereClause}`;
+
     let orderBy = "last_occurrence DESC, rank ASC";
     if (sort === "relevance") {
       orderBy = "rank ASC, last_occurrence DESC";
@@ -501,6 +512,7 @@ export function searchMessages(
           COALESCE(c.created_at, 0) AS created_at,
           COALESCE(m.created_at, 0) AS message_created_at,
           m.id AS message_id,
+          (LENGTH(LOWER(m.content)) - LENGTH(REPLACE(LOWER(m.content), $3, ''))) / NULLIF(LENGTH($3), 0) AS occurrence_in_message,
           CASE
             WHEN LOWER(COALESCE(c.title, '')) LIKE $2 ESCAPE '\\' THEN -5.0
             ELSE 0.0
@@ -517,8 +529,9 @@ export function searchMessages(
           source,
           created_at,
           MAX(message_created_at) AS last_occurrence,
-          COUNT(*) AS occurrence_count,
-          (-1.0 * COUNT(*)) + MIN(title_boost) AS rank,
+          CAST(SUM(occurrence_in_message) AS INTEGER) AS occurrence_count,
+          COUNT(DISTINCT message_id) AS message_match_count,
+          (-1.0 * SUM(occurrence_in_message)) + MIN(title_boost) AS rank,
           (SELECT message_id FROM ranked_rows r2
            WHERE r2.conversation_id = ranked_rows.conversation_id
            ORDER BY r2.message_created_at ASC
@@ -533,6 +546,7 @@ export function searchMessages(
         created_at,
         COALESCE(last_occurrence, 0) AS last_occurrence,
         occurrence_count,
+        message_match_count,
         rank,
         first_match_message_id
       FROM grouped
@@ -540,8 +554,9 @@ export function searchMessages(
       LIMIT ${safeLimit}
       OFFSET ${safeOffset}`;
 
-    const [countRows, rawRows] = await Promise.all([
+    const [countRows, totalOccurrencesRows, rawRows] = await Promise.all([
       database.select<{ total: number }[]>(countSql, params),
+      database.select<{ total: number }[]>(totalOccurrencesSql, params),
       database.select<Omit<SearchResultRow, "snippet" | "snippets">[]>(rowsSql, params),
     ]);
     const rows: SearchResultRow[] = [];
@@ -585,6 +600,7 @@ export function searchMessages(
         created_at: row.created_at,
         last_occurrence: row.last_occurrence,
         occurrence_count: row.occurrence_count,
+        message_match_count: row.message_match_count,
         rank: row.rank,
         first_match_message_id: row.first_match_message_id,
       });
@@ -593,6 +609,7 @@ export function searchMessages(
     return {
       rows,
       totalMatches: countRows[0]?.total ?? 0,
+      totalOccurrences: totalOccurrencesRows[0]?.total ?? 0,
     };
   });
 }
