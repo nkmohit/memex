@@ -71,13 +71,21 @@ function App() {
     [conversations, selectedConvId]
   );
 
-  const filteredMessages = useMemo(() => {
-    if (!messageSearchQuery.trim()) return messages;
-    
-    const queryLower = messageSearchQuery.toLowerCase();
-    return messages.filter((m) =>
-      m.content.toLowerCase().includes(queryLower)
-    );
+  // One entry per occurrence of the search query (across all messages)
+  const occurrences = useMemo(() => {
+    if (!messageSearchQuery.trim()) return [];
+    const escaped = messageSearchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(escaped, "gi");
+    const result: { messageId: string; localIndex: number }[] = [];
+    for (const m of messages) {
+      re.lastIndex = 0;
+      let count = 0;
+      while (re.exec(m.content) !== null) {
+        result.push({ messageId: m.id, localIndex: count });
+        count += 1;
+      }
+    }
+    return result;
   }, [messages, messageSearchQuery]);
 
   // Helper to highlight search query in text
@@ -92,7 +100,7 @@ function App() {
     );
   };
 
-  const matchCount = filteredMessages.length;
+  const matchCount = occurrences.length;
   const currentMatchIndex = Math.min(messageSearchMatchIndex, Math.max(0, matchCount - 1));
 
   const goToPrevMatch = useCallback(() => {
@@ -105,35 +113,47 @@ function App() {
     setMessageSearchMatchIndex((i) => (i >= matchCount - 1 ? 0 : i + 1));
   }, [matchCount]);
 
-  // When query or filtered list changes, reset to first match
+  // When query or occurrence list changes, reset to first match
   useEffect(() => {
     setMessageSearchMatchIndex(0);
     if (!messageSearchQuery.trim()) setHighlightedMessageId(null);
   }, [messageSearchQuery, matchCount]);
 
-  // Scroll to the highlighted text (first <mark>) in the current match
+  // Scroll to the specific occurrence (Nth <mark> in the message)
   useEffect(() => {
     if (!messageSearchQuery.trim() || matchCount === 0) return;
-    const msg = filteredMessages[currentMatchIndex];
-    if (!msg) return;
-    setHighlightedMessageId(msg.id);
-    const el = messageRefs.current[msg.id];
+    const occ = occurrences[currentMatchIndex];
+    if (!occ) return;
+    setHighlightedMessageId(occ.messageId);
+    const el = messageRefs.current[occ.messageId];
     if (el) {
-      const mark = el.querySelector("mark");
+      const marks = el.querySelectorAll("mark");
+      const mark = marks[occ.localIndex] ?? marks[0];
       (mark || el).scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [messageSearchQuery, currentMatchIndex, matchCount, filteredMessages]);
+  }, [messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
 
-  // Keyboard: Up/Down navigate between matches when searching in conversation
+  // Keyboard: Up/Down/Enter navigate between occurrences when searching in conversation
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (!messageSearchQuery.trim() || matchCount <= 0) return;
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
       const inViewer = (e.target as Node)?.parentElement?.closest(".viewer");
       if (!inViewer) return;
-      e.preventDefault();
-      if (e.key === "ArrowUp") goToPrevMatch();
-      else goToNextMatch();
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        goToPrevMatch();
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        goToNextMatch();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (e.shiftKey) goToPrevMatch();
+        else goToNextMatch();
+      }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -234,16 +254,24 @@ function App() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      const key = event.key.toLowerCase();
+      if (key === "k") {
         event.preventDefault();
         setActiveView("search");
         setSearchFocusRequestId(Date.now());
+      }
+      if (key === "f") {
+        event.preventDefault();
+        if (activeView === "conversations" && selectedConvId) {
+          viewerSearchInputRef.current?.focus();
+        }
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [activeView, selectedConvId]);
 
   // ---- import ----
   async function handleImportSource(source: ImportSource) {
@@ -560,7 +588,7 @@ function App() {
                       <span className="source-tag">
                         {sourceLabel(selectedConversation.source)}
                       </span>
-                      <span>{messageSearchQuery.trim() ? `${matchCount} of ${messages.length} matches` : `${messages.length} messages`}</span>
+                      <span>{messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
                       <span>{formatDate(selectedConversation.created_at)}</span>
                     </p>
                   </div>
