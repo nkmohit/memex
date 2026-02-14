@@ -352,17 +352,6 @@ function App() {
 
         {/* Import/Clear controls */}
         <div className="nav-bottom">
-          <div className="nav-stats">
-            <span>{stats?.conversationCount ?? 0} convs</span>
-            <span>{stats?.messageCount ?? 0} msgs</span>
-            <span>{stats?.indexedMessageCount ?? 0} indexed</span>
-            <span>
-              {stats?.latestMessageTimestamp
-                ? `Last ${formatDate(stats.latestMessageTimestamp)}`
-                : "No data"}
-            </span>
-          </div>
-
           <div className="import-wrapper" ref={importMenuRef}>
             <button
               type="button"
