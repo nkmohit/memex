@@ -420,7 +420,7 @@ export default function SearchPage({
                 {`Showing top ${results.length} of ${totalMatches} conversations`}
               </span>
               <span>
-                {`${loadedOccurrences} occurrences loaded`}
+                {`${loadedOccurrences} occurrence${loadedOccurrences !== 1 ? "s" : ""} in ${results.length} conversation${results.length !== 1 ? "s" : ""}`}
                 {` · ${searchContext}`}
                 {dateContext ? ` · ${dateContext}` : ""}
                 {latencyMs !== null ? ` · ${latencyMs} ms` : ""}

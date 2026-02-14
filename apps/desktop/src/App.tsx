@@ -101,6 +101,10 @@ function App() {
   };
 
   const matchCount = occurrences.length;
+  const messageMatchCount = useMemo(
+    () => new Set(occurrences.map((o) => o.messageId)).size,
+    [occurrences]
+  );
   const currentMatchIndex = Math.min(messageSearchMatchIndex, Math.max(0, matchCount - 1));
 
   const goToPrevMatch = useCallback(() => {
@@ -594,7 +598,7 @@ function App() {
                       <span className="source-tag">
                         {sourceLabel(selectedConversation.source)}
                       </span>
-                      <span>{messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
+                      <span>{messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
                       <span>{formatDate(selectedConversation.created_at)}</span>
                     </p>
                   </div>
