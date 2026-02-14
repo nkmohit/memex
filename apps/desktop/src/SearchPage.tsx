@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { SearchResultRow, getAllConversationsForSearch, searchMessages } from "./db";
 import { formatDate } from "./utils";
 
@@ -11,6 +11,7 @@ interface SearchPageProps {
   focusRequestId?: number | null;
   snapshot: SearchPageSnapshot;
   onSnapshotChange: (snapshot: SearchPageSnapshot) => void;
+  skipSearchOnceRef?: MutableRefObject<boolean>;
 }
 
 export interface SearchPageSnapshot {
@@ -70,6 +71,7 @@ export default function SearchPage({
   focusRequestId = null,
   snapshot,
   onSnapshotChange,
+  skipSearchOnceRef,
 }: SearchPageProps) {
   const [source, setSource] = useState(snapshot.source);
   const [dateFrom, setDateFrom] = useState(snapshot.dateFrom);
@@ -106,6 +108,10 @@ export default function SearchPage({
   }, [focusRequestId]);
 
   useEffect(() => {
+    if (skipSearchOnceRef?.current) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const debounceMs = 250;
 
@@ -202,7 +208,7 @@ export default function SearchPage({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [PAGE_SIZE, hasQuery, query, searchParams]);
+  }, [PAGE_SIZE, hasQuery, query, searchParams, skipSearchOnceRef]);
 
   useEffect(() => {
     setSelectedIndex(results.length > 0 ? 0 : -1);
