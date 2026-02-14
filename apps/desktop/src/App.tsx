@@ -143,12 +143,23 @@ function App() {
     }
   }, [messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
 
-  // Keyboard: Up/Down/Enter navigate between occurrences when searching in conversation
+  // Keyboard: Up/Down/Enter navigate between occurrences; Escape blurs search (keeps query)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (!messageSearchQuery.trim() || matchCount <= 0) return;
       const inViewer = (e.target as Node)?.parentElement?.closest(".viewer");
       if (!inViewer) return;
+
+      if (e.key === "Escape") {
+        const searchInput = viewerSearchInputRef.current;
+        if (searchInput && document.activeElement === searchInput) {
+          e.preventDefault();
+          searchInput.blur();
+          searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        }
+        return;
+      }
+
+      if (!messageSearchQuery.trim() || matchCount <= 0) return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
         goToPrevMatch();
@@ -276,6 +287,7 @@ function App() {
         event.preventDefault();
         if (activeView === "conversations" && selectedConvId) {
           viewerSearchInputRef.current?.focus();
+          viewerSearchInputRef.current?.select();
         }
       }
     }
