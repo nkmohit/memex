@@ -12,6 +12,8 @@ interface SearchPageProps {
   snapshot: SearchPageSnapshot;
   onSnapshotChange: (snapshot: SearchPageSnapshot) => void;
   skipSearchOnceRef?: MutableRefObject<boolean>;
+  restoreSelectedConversationId?: string | null;
+  onRestoreSelectionDone?: () => void;
 }
 
 export interface SearchPageSnapshot {
@@ -26,6 +28,7 @@ export interface SearchPageSnapshot {
     | "title_za";
   results: SearchResultRow[];
   totalMatches: number;
+  totalOccurrences: number;
   latencyMs: number | null;
 }
 
@@ -72,6 +75,8 @@ export default function SearchPage({
   snapshot,
   onSnapshotChange,
   skipSearchOnceRef,
+  restoreSelectedConversationId = null,
+  onRestoreSelectionDone,
 }: SearchPageProps) {
   const [source, setSource] = useState(snapshot.source);
   const [dateFrom, setDateFrom] = useState(snapshot.dateFrom);
@@ -79,7 +84,7 @@ export default function SearchPage({
   const [sort, setSort] = useState(snapshot.sort);
   const [results, setResults] = useState<SearchResultRow[]>(snapshot.results);
   const [totalMatches, setTotalMatches] = useState(snapshot.totalMatches);
-  const [totalOccurrences, setTotalOccurrences] = useState(0);
+  const [totalOccurrences, setTotalOccurrences] = useState(snapshot.totalOccurrences ?? 0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +219,14 @@ export default function SearchPage({
     setSelectedIndex(results.length > 0 ? 0 : -1);
   }, [results]);
 
+  // Restore selection to the conversation we returned from (Back to search)
+  useEffect(() => {
+    if (!restoreSelectedConversationId || results.length === 0) return;
+    const idx = results.findIndex((r) => r.conversation_id === restoreSelectedConversationId);
+    if (idx >= 0) setSelectedIndex(idx);
+    onRestoreSelectionDone?.();
+  }, [restoreSelectedConversationId, results]);
+
   useEffect(() => {
     if (selectedIndex < 0) return;
     resultRefs.current[selectedIndex]?.scrollIntoView({
@@ -280,6 +293,7 @@ export default function SearchPage({
       sort,
       results,
       totalMatches,
+      totalOccurrences,
       latencyMs,
     });
   }, [
@@ -289,6 +303,7 @@ export default function SearchPage({
     sort,
     results,
     totalMatches,
+    totalOccurrences,
     latencyMs,
     onSnapshotChange,
   ]);

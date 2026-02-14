@@ -92,6 +92,7 @@ function App() {
       sort: loaded?.sort ?? "last_occurrence_desc",
       results: [],
       totalMatches: 0,
+      totalOccurrences: 0,
       latencyMs: null,
     };
   });
@@ -99,6 +100,7 @@ function App() {
     null
   );
   const [openedConversationFromSearch, setOpenedConversationFromSearch] = useState(false);
+  const [searchRestoreConversationId, setSearchRestoreConversationId] = useState<string | null>(null);
   const skipSearchOnceRef = useRef(false);
 
   // ---- persist search state to localStorage ----
@@ -415,10 +417,11 @@ function App() {
   }, [activeView, selectedConvId]);
 
   const goBackToSearch = useCallback(() => {
+    if (selectedConvId) setSearchRestoreConversationId(selectedConvId);
     setOpenedConversationFromSearch(false);
     skipSearchOnceRef.current = true;
     setActiveView("search");
-  }, []);
+  }, [selectedConvId]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -516,6 +519,7 @@ function App() {
         sort: "last_occurrence_desc",
         results: [],
         totalMatches: 0,
+        totalOccurrences: 0,
         latencyMs: null,
       });
       saveSearchState({
@@ -714,6 +718,8 @@ function App() {
             snapshot={searchPageSnapshot}
             onSnapshotChange={setSearchPageSnapshot}
             skipSearchOnceRef={skipSearchOnceRef}
+            restoreSelectedConversationId={searchRestoreConversationId}
+            onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
             onOpenConversation={(conversationId, activeQuery, messageId) => {
               void handleOpenConversationFromSearchPage(conversationId, activeQuery, messageId);
             }}
