@@ -632,13 +632,11 @@ function App() {
                         </button>
                       </div>
                     )}
+                    {messageSearchQuery.trim() && matchCount === 0 && (
+                      <span className="viewer-search-no-results">No results</span>
+                    )}
                   </div>
                 </div>
-                {messageSearchQuery.trim() && matchCount === 0 && (
-                  <div className="viewer-no-results">
-                    No results for “{messageSearchQuery}”
-                  </div>
-                )}
                 <div className="msg-list">
                   {messages.map((m) => (
                     <article
