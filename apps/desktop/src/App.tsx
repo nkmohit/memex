@@ -15,6 +15,49 @@ import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
 import { formatDate, formatTimestamp } from "./utils";
 import "./App.css";
 
+const SEARCH_STATE_KEY = "memex-search-state";
+
+type PersistedSearchState = {
+  query: string;
+  source: string;
+  dateFrom: string;
+  dateTo: string;
+  sort: SearchPageSnapshot["sort"];
+};
+
+function loadSearchState(): Partial<PersistedSearchState> | null {
+  try {
+    const raw = localStorage.getItem(SEARCH_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && "query" in parsed) {
+      const p = parsed as Record<string, unknown>;
+      return {
+        query: typeof p.query === "string" ? p.query : "",
+        source: typeof p.source === "string" ? p.source : "",
+        dateFrom: typeof p.dateFrom === "string" ? p.dateFrom : "",
+        dateTo: typeof p.dateTo === "string" ? p.dateTo : "",
+        sort:
+          typeof p.sort === "string" &&
+          ["relevance", "last_occurrence_desc", "occurrence_count_desc", "title_az", "title_za"].includes(p.sort)
+            ? (p.sort as PersistedSearchState["sort"])
+            : "last_occurrence_desc",
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function saveSearchState(state: PersistedSearchState) {
+  try {
+    localStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
 type ActiveView = "conversations" | "search";
 
 function App() {
@@ -32,22 +75,60 @@ function App() {
   const [activeView, setActiveView] = useState<ActiveView>("conversations");
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
+  const [viewerSearchOpen, setViewerSearchOpen] = useState(false);
   const viewerSearchInputRef = useRef<HTMLInputElement>(null);
 
-  // ---- search state ----
-  const [searchPageQuery, setSearchPageQuery] = useState("");
-  const [searchPageSnapshot, setSearchPageSnapshot] = useState<SearchPageSnapshot>({
-    source: "",
-    dateFrom: "",
-    dateTo: "",
-    sort: "last_occurrence_desc",
-    results: [],
-    totalMatches: 0,
-    latencyMs: null,
+  // ---- search state (initialized from persisted state if present) ----
+  const [searchPageQuery, setSearchPageQuery] = useState(() => {
+    const loaded = loadSearchState();
+    return loaded?.query ?? "";
+  });
+  const [searchPageSnapshot, setSearchPageSnapshot] = useState<SearchPageSnapshot>(() => {
+    const loaded = loadSearchState();
+    return {
+      source: loaded?.source ?? "",
+      dateFrom: loaded?.dateFrom ?? "",
+      dateTo: loaded?.dateTo ?? "",
+      sort: loaded?.sort ?? "last_occurrence_desc",
+      results: [],
+      totalMatches: 0,
+      totalOccurrences: 0,
+      latencyMs: null,
+    };
   });
   const [searchFocusRequestId, setSearchFocusRequestId] = useState<number | null>(
     null
   );
+  const [openedConversationFromSearch, setOpenedConversationFromSearch] = useState(false);
+  const [searchRestoreConversationId, setSearchRestoreConversationId] = useState<string | null>(null);
+  const skipSearchOnceRef = useRef(false);
+
+  // ---- persist search state to localStorage ----
+  useEffect(() => {
+    saveSearchState({
+      query: searchPageQuery,
+      source: searchPageSnapshot.source,
+      dateFrom: searchPageSnapshot.dateFrom,
+      dateTo: searchPageSnapshot.dateTo,
+      sort: searchPageSnapshot.sort,
+    });
+  }, [
+    searchPageQuery,
+    searchPageSnapshot.source,
+    searchPageSnapshot.dateFrom,
+    searchPageSnapshot.dateTo,
+    searchPageSnapshot.sort,
+  ]);
+
+  // ---- clear skipSearchOnceRef after SearchPage has read it (when on search tab) ----
+  useEffect(() => {
+    if (activeView === "search") {
+      const id = window.setTimeout(() => {
+        skipSearchOnceRef.current = false;
+      }, 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [activeView]);
 
   // ---- import state ----
   const [importing, setImporting] = useState(false);
@@ -64,6 +145,53 @@ function App() {
 
   // ---- highlight state ----
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+
+  // ---- copy toast ----
+  const [copyToast, setCopyToast] = useState<string | null>(null);
+  const copyToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function copyToClipboard(text: string): Promise<boolean> {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function showCopyToast(message: string) {
+    if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+    setCopyToast(message);
+    copyToastTimerRef.current = setTimeout(() => {
+      setCopyToast(null);
+      copyToastTimerRef.current = null;
+    }, 2000);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+    };
+  }, []);
+
+  function copyMessageToClipboard(m: MessageRow, assistantLabel: string) {
+    const sender = m.sender === "human" ? "You" : assistantLabel;
+    const line = `${sender} (${formatTimestamp(m.created_at)}): ${m.content}`;
+    copyToClipboard(line).then((ok) => ok && showCopyToast("Copied"));
+  }
+
+  function copyConversationToClipboard(assistantLabel: string) {
+    const lines = messages.map((m) => {
+      const sender = m.sender === "human" ? "You" : assistantLabel;
+      const ts = formatTimestamp(m.created_at);
+      return `**${sender}** (${ts}):\n\n${m.content}`;
+    });
+    const text = lines.join("\n\n");
+    copyToClipboard(text).then((ok) => ok && showCopyToast("Copied"));
+  }
 
   // ---- derived ----
   const selectedConversation = useMemo(
@@ -125,7 +253,7 @@ function App() {
 
   // Scroll to the specific occurrence and mark it as current (others dimmed via CSS)
   useEffect(() => {
-    if (!messageSearchQuery.trim()) return;
+    if (!viewerSearchOpen || !messageSearchQuery.trim()) return;
     // Clear current-match from all marks
     Object.values(messageRefs.current).forEach((msgEl) => {
       msgEl?.querySelectorAll("mark").forEach((m) => m.classList.remove("current-match"));
@@ -141,25 +269,39 @@ function App() {
       if (mark) mark.classList.add("current-match");
       (mark || el).scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
+  }, [viewerSearchOpen, messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
 
-  // Keyboard: Up/Down/Enter navigate between occurrences; Escape blurs search (keeps query)
+  // Focus viewer search input when search panel opens
+  useEffect(() => {
+    if (viewerSearchOpen && selectedConvId) {
+      const id = setTimeout(() => {
+        viewerSearchInputRef.current?.focus();
+        viewerSearchInputRef.current?.select();
+      }, 0);
+      return () => clearTimeout(id);
+    }
+  }, [viewerSearchOpen, selectedConvId]);
+
+  // Keyboard: Up/Down/Enter navigate between occurrences; Escape closes search UI (keeps query)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const inViewer = (e.target as Node)?.parentElement?.closest(".viewer");
       if (!inViewer) return;
 
       if (e.key === "Escape") {
-        const searchInput = viewerSearchInputRef.current;
-        if (searchInput && document.activeElement === searchInput) {
+        if (viewerSearchOpen) {
           e.preventDefault();
-          searchInput.blur();
-          searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+          const searchInput = viewerSearchInputRef.current;
+          if (searchInput) {
+            searchInput.blur();
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+          }
+          setViewerSearchOpen(false);
         }
         return;
       }
 
-      if (!messageSearchQuery.trim() || matchCount <= 0) return;
+      if (!viewerSearchOpen || !messageSearchQuery.trim() || matchCount <= 0) return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
         goToPrevMatch();
@@ -178,7 +320,7 @@ function App() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
+  }, [viewerSearchOpen, messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
 
   // ---- close import menu on outside click ----
   useEffect(() => {
@@ -274,27 +416,57 @@ function App() {
     });
   }, [activeView, selectedConvId]);
 
+  const goBackToSearch = useCallback(() => {
+    if (selectedConvId) setSearchRestoreConversationId(selectedConvId);
+    setOpenedConversationFromSearch(false);
+    skipSearchOnceRef.current = true;
+    setActiveView("search");
+  }, [selectedConvId]);
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // Back to search when current conversation was opened from Search (e.g. Backspace)
+      if (
+        event.key === "Backspace" &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !(event.target instanceof HTMLInputElement) &&
+        !(event.target instanceof HTMLTextAreaElement)
+      ) {
+        if (activeView === "conversations" && selectedConvId && openedConversationFromSearch) {
+          event.preventDefault();
+          goBackToSearch();
+        }
+      }
       if (!(event.metaKey || event.ctrlKey)) return;
       const key = event.key.toLowerCase();
       if (key === "k") {
         event.preventDefault();
+        setOpenedConversationFromSearch(false);
         setActiveView("search");
         setSearchFocusRequestId(Date.now());
       }
       if (key === "f") {
         event.preventDefault();
         if (activeView === "conversations" && selectedConvId) {
-          viewerSearchInputRef.current?.focus();
-          viewerSearchInputRef.current?.select();
+          const searchInput = viewerSearchInputRef.current;
+          const searchIsFocused = searchInput && document.activeElement === searchInput;
+          if (!viewerSearchOpen) {
+            setViewerSearchOpen(true);
+          } else if (searchIsFocused) {
+            setViewerSearchOpen(false);
+          } else {
+            searchInput?.focus();
+            searchInput?.select();
+          }
         }
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [activeView, selectedConvId]);
+  }, [activeView, selectedConvId, openedConversationFromSearch, goBackToSearch, viewerSearchOpen]);
 
   // ---- import ----
   async function handleImportSource(source: ImportSource) {
@@ -347,7 +519,15 @@ function App() {
         sort: "last_occurrence_desc",
         results: [],
         totalMatches: 0,
+        totalOccurrences: 0,
         latencyMs: null,
+      });
+      saveSearchState({
+        query: "",
+        source: "",
+        dateFrom: "",
+        dateTo: "",
+        sort: "last_occurrence_desc",
       });
       setSelectedConvId(null);
       setMessages([]);
@@ -366,6 +546,7 @@ function App() {
     activeQuery: string,
     messageId?: string | null
   ) {
+    setOpenedConversationFromSearch(true);
     setSearchPageQuery(activeQuery);
     setMessageSearchQuery(activeQuery);
     setActiveView("conversations");
@@ -392,6 +573,7 @@ function App() {
           source: fromSearch.source,
           title: fromSearch.title || "Untitled",
           created_at: fromSearch.created_at,
+          last_message_at: fromSearch.last_occurrence,
           message_count: 0,
         },
         ...prev,
@@ -400,7 +582,8 @@ function App() {
 
     await handleConversationClick(conversationId, messageId);
 
-    // Focus the conversation search bar and select its text so it stays "selected"
+    // Open and focus the conversation search bar with the query pre-filled
+    setViewerSearchOpen(true);
     setTimeout(() => {
       viewerSearchInputRef.current?.focus();
       viewerSearchInputRef.current?.select();
@@ -445,7 +628,10 @@ function App() {
           </button>
           <button
             className={`nav-source-btn ${activeView === "search" ? "active" : ""}`}
-            onClick={() => setActiveView("search")}
+            onClick={() => {
+              setOpenedConversationFromSearch(false);
+              setActiveView("search");
+            }}
           >
             <span>Search</span>
           </button>
@@ -532,6 +718,9 @@ function App() {
             focusRequestId={searchFocusRequestId}
             snapshot={searchPageSnapshot}
             onSnapshotChange={setSearchPageSnapshot}
+            skipSearchOnceRef={skipSearchOnceRef}
+            restoreSelectedConversationId={searchRestoreConversationId}
+            onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
             onOpenConversation={(conversationId, activeQuery, messageId) => {
               void handleOpenConversationFromSearchPage(conversationId, activeQuery, messageId);
             }}
@@ -563,13 +752,16 @@ function App() {
                       convItemRefs.current[c.id] = element;
                     }}
                     className={`conv-item ${selectedConvId === c.id ? "selected" : ""}`}
-                    onClick={() => void handleConversationClick(c.id)}
+                    onClick={() => {
+                      setOpenedConversationFromSearch(false);
+                      void handleConversationClick(c.id);
+                    }}
                   >
                     <span className="conv-title">{c.title || "Untitled"}</span>
                     <span className="conv-meta">
                       <span className="source-tag">{sourceLabel(c.source)}</span>
                       <span>{c.message_count} msgs</span>
-                      <span>{formatDate(c.created_at)}</span>
+                      <span>{formatDate(c.last_message_at)}</span>
                     </span>
                   </button>
                 ))}
@@ -578,7 +770,7 @@ function App() {
           </aside>
 
           {/* ---- MESSAGE VIEWER ---- */}
-          <main className={`viewer${messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
+          <main className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
             {/* banner messages */}
             {(importResult || importError || loadError) && (
               <div className="banner-area">
@@ -612,55 +804,95 @@ function App() {
             ) : (
               <>
                 <div className="viewer-header">
-                  <div>
-                    <h2>{selectedConversation.title || "Untitled"}</h2>
-                    <p className="viewer-header-meta">
-                      <span className="source-tag">
-                        {sourceLabel(selectedConversation.source)}
-                      </span>
-                      <span>{messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
-                      <span>{formatDate(selectedConversation.created_at)}</span>
-                    </p>
-                  </div>
-                  <div className="viewer-search">
-                    <input
-                      ref={viewerSearchInputRef}
-                      type="search"
-                      className="viewer-search-input"
-                      placeholder="Search in conversation..."
-                      value={messageSearchQuery}
-                      onChange={(e) => setMessageSearchQuery(e.target.value)}
-                    />
-                    {messageSearchQuery.trim() && matchCount > 0 && (
-                      <div className="viewer-search-nav">
-                        <span className="viewer-search-count">
-                          {currentMatchIndex + 1} of {matchCount}
-                        </span>
-                        <button
-                          type="button"
-                          className="viewer-search-nav-btn"
-                          onClick={goToPrevMatch}
-                          title="Previous match"
-                          aria-label="Previous match"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="viewer-search-nav-btn"
-                          onClick={goToNextMatch}
-                          title="Next match"
-                          aria-label="Next match"
-                        >
-                          ↓
-                        </button>
-                      </div>
+                  <div className="viewer-header-left">
+                    {openedConversationFromSearch && (
+                      <button
+                        type="button"
+                        className="viewer-back-to-search-btn"
+                        onClick={goBackToSearch}
+                        title="Back to search (Backspace)"
+                        aria-label="Back to search"
+                      >
+                        ←
+                      </button>
                     )}
-                    {messageSearchQuery.trim() && matchCount === 0 && (
-                      <span className="viewer-search-no-results">No results</span>
+                    <div>
+                      <h2>{selectedConversation.title || "Untitled"}</h2>
+                      <p className="viewer-header-meta">
+                        <span className="source-tag">
+                          {sourceLabel(selectedConversation.source)}
+                        </span>
+                        <span>{viewerSearchOpen && messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
+                        <span>{formatDate(selectedConversation.last_message_at)}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="viewer-header-actions">
+                    <button
+                      type="button"
+                      className="viewer-copy-conv-btn"
+                      onClick={() => copyConversationToClipboard(sourceLabel(selectedConversation.source))}
+                      title="Copy conversation (Markdown)"
+                    >
+                      Copy conversation
+                    </button>
+                    {viewerSearchOpen ? (
+                      <div className="viewer-search">
+                        <input
+                          ref={viewerSearchInputRef}
+                          type="search"
+                          className="viewer-search-input"
+                          placeholder="Search in conversation..."
+                          value={messageSearchQuery}
+                          onChange={(e) => setMessageSearchQuery(e.target.value)}
+                        />
+                        {messageSearchQuery.trim() && matchCount > 0 && (
+                          <div className="viewer-search-nav">
+                            <span className="viewer-search-count">
+                              {currentMatchIndex + 1} of {matchCount}
+                            </span>
+                            <button
+                              type="button"
+                              className="viewer-search-nav-btn"
+                              onClick={goToPrevMatch}
+                              title="Previous match"
+                              aria-label="Previous match"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="viewer-search-nav-btn"
+                              onClick={goToNextMatch}
+                              title="Next match"
+                              aria-label="Next match"
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        )}
+                        {messageSearchQuery.trim() && matchCount === 0 && (
+                          <span className="viewer-search-no-results">No results</span>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="viewer-search-icon-btn"
+                        onClick={() => setViewerSearchOpen(true)}
+                        title="Search in conversation (⌘F)"
+                        aria-label="Search in conversation"
+                      >
+                        <span className="viewer-search-icon" aria-hidden="true">⌕</span>
+                      </button>
                     )}
                   </div>
                 </div>
+                {copyToast && (
+                  <div className="copy-toast" role="status" aria-live="polite">
+                    {copyToast}
+                  </div>
+                )}
                 <div className="msg-list">
                   {messages.map((m) => (
                     <article
@@ -674,11 +906,22 @@ function App() {
                     >
                       <div className="msg-top">
                         <span className="sender-pill">
-                          {m.sender === "human" ? "You" : "Assistant"}
+                          {m.sender === "human" ? "You" : sourceLabel(selectedConversation.source)}
                         </span>
-                        <time>{formatTimestamp(m.created_at)}</time>
+                        <span className="msg-top-right">
+                          <time>{formatTimestamp(m.created_at)}</time>
+                          <button
+                            type="button"
+                            className="msg-copy-btn"
+                            onClick={() => copyMessageToClipboard(m, sourceLabel(selectedConversation.source))}
+                            title="Copy message"
+                            aria-label="Copy message"
+                          >
+                            Copy
+                          </button>
+                        </span>
                       </div>
-                      <div className="msg-body">{highlightText(m.content, messageSearchQuery)}</div>
+                      <div className="msg-body">{highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}</div>
                     </article>
                   ))}
                 </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { SearchResultRow, getAllConversationsForSearch, searchMessages } from "./db";
 import { formatDate } from "./utils";
 
@@ -11,6 +11,9 @@ interface SearchPageProps {
   focusRequestId?: number | null;
   snapshot: SearchPageSnapshot;
   onSnapshotChange: (snapshot: SearchPageSnapshot) => void;
+  skipSearchOnceRef?: MutableRefObject<boolean>;
+  restoreSelectedConversationId?: string | null;
+  onRestoreSelectionDone?: () => void;
 }
 
 export interface SearchPageSnapshot {
@@ -25,6 +28,7 @@ export interface SearchPageSnapshot {
     | "title_za";
   results: SearchResultRow[];
   totalMatches: number;
+  totalOccurrences: number;
   latencyMs: number | null;
 }
 
@@ -70,6 +74,9 @@ export default function SearchPage({
   focusRequestId = null,
   snapshot,
   onSnapshotChange,
+  skipSearchOnceRef,
+  restoreSelectedConversationId = null,
+  onRestoreSelectionDone,
 }: SearchPageProps) {
   const [source, setSource] = useState(snapshot.source);
   const [dateFrom, setDateFrom] = useState(snapshot.dateFrom);
@@ -77,7 +84,7 @@ export default function SearchPage({
   const [sort, setSort] = useState(snapshot.sort);
   const [results, setResults] = useState<SearchResultRow[]>(snapshot.results);
   const [totalMatches, setTotalMatches] = useState(snapshot.totalMatches);
-  const [totalOccurrences, setTotalOccurrences] = useState(0);
+  const [totalOccurrences, setTotalOccurrences] = useState(snapshot.totalOccurrences ?? 0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +113,10 @@ export default function SearchPage({
   }, [focusRequestId]);
 
   useEffect(() => {
+    if (skipSearchOnceRef?.current) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const debounceMs = 250;
 
@@ -202,11 +213,19 @@ export default function SearchPage({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [PAGE_SIZE, hasQuery, query, searchParams]);
+  }, [PAGE_SIZE, hasQuery, query, searchParams, skipSearchOnceRef]);
 
   useEffect(() => {
     setSelectedIndex(results.length > 0 ? 0 : -1);
   }, [results]);
+
+  // Restore selection to the conversation we returned from (Back to search)
+  useEffect(() => {
+    if (!restoreSelectedConversationId || results.length === 0) return;
+    const idx = results.findIndex((r) => r.conversation_id === restoreSelectedConversationId);
+    if (idx >= 0) setSelectedIndex(idx);
+    onRestoreSelectionDone?.();
+  }, [restoreSelectedConversationId, results]);
 
   useEffect(() => {
     if (selectedIndex < 0) return;
@@ -218,19 +237,18 @@ export default function SearchPage({
 
   useEffect(() => {
     function handleKeyboardNav(event: KeyboardEvent) {
-      if (!hasQuery || loading || results.length === 0) {
-        if (event.key === "Escape" && hasQuery) {
+      // Escape: only remove selection / blur search input, do not clear the query
+      if (event.key === "Escape") {
+        const searchInput = searchInputRef.current;
+        if (searchInput && document.activeElement === searchInput) {
           event.preventDefault();
-          onQueryChange("");
-          setResults([]);
-          setTotalMatches(0);
-          setTotalOccurrences(0);
-          setSelectedIndex(-1);
-          setLatencyMs(null);
-          searchInputRef.current?.focus();
+          searchInput.blur();
+          searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
         }
         return;
       }
+
+      if (!hasQuery || loading || results.length === 0) return;
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -249,24 +267,12 @@ export default function SearchPage({
         if (!selected) return;
         event.preventDefault();
         onOpenConversation(selected.conversation_id, query, selected.first_match_message_id);
-        return;
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onQueryChange("");
-        setResults([]);
-        setTotalMatches(0);
-        setTotalOccurrences(0);
-        setSelectedIndex(-1);
-        setLatencyMs(null);
-        searchInputRef.current?.focus();
       }
     }
 
     document.addEventListener("keydown", handleKeyboardNav);
     return () => document.removeEventListener("keydown", handleKeyboardNav);
-  }, [hasQuery, loading, onOpenConversation, onQueryChange, query, results, selectedIndex]);
+  }, [hasQuery, loading, onOpenConversation, query, results, selectedIndex]);
 
   const searchContext = source
     ? `Searching in ${sourceLabel(source)}`
@@ -287,6 +293,7 @@ export default function SearchPage({
       sort,
       results,
       totalMatches,
+      totalOccurrences,
       latencyMs,
     });
   }, [
@@ -296,6 +303,7 @@ export default function SearchPage({
     sort,
     results,
     totalMatches,
+    totalOccurrences,
     latencyMs,
     onSnapshotChange,
   ]);
