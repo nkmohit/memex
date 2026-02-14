@@ -231,12 +231,13 @@ function App() {
       const data = await getMessages(convId);
       setMessages(data);
       
-      // Scroll to and highlight the target message after a brief delay
+      // Scroll to the highlighted search term (first <mark>) in the target message, not the message center
       if (scrollToMessageId) {
         setTimeout(() => {
           const messageEl = messageRefs.current[scrollToMessageId];
           if (messageEl) {
-            messageEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            const mark = messageEl.querySelector("mark");
+            (mark || messageEl).scrollIntoView({ behavior: "smooth", block: "center" });
             setHighlightedMessageId(scrollToMessageId);
             
             // Remove highlight after 2 seconds
@@ -354,6 +355,7 @@ function App() {
     messageId?: string | null
   ) {
     setSearchPageQuery(activeQuery);
+    setMessageSearchQuery(activeQuery);
     setActiveView("conversations");
     if (activeSource !== null) {
       setActiveSource(null);
@@ -385,6 +387,12 @@ function App() {
     });
 
     await handleConversationClick(conversationId, messageId);
+
+    // Focus the conversation search bar and select its text so it stays "selected"
+    setTimeout(() => {
+      viewerSearchInputRef.current?.focus();
+      viewerSearchInputRef.current?.select();
+    }, 150);
   }
 
   // ---- source helpers ----
