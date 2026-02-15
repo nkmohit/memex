@@ -7,7 +7,10 @@ interface SearchPageProps {
   onQueryChange: (query: string) => void;
   availableSources: string[];
   sourceLabel: (source: string) => string;
-  onOpenConversation: (conversationId: string, activeQuery: string, messageId?: string | null) => void;
+  onOpenConversation?: (conversationId: string, activeQuery: string, messageId?: string | null) => void;
+  /** When provided, clicking a result only updates the detail panel (no view switch). */
+  onSelectResult?: (conversationId: string, title: string, source: string) => void;
+  selectedConversationId?: string | null;
   focusRequestId?: number | null;
   snapshot: SearchPageSnapshot;
   onSnapshotChange: (snapshot: SearchPageSnapshot) => void;
@@ -71,6 +74,8 @@ export default function SearchPage({
   availableSources,
   sourceLabel,
   onOpenConversation,
+  onSelectResult,
+  selectedConversationId = null,
   focusRequestId = null,
   snapshot,
   onSnapshotChange,
@@ -266,13 +271,17 @@ export default function SearchPage({
         const selected = results[selectedIndex];
         if (!selected) return;
         event.preventDefault();
-        onOpenConversation(selected.conversation_id, query, selected.first_match_message_id);
+        if (onSelectResult) {
+          onSelectResult(selected.conversation_id, selected.title || "Untitled", selected.source);
+        } else if (onOpenConversation) {
+          onOpenConversation(selected.conversation_id, query, selected.first_match_message_id);
+        }
       }
     }
 
     document.addEventListener("keydown", handleKeyboardNav);
     return () => document.removeEventListener("keydown", handleKeyboardNav);
-  }, [hasQuery, loading, onOpenConversation, query, results, selectedIndex]);
+  }, [hasQuery, loading, onOpenConversation, onSelectResult, query, results, selectedIndex]);
 
   const searchContext = source
     ? `Searching in ${sourceLabel(source)}`
@@ -464,8 +473,14 @@ export default function SearchPage({
               ref={(element) => {
                 resultRefs.current[index] = element;
               }}
-              className={`search-result ${selectedIndex === index ? "selected" : ""}`}
-              onClick={() => onOpenConversation(row.conversation_id, query, row.first_match_message_id)}
+              className={`search-result ${selectedIndex === index || row.conversation_id === selectedConversationId ? "selected" : ""}`}
+              onClick={() => {
+                if (onSelectResult) {
+                  onSelectResult(row.conversation_id, row.title || "Untitled", row.source);
+                } else if (onOpenConversation) {
+                  onOpenConversation(row.conversation_id, query, row.first_match_message_id);
+                }
+              }}
               onMouseEnter={() => setSelectedIndex(index)}
             >
               <div className="search-result-header">

@@ -58,9 +58,48 @@ function saveSearchState(state: PersistedSearchState) {
   }
 }
 
-type ActiveView = "conversations" | "search";
-
 function App() {
+  // ---- theme ----
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark" || stored === "system") return stored;
+    return "system";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "light") {
+      root.classList.remove("dark");
+    } else if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const listener = () => {
+      if (theme !== "system") return;
+      if (mq.matches) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    };
+    mq.addEventListener("change", listener);
+    return () => mq.removeEventListener("change", listener);
+  }, [theme]);
+
+  function setThemeAndPersist(next: ThemeMode) {
+    setTheme(next);
+    localStorage.setItem(THEME_KEY, next);
+  }
+
   // ---- data state ----
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DbStats | null>(null);
@@ -72,7 +111,14 @@ function App() {
 
   // ---- source filter ----
   const [activeSource, setActiveSource] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<ActiveView>("conversations");
+  const [activeView, setActiveView] = useState<ActiveView>("overview");
+
+  // ---- search detail panel (when on search view, in-place) ----
+  const [searchSelectedConvId, setSearchSelectedConvId] = useState<string | null>(null);
+  const [searchSelectedTitle, setSearchSelectedTitle] = useState("");
+  const [searchSelectedSource, setSearchSelectedSource] = useState("");
+  const [searchDetailMessages, setSearchDetailMessages] = useState<MessageRow[]>([]);
+  const [searchDetailLoading, setSearchDetailLoading] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
   const [viewerSearchOpen, setViewerSearchOpen] = useState(false);
