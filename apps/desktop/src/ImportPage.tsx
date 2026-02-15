@@ -43,11 +43,14 @@ export default function ImportPage({
   const [stats, setStats] = useState<DbStats | null>(null);
   const [sourceStats, setSourceStats] = useState<SourceStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setLoadError(null);
       try {
         const [s, ss] = await Promise.all([
           getStats(),
@@ -57,6 +60,10 @@ export default function ImportPage({
           setStats(s);
           setSourceStats(ss);
         }
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : "Failed to load data");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -65,12 +72,12 @@ export default function ImportPage({
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
+  }, [refreshKey, retryTrigger]);
 
   const getStatsForSource = (source: string) =>
     sourceStats.find((s) => s.source.toLowerCase() === source.toLowerCase());
 
-  if (loading && !stats) {
+  if (loading && !stats && !loadError) {
     return (
       <main className="import-main">
         <h1 className="import-title">Import</h1>
@@ -91,6 +98,21 @@ export default function ImportPage({
       <p className="import-description">
         Add conversations from supported providers. Data is stored only on your device.
       </p>
+
+      {loadError && (
+        <div className="import-banners">
+          <div className="banner error import-load-error" role="alert">
+            <span>{loadError}</span>
+            <button
+              type="button"
+              className="import-retry-btn"
+              onClick={() => setRetryTrigger((t) => t + 1)}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       {(importError || importResult) && (
         <div className="import-banners">

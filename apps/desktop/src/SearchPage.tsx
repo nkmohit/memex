@@ -371,6 +371,7 @@ export default function SearchPage({
           ref={searchInputRef}
           className="search-input"
           type="search"
+          aria-label="Search all messages"
           placeholder="Search all messages..."
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}

@@ -5,7 +5,7 @@ import {
   GeminiIcon,
   GrokIcon,
 } from "./icons";
-import { getConversations, getSourceStats, getStats } from "./db";
+import { getActivityCountByDay, getConversations, getSourceStats, getStats } from "./db";
 import type { ConversationRow, DbStats, SourceStats } from "./db";
 import { formatDate, formatTimestamp } from "./utils";
 import { IMPORT_SOURCES } from "./importer";
@@ -42,6 +42,7 @@ export default function OverviewPage({
   const [stats, setStats] = useState<DbStats | null>(null);
   const [sourceStats, setSourceStats] = useState<SourceStats[]>([]);
   const [recent, setRecent] = useState<ConversationRow[]>([]);
+  const [activityByDay, setActivityByDay] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,15 +50,17 @@ export default function OverviewPage({
     async function load() {
       setLoading(true);
       try {
-        const [s, ss, convs] = await Promise.all([
+        const [s, ss, convs, activity] = await Promise.all([
           getStats(),
           getSourceStats(),
           getConversations(10),
+          getActivityCountByDay(30),
         ]);
         if (!cancelled) {
           setStats(s);
           setSourceStats(ss);
           setRecent(convs);
+          setActivityByDay(activity);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -121,21 +124,26 @@ export default function OverviewPage({
             maxWidth: "400px",
           }}
         >
-          {Array.from({ length: 30 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                height: "16px",
-                borderRadius: "4px",
-                background: "var(--color-muted)",
-                opacity: 0.3 + Math.random() * 0.5,
-              }}
-              title={`Day ${30 - i}`}
-            />
-          ))}
+          {Array.from({ length: 30 }).map((_, i) => {
+            const count = activityByDay[i] ?? 0;
+            const max = Math.max(1, ...activityByDay);
+            const opacity = max > 0 ? 0.3 + 0.5 * (count / max) : 0.3;
+            return (
+              <div
+                key={i}
+                style={{
+                  height: "16px",
+                  borderRadius: "4px",
+                  background: "var(--color-muted)",
+                  opacity,
+                }}
+                title={`Day ${30 - i}${count > 0 ? `: ${count} message${count !== 1 ? "s" : ""}` : ""}`}
+              />
+            );
+          })}
         </div>
         <p style={{ fontSize: "12px", color: "var(--color-muted-foreground)", marginTop: "6px" }}>
-          Derived from conversation activity (placeholder)
+          Message activity per day (last 30 days)
         </p>
       </div>
 

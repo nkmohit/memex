@@ -1089,6 +1089,27 @@ body {
   margin-bottom: 20px;
 }
 
+.import-load-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.import-retry-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.import-retry-btn:hover {
+  opacity: 0.9;
+}
+
 .import-summary {
   margin-bottom: 28px;
 }

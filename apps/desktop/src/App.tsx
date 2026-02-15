@@ -198,6 +198,9 @@ function App() {
 
   const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
+  const clearConfirmCancelBtnRef = useRef<HTMLButtonElement>(null);
+  const clearConfirmDialogRef = useRef<HTMLDivElement>(null);
+  const clearDataTriggerRef = useRef<HTMLButtonElement>(null);
 
   // ---- highlight state ----
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -392,6 +395,47 @@ function App() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [viewerSearchOpen, messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
+
+  // ---- clear-data modal: focus on open, focus trap, Escape ----
+  useEffect(() => {
+    if (!clearConfirmOpen) return;
+    const id = setTimeout(() => {
+      clearConfirmCancelBtnRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [clearConfirmOpen]);
+
+  useEffect(() => {
+    if (!clearConfirmOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setClearConfirmOpen(false);
+        clearDataTriggerRef.current?.focus();
+        return;
+      }
+      if (e.key !== "Tab" || !clearConfirmDialogRef.current) return;
+      const dialog = clearConfirmDialogRef.current;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLButtonElement>("button"));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (active === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [clearConfirmOpen]);
 
   // ---- data loading ----
   const loadData = useCallback(
@@ -775,6 +819,7 @@ function App() {
           <div className="settings-section">
             <h3>Data</h3>
             <button
+              ref={clearDataTriggerRef}
               type="button"
               className="settings-danger-btn"
               onClick={handleClearAllDataClick}
@@ -1069,8 +1114,15 @@ function App() {
       )}
 
       {clearConfirmOpen && (
-        <div className="confirm-overlay" role="presentation">
+        <div
+          className="confirm-overlay"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setClearConfirmOpen(false);
+          }}
+        >
           <div
+            ref={clearConfirmDialogRef}
             className="confirm-dialog"
             role="dialog"
             aria-modal="true"
@@ -1083,6 +1135,7 @@ function App() {
             </p>
             <div className="confirm-actions">
               <button
+                ref={clearConfirmCancelBtnRef}
                 type="button"
                 className="confirm-cancel-btn"
                 onClick={() => setClearConfirmOpen(false)}

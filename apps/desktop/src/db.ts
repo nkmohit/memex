@@ -268,6 +268,45 @@ export function getStats(): Promise<DbStats> {
   });
 }
 
+/**
+ * Returns message counts per day for the last N days.
+ * result[0] = oldest day (N days ago), result[days-1] = most recent day.
+ * Uses calendar days in local time; created_at is stored as Unix ms.
+ */
+export function getActivityCountByDay(days: number): Promise<number[]> {
+  return withDbLock(async () => {
+    const database = await getDb();
+    const safeDays = Math.max(1, Math.min(365, Math.floor(days)));
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const startOfOldestDay = new Date(now - (safeDays - 1) * oneDayMs);
+    startOfOldestDay.setHours(0, 0, 0, 0);
+    const startMs = startOfOldestDay.getTime();
+
+    const rows = await database.select<{ day: string; cnt: number }[]>(
+      `SELECT date(created_at / 1000, 'unixepoch') AS day, COUNT(*) AS cnt
+       FROM messages
+       WHERE created_at >= $1 AND created_at IS NOT NULL
+       GROUP BY day
+       ORDER BY day`,
+      [startMs]
+    );
+
+    const countByDay = new Map<string, number>();
+    for (const r of rows) {
+      countByDay.set(r.day, r.cnt);
+    }
+
+    const result: number[] = [];
+    for (let i = 0; i < safeDays; i++) {
+      const t = now - (safeDays - 1 - i) * oneDayMs;
+      const dayStr = new Date(t).toISOString().slice(0, 10);
+      result.push(countByDay.get(dayStr) ?? 0);
+    }
+    return result;
+  });
+}
+
 export function getSourceStats(): Promise<SourceStats[]> {
   return withDbLock(async () => {
     const database = await getDb();

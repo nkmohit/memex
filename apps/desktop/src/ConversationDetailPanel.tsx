@@ -40,6 +40,18 @@ export default function ConversationDetailPanel({
     return () => document.removeEventListener("click", handleClick, true);
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
+
   return (
     <div className="search-detail-panel">
       <div className="viewer-header">
