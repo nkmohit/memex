@@ -1,32 +1,32 @@
 /* ===================================================================
-   Memex Desktop — Swiss & High-Contrast Design System
-   Tailwind v4 + design tokens (light/dark)
+   Memex Desktop — Smooth glassmorphism + diagram palette
+   Palette: #06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF
    =================================================================== */
 
 @import "tailwindcss";
 
 /* -------------------------------------------------------------------
-   Theme: Zinc neutrals + Signal Orange
+   Theme: Diagram palette (dark navy → light blue-grey)
    ------------------------------------------------------------------- */
 @theme {
-  /* Light (default) */
-  --color-background: #ffffff;
-  --color-foreground: #09090b;
-  --color-card: #ffffff;
-  --color-card-foreground: #09090b;
-  --color-primary: #f97316;
-  --color-primary-foreground: #fafafa;
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #18181b;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #71717a;
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #18181b;
-  --color-destructive: #ef4444;
+  /* Light (default) — canvas #CCD0CF, text #06141B */
+  --color-background: #CCD0CF;
+  --color-foreground: #06141B;
+  --color-card: rgba(255, 255, 255, 0.72);
+  --color-card-foreground: #06141B;
+  --color-primary: #253745;
+  --color-primary-foreground: #CCD0CF;
+  --color-secondary: rgba(155, 168, 171, 0.5);
+  --color-secondary-foreground: #06141B;
+  --color-muted: rgba(155, 168, 171, 0.6);
+  --color-muted-foreground: #4A5C6A;
+  --color-accent: rgba(155, 168, 171, 0.4);
+  --color-accent-foreground: #06141B;
+  --color-destructive: #b91c1c;
   --color-destructive-foreground: #fafafa;
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-ring: #f97316;
+  --color-border: rgba(74, 92, 106, 0.35);
+  --color-input: rgba(74, 92, 106, 0.4);
+  --color-ring: #253745;
   /* Fonts */
   --font-heading: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -36,33 +36,37 @@
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-  /* Shadows */
-  --shadow-soft: 0 8px 30px rgb(0 0 0 / 0.04);
-  --shadow-glow: 0 0 15px rgb(249 115 22 / 0.3);
+  /* Glassmorphism shadows — soft, layered */
+  --shadow-soft: 0 2px 8px rgb(6 20 27 / 0.06);
+  --shadow-panel: 0 4px 24px rgb(6 20 27 / 0.08), 0 1px 2px rgb(6 20 27 / 0.04);
+  --shadow-panel-strong: 0 8px 32px rgb(6 20 27 / 0.12);
+  --blur-glass: 20px;
 }
 
 /* Dark mode variant: apply when .dark is on ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Dark theme overrides */
+/* Dark theme overrides — deep navy base */
 .dark {
-  --color-background: #09090b;
-  --color-foreground: #fafafa;
-  --color-card: #09090b;
-  --color-card-foreground: #fafafa;
-  --color-primary: #f97316;
-  --color-primary-foreground: #fafafa;
-  --color-secondary: #27272a;
-  --color-secondary-foreground: #fafafa;
-  --color-muted: #27272a;
-  --color-muted-foreground: #a1a1aa;
-  --color-accent: #27272a;
-  --color-accent-foreground: #fafafa;
+  --color-background: #06141B;
+  --color-foreground: #CCD0CF;
+  --color-card: rgba(17, 33, 45, 0.82);
+  --color-card-foreground: #CCD0CF;
+  --color-primary: #9BA8AB;
+  --color-primary-foreground: #06141B;
+  --color-secondary: rgba(37, 55, 69, 0.6);
+  --color-secondary-foreground: #CCD0CF;
+  --color-muted: rgba(37, 55, 69, 0.7);
+  --color-muted-foreground: #9BA8AB;
+  --color-accent: rgba(74, 92, 106, 0.4);
+  --color-accent-foreground: #CCD0CF;
   --color-destructive: #7f1d1d;
   --color-destructive-foreground: #fafafa;
-  --color-border: #27272a;
-  --color-input: #27272a;
-  --color-ring: #f97316;
+  --color-border: rgba(74, 92, 106, 0.35);
+  --color-input: rgba(74, 92, 106, 0.4);
+  --color-ring: #9BA8AB;
+  --shadow-panel: 0 4px 24px rgb(0 0 0 / 0.25), 0 1px 0 rgb(74 92 106 / 0.15);
+  --shadow-panel-strong: 0 8px 32px rgb(0 0 0 / 0.35);
 }
 
 /* -------------------------------------------------------------------
@@ -90,14 +94,20 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Layout: app shell (grid varies by view in App.tsx)
+   Layout: app shell — smooth gradient background, gap for floating panels
    ------------------------------------------------------------------- */
 .app-shell {
   display: grid;
   height: 100vh;
   overflow: hidden;
-  background: var(--color-background);
+  background: linear-gradient(180deg, #CCD0CF 0%, #9BA8AB 50%, #4A5C6A 100%);
   color: var(--color-foreground);
+  padding: 14px;
+  gap: 14px;
+}
+
+.dark .app-shell {
+  background: linear-gradient(180deg, #06141B 0%, #11212D 40%, #0d1c24 100%);
 }
 
 /* Conversations view: sidebar | conv list | viewer */
@@ -120,19 +130,35 @@ body {
   grid-template-columns: 64px 1fr;
 }
 
+/* Glassmorphism panel: blur + semi-transparent surface + soft shadow */
+.glass-panel {
+  background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
 /* -------------------------------------------------------------------
-   Collapsed sidebar (56-64px)
+   Collapsed sidebar (56-64px) — glass floating panel
    ------------------------------------------------------------------- */
 .sidebar {
   display: flex;
   flex-direction: column;
   width: 64px;
   flex-shrink: 0;
-  background: var(--color-muted);
-  border-right: 1px solid var(--color-border);
+  background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
   padding: 12px 0;
   overflow: visible;
   z-index: 10;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .sidebar-logo {
@@ -142,6 +168,11 @@ body {
   padding: 8px 0 16px;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 8px;
+  color: var(--color-primary);
+}
+
+.dark .sidebar-logo svg path {
+  fill: #06141B;
 }
 
 .sidebar-nav {
@@ -227,11 +258,13 @@ body {
   bottom: 0;
   min-width: 200px;
   background: var(--color-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 4px;
   z-index: 100;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-panel);
 }
 
 .import-popover-item {
@@ -266,13 +299,17 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Conversation list panel
+   Conversation list panel — glass floating panel
    ------------------------------------------------------------------- */
 .conv-panel {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border);
   background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
   overflow: hidden;
 }
 
@@ -361,13 +398,18 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Message viewer / detail panel
+   Message viewer / detail panel — glass floating panel
    ------------------------------------------------------------------- */
 .viewer {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-background);
+  background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
 }
 
 .viewer-empty {
@@ -407,11 +449,64 @@ body {
   color: var(--color-foreground);
 }
 
+.viewer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .viewer-header-meta {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+}
+
+.viewer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewer-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewer-search-input {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  min-width: 200px;
+  background: var(--color-card);
+  color: var(--color-foreground);
+}
+
+.viewer-search-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.viewer-search-count {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+}
+
+.viewer-search-nav-btn {
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.viewer-search-no-results {
   font-size: 12px;
   color: var(--color-muted-foreground);
 }
@@ -461,6 +556,12 @@ body {
   opacity: 0.9;
 }
 
+.msg-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sender-pill {
   font-size: 10px;
   font-weight: 700;
@@ -484,13 +585,18 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Search page (center panel)
+   Search page (center panel) — glass floating panel
    ------------------------------------------------------------------- */
 .search-main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-background);
+  background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
 }
 
 .search-page {
@@ -529,7 +635,7 @@ body {
 .search-input:focus {
   outline: none;
   border-color: var(--color-ring);
-  box-shadow: 0 0 0 2px rgb(249 115 22 / 0.2);
+  box-shadow: 0 0 0 2px rgb(37 55 69 / 0.2);
 }
 
 .search-filters {
@@ -617,8 +723,12 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-background);
-  border-left: 1px solid var(--color-border);
+  background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
 }
 
 .search-detail-empty {
@@ -633,11 +743,16 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Overview / Dashboard
+   Overview / Dashboard — glass floating panel
    ------------------------------------------------------------------- */
 .overview-main {
   overflow-y: auto;
-  background: var(--color-background);
+  background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
   padding: 24px 32px;
 }
 
@@ -747,11 +862,16 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Settings
+   Settings — glass floating panel
    ------------------------------------------------------------------- */
 .settings-main {
   overflow-y: auto;
-  background: var(--color-background);
+  background: var(--color-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
   padding: 24px 32px;
 }
 
@@ -907,10 +1027,12 @@ body {
 .confirm-dialog {
   width: min(420px, 100%);
   background: var(--color-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 20px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-panel-strong);
 }
 
 .confirm-dialog h3 {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Home, MessageCircle, Search, Settings, Upload } from "lucide-react";
 import {
   ConversationRow,
   DbStats,
@@ -12,10 +13,16 @@ import {
 } from "./db";
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
 import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
+import OverviewPage from "./OverviewPage";
+import ConversationDetailPanel from "./ConversationDetailPanel";
+import { MemexLogoIcon } from "./icons";
 import { formatDate, formatTimestamp } from "./utils";
 import "./App.css";
 
 const SEARCH_STATE_KEY = "memex-search-state";
+const THEME_KEY = "memex-theme";
+type ThemeMode = "light" | "dark" | "system";
+type ActiveView = "overview" | "search" | "conversations" | "settings";
 
 type PersistedSearchState = {
   query: string;
@@ -587,55 +594,6 @@ function App() {
     }
   }
 
-  async function handleOpenConversationFromSearchPage(
-    conversationId: string,
-    activeQuery: string,
-    messageId?: string | null
-  ) {
-    setOpenedConversationFromSearch(true);
-    setSearchPageQuery(activeQuery);
-    setMessageSearchQuery(activeQuery);
-    setActiveView("conversations");
-    if (activeSource !== null) {
-      setActiveSource(null);
-      await loadData(null);
-    }
-
-    // If the selected conversation is not in the currently loaded list,
-    // inject it from search snapshot so the left panel can highlight it.
-    setConversations((prev) => {
-      if (prev.some((c) => c.id === conversationId)) {
-        return prev;
-      }
-      const fromSearch = searchPageSnapshot.results.find(
-        (row) => row.conversation_id === conversationId
-      );
-      if (!fromSearch) {
-        return prev;
-      }
-      return [
-        {
-          id: fromSearch.conversation_id,
-          source: fromSearch.source,
-          title: fromSearch.title || "Untitled",
-          created_at: fromSearch.created_at,
-          last_message_at: fromSearch.last_occurrence,
-          message_count: 0,
-        },
-        ...prev,
-      ];
-    });
-
-    await handleConversationClick(conversationId, messageId);
-
-    // Open and focus the conversation search bar with the query pre-filled
-    setViewerSearchOpen(true);
-    setTimeout(() => {
-      viewerSearchInputRef.current?.focus();
-      viewerSearchInputRef.current?.select();
-    }, 150);
-  }
-
   // ---- source helpers ----
   const availableSources = useMemo(() => {
     const dbSources = sourceStats.map((s) => s.source);
@@ -655,132 +613,243 @@ function App() {
     return sourceStats.find((s) => s.source === source)?.conversationCount ?? 0;
   }
 
+  async function handleSearchResultSelect(convId: string, title: string, source: string) {
+    setSearchSelectedConvId(convId);
+    setSearchSelectedTitle(title);
+    setSearchSelectedSource(source);
+    setSearchDetailLoading(true);
+    try {
+      const msgs = await getMessages(convId);
+      setSearchDetailMessages(msgs);
+    } catch {
+      setSearchDetailMessages([]);
+    } finally {
+      setSearchDetailLoading(false);
+    }
+  }
+
+  function handleCopySearchDetailThread() {
+    const lines = searchDetailMessages.map((m) => {
+      const sender = m.sender === "human" ? "You" : searchSelectedSource;
+      return `**${sender}** (${formatTimestamp(m.created_at)}):\n\n${m.content}`;
+    });
+    const text = lines.join("\n\n");
+    copyToClipboard(text).then((ok) => ok && showCopyToast("Copied"));
+  }
+
+  function handleOverviewSelectConversation(convId: string) {
+    setActiveView("conversations");
+    setActiveSource(null);
+    void loadData(null).then(() => {
+      setSelectedConvId(convId);
+      setMessagesLoading(true);
+      getMessages(convId).then((data) => {
+        setMessages(data);
+        setMessagesLoading(false);
+      }).catch(() => setMessagesLoading(false));
+    });
+  }
+
+  const shellLayoutClass =
+    activeView === "search"
+      ? "search-layout"
+      : activeView === "overview"
+        ? "overview-layout"
+        : activeView === "settings"
+          ? "settings-layout"
+          : "conversations-layout";
+
   // ---- render ----
   return (
-    <div className="app-shell">
-      {/* ---- LEFT NAV ---- */}
-      <nav className="nav-rail">
-        <div className="nav-brand">
-          <span className="brand-mark">M</span>
-          <span className="brand-text">Memex</span>
+    <div className={`app-shell ${shellLayoutClass}`}>
+      {/* ---- Collapsed sidebar ---- */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <MemexLogoIcon size={32} />
         </div>
-
-        <div className="nav-views">
+        <nav className="sidebar-nav" aria-label="Main">
           <button
-            className={`nav-source-btn ${activeView === "conversations" ? "active" : ""}`}
+            type="button"
+            className={`sidebar-item ${activeView === "overview" ? "active" : ""}`}
+            onClick={() => setActiveView("overview")}
+            title="Overview"
+            aria-label="Overview"
+            aria-current={activeView === "overview" ? "page" : undefined}
+          >
+            <Home size={22} strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            className={`sidebar-item ${activeView === "search" ? "active" : ""}`}
+            onClick={() => setActiveView("search")}
+            title="Search (⌘K)"
+            aria-label="Search"
+            aria-current={activeView === "search" ? "page" : undefined}
+          >
+            <Search size={22} strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            className={`sidebar-item ${activeView === "conversations" ? "active" : ""}`}
             onClick={() => setActiveView("conversations")}
+            title="Conversations"
+            aria-label="Conversations"
+            aria-current={activeView === "conversations" ? "page" : undefined}
           >
-            <span>Chats</span>
+            <MessageCircle size={22} strokeWidth={1.5} />
           </button>
-          <button
-            className={`nav-source-btn ${activeView === "search" ? "active" : ""}`}
-            onClick={() => {
-              setOpenedConversationFromSearch(false);
-              setActiveView("search");
-            }}
-          >
-            <span>Search</span>
-          </button>
-        </div>
-
-        {/* Source tabs */}
-        <div className="nav-sources">
-          <button
-            className={`nav-source-btn ${activeSource === null ? "active" : ""}`}
-            onClick={() => {
-              setActiveView("conversations");
-              setActiveSource(null);
-            }}
-          >
-            <span>All</span>
-            {stats && <span className="nav-badge">{stats.conversationCount}</span>}
-          </button>
-
-          {availableSources.map((src) => (
-            <button
-              key={src}
-              className={`nav-source-btn ${activeSource === src ? "active" : ""}`}
-              onClick={() => {
-                setActiveView("conversations");
-                setActiveSource(src);
-              }}
-            >
-              <span>{sourceLabel(src)}</span>
-              <span className="nav-badge">{sourceConvCount(src)}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Import/Clear controls */}
-        <div className="nav-bottom">
-          <div className="import-wrapper" ref={importMenuRef}>
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="sidebar-import-wrapper" ref={importMenuRef}>
             <button
               type="button"
-              className="import-trigger"
+              className="sidebar-import-trigger"
               onClick={() => setImportMenuOpen((v) => !v)}
               disabled={importing || clearingData}
+              title="Import"
+              aria-label="Import conversations"
             >
-              {importing ? "Importing..." : "+ Import"}
+              <Upload size={22} strokeWidth={1.5} />
             </button>
-
             {importMenuOpen && (
-              <div className="import-menu">
+              <div className="import-popover">
                 {IMPORT_SOURCES.map((src) => (
                   <button
                     type="button"
                     key={src.id}
-                    className="import-menu-item"
+                    className="import-popover-item"
                     disabled={!src.available || clearingData}
                     onClick={() => void handleImportSource(src.id)}
                   >
                     <span>{src.label}</span>
                     {!src.available && (
-                      <span className="coming-soon">Coming soon</span>
+                      <span className="import-coming-soon">Coming soon</span>
                     )}
                   </button>
                 ))}
               </div>
             )}
           </div>
-
           <button
             type="button"
-            className="clear-data-trigger"
-            onClick={handleClearAllDataClick}
-            disabled={importing || clearingData || loading}
+            className={`sidebar-item ${activeView === "settings" ? "active" : ""}`}
+            onClick={() => setActiveView("settings")}
+            title="Settings"
+            aria-label="Settings"
+            aria-current={activeView === "settings" ? "page" : undefined}
           >
-            {clearingData ? "Clearing..." : "Clear Data"}
+            <Settings size={22} strokeWidth={1.5} />
           </button>
         </div>
-      </nav>
+      </aside>
 
-      {activeView === "search" ? (
-        <main className="search-main">
-          <SearchPage
-            query={searchPageQuery}
-            onQueryChange={setSearchPageQuery}
-            availableSources={availableSources}
-            sourceLabel={sourceLabel}
-            focusRequestId={searchFocusRequestId}
-            snapshot={searchPageSnapshot}
-            onSnapshotChange={setSearchPageSnapshot}
-            skipSearchOnceRef={skipSearchOnceRef}
-            restoreSelectedConversationId={searchRestoreConversationId}
-            onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
-            onOpenConversation={(conversationId, activeQuery, messageId) => {
-              void handleOpenConversationFromSearchPage(conversationId, activeQuery, messageId);
-            }}
-          />
+      {activeView === "overview" && (
+        <OverviewPage
+          onOpenImport={() => setImportMenuOpen(true)}
+          onSelectConversation={handleOverviewSelectConversation}
+        />
+      )}
+
+      {activeView === "settings" && (
+        <main className="settings-main">
+          <h1 className="settings-title">Settings</h1>
+          <div className="settings-section">
+            <h3>Theme</h3>
+            <div className="settings-theme-options">
+              {(["light", "dark", "system"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`settings-theme-option ${theme === mode ? "selected" : ""}`}
+                  onClick={() => setThemeAndPersist(mode)}
+                >
+                  {theme === mode && <span aria-hidden>●</span>}
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="settings-section">
+            <h3>Data</h3>
+            <button
+              type="button"
+              className="settings-danger-btn"
+              onClick={handleClearAllDataClick}
+              disabled={importing || clearingData || loading}
+            >
+              {clearingData ? "Clearing..." : "Clear all data"}
+            </button>
+          </div>
         </main>
-      ) : (
+      )}
+
+      {activeView === "search" && (
+        <>
+          <main className="search-main">
+            <SearchPage
+              query={searchPageQuery}
+              onQueryChange={setSearchPageQuery}
+              availableSources={availableSources}
+              sourceLabel={sourceLabel}
+              onSelectResult={handleSearchResultSelect}
+              selectedConversationId={searchSelectedConvId}
+              focusRequestId={searchFocusRequestId}
+              snapshot={searchPageSnapshot}
+              onSnapshotChange={setSearchPageSnapshot}
+              skipSearchOnceRef={skipSearchOnceRef}
+              restoreSelectedConversationId={searchRestoreConversationId}
+              onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
+            />
+          </main>
+          <div className="search-detail-panel">
+            {!searchSelectedConvId ? (
+              <div className="search-detail-empty">
+                No conversation selected. Choose a result to view its messages.
+              </div>
+            ) : (
+              <ConversationDetailPanel
+                title={searchSelectedTitle}
+                source={searchSelectedSource}
+                messages={searchDetailMessages}
+                loading={searchDetailLoading}
+                onCopyThread={handleCopySearchDetailThread}
+              />
+            )}
+          </div>
+        </>
+      )}
+
+      {activeView === "conversations" && (
         <>
           {/* ---- CONVERSATION LIST ---- */}
           <aside className="conv-panel">
             <div className="conv-panel-header">
               <div className="conv-header-top">
-                <h2>{activeSource ? sourceLabel(activeSource) : "All Conversations"}</h2>
+                <h2>Conversations</h2>
                 <span className="conv-count">{conversations.length}</span>
               </div>
+              <select
+                value={activeSource ?? ""}
+                onChange={(e) => setActiveSource(e.target.value || null)}
+                aria-label="Filter by source"
+                style={{
+                  marginTop: "8px",
+                  width: "100%",
+                  padding: "6px 8px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-card)",
+                  color: "var(--color-foreground)",
+                  fontSize: "12px",
+                }}
+              >
+                <option value="">All sources</option>
+                {availableSources.map((src) => (
+                  <option key={src} value={src}>
+                    {sourceLabel(src)} ({sourceConvCount(src)})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {loading ? (

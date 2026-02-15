@@ -82,7 +82,7 @@ export function GrokIcon({ className, size = defaultSize }: LLMIconProps) {
   );
 }
 
-/** Memex logo mark (M) for sidebar */
+/** Memex logo mark (M) for sidebar — uses palette primary (currentColor) */
 export function MemexLogoIcon({ className, size = 32 }: LLMIconProps) {
   return (
     <svg
@@ -93,9 +93,9 @@ export function MemexLogoIcon({ className, size = 32 }: LLMIconProps) {
       className={className}
       aria-hidden
     >
-      <rect width="32" height="32" rx="8" fill="#F97316" />
+      <rect width="32" height="32" rx="8" fill="currentColor" />
       <path
-        fill="#FAFAFA"
+        fill="#CCD0CF"
         d="M8 8h4v16h-4V8zm6 0h4l4 8 4-8h4v16h-4V14l-4 10h-4L14 14v10h-4V8z"
       />
     </svg>
