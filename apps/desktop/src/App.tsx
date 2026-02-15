@@ -665,7 +665,7 @@ function App() {
       {/* ---- Collapsed sidebar ---- */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <MemexLogoIcon size={32} />
+          <MemexLogoIcon size={26} />
         </div>
         <nav className="sidebar-nav" aria-label="Main">
           <button
@@ -676,7 +676,7 @@ function App() {
             aria-label="Overview"
             aria-current={activeView === "overview" ? "page" : undefined}
           >
-            <Home size={22} strokeWidth={1.5} />
+            <Home size={20} strokeWidth={1.5} />
           </button>
           <button
             type="button"
@@ -686,7 +686,7 @@ function App() {
             aria-label="Search"
             aria-current={activeView === "search" ? "page" : undefined}
           >
-            <Search size={22} strokeWidth={1.5} />
+            <Search size={20} strokeWidth={1.5} />
           </button>
           <button
             type="button"
@@ -696,7 +696,7 @@ function App() {
             aria-label="Conversations"
             aria-current={activeView === "conversations" ? "page" : undefined}
           >
-            <MessageCircle size={22} strokeWidth={1.5} />
+            <MessageCircle size={20} strokeWidth={1.5} />
           </button>
         </nav>
         <div className="sidebar-bottom">
@@ -709,7 +709,7 @@ function App() {
               title="Import"
               aria-label="Import conversations"
             >
-              <Upload size={22} strokeWidth={1.5} />
+              <Upload size={20} strokeWidth={1.5} />
             </button>
             {importMenuOpen && (
               <div className="import-popover">
@@ -738,7 +738,7 @@ function App() {
             aria-label="Settings"
             aria-current={activeView === "settings" ? "page" : undefined}
           >
-            <Settings size={22} strokeWidth={1.5} />
+            <Settings size={20} strokeWidth={1.5} />
           </button>
         </div>
       </aside>

@@ -95,7 +95,7 @@ export function MemexLogoIcon({ className, size = 32 }: LLMIconProps) {
     >
       <rect width="32" height="32" rx="8" fill="currentColor" />
       <path
-        fill="#CCD0CF"
+        fill="#fafafa"
         d="M8 8h4v16h-4V8zm6 0h4l4 8 4-8h4v16h-4V14l-4 10h-4L14 14v10h-4V8z"
       />
     </svg>
