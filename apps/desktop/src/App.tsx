@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Home, MessageCircle, MoreHorizontal, Search, Settings, Upload } from "lucide-react";
 import {
   ConversationRow,
   DbStats,
@@ -12,10 +13,17 @@ import {
 } from "./db";
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
 import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
+import OverviewPage from "./OverviewPage";
+import ImportPage from "./ImportPage";
+import ConversationDetailPanel from "./ConversationDetailPanel";
+import { MemexLogoIcon } from "./icons";
 import { formatDate, formatTimestamp } from "./utils";
 import "./App.css";
 
 const SEARCH_STATE_KEY = "memex-search-state";
+const THEME_KEY = "memex-theme";
+type ThemeMode = "light" | "dark" | "system";
+type ActiveView = "overview" | "search" | "conversations" | "import" | "settings";
 
 type PersistedSearchState = {
   query: string;
@@ -58,9 +66,48 @@ function saveSearchState(state: PersistedSearchState) {
   }
 }
 
-type ActiveView = "conversations" | "search";
-
 function App() {
+  // ---- theme ----
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark" || stored === "system") return stored;
+    return "system";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "light") {
+      root.classList.remove("dark");
+    } else if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const listener = () => {
+      if (theme !== "system") return;
+      if (mq.matches) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    };
+    mq.addEventListener("change", listener);
+    return () => mq.removeEventListener("change", listener);
+  }, [theme]);
+
+  function setThemeAndPersist(next: ThemeMode) {
+    setTheme(next);
+    localStorage.setItem(THEME_KEY, next);
+  }
+
   // ---- data state ----
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DbStats | null>(null);
@@ -72,11 +119,20 @@ function App() {
 
   // ---- source filter ----
   const [activeSource, setActiveSource] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<ActiveView>("conversations");
+  const [activeView, setActiveView] = useState<ActiveView>("overview");
+
+  // ---- search detail panel (when on search view, in-place) ----
+  const [searchSelectedConvId, setSearchSelectedConvId] = useState<string | null>(null);
+  const [searchSelectedTitle, setSearchSelectedTitle] = useState("");
+  const [searchSelectedSource, setSearchSelectedSource] = useState("");
+  const [searchDetailMessages, setSearchDetailMessages] = useState<MessageRow[]>([]);
+  const [searchDetailLoading, setSearchDetailLoading] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
   const [viewerSearchOpen, setViewerSearchOpen] = useState(false);
+  const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   const viewerSearchInputRef = useRef<HTMLInputElement>(null);
+  const viewerMenuRef = useRef<HTMLDivElement>(null);
 
   // ---- search state (initialized from persisted state if present) ----
   const [searchPageQuery, setSearchPageQuery] = useState(() => {
@@ -101,6 +157,7 @@ function App() {
   );
   const [openedConversationFromSearch, setOpenedConversationFromSearch] = useState(false);
   const [searchRestoreConversationId, setSearchRestoreConversationId] = useState<string | null>(null);
+  const [importRefreshKey, setImportRefreshKey] = useState(0);
   const skipSearchOnceRef = useRef(false);
 
   // ---- persist search state to localStorage ----
@@ -134,12 +191,11 @@ function App() {
   const [importing, setImporting] = useState(false);
   const [clearingData, setClearingData] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  const [importMenuOpen, setImportMenuOpen] = useState(false);
+  const [, setImportMenuOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const importMenuRef = useRef<HTMLDivElement>(null);
   const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -282,6 +338,17 @@ function App() {
     }
   }, [viewerSearchOpen, selectedConvId]);
 
+  useEffect(() => {
+    if (!viewerMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (viewerMenuRef.current && !viewerMenuRef.current.contains(e.target as Node)) {
+        setViewerMenuOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [viewerMenuOpen]);
+
   // Keyboard: Up/Down/Enter navigate between occurrences; Escape closes search UI (keeps query)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -289,8 +356,12 @@ function App() {
       if (!inViewer) return;
 
       if (e.key === "Escape") {
+        e.preventDefault();
+        if (viewerMenuOpen) {
+          setViewerMenuOpen(false);
+          return;
+        }
         if (viewerSearchOpen) {
-          e.preventDefault();
           const searchInput = viewerSearchInputRef.current;
           if (searchInput) {
             searchInput.blur();
@@ -321,20 +392,6 @@ function App() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [viewerSearchOpen, messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
-
-  // ---- close import menu on outside click ----
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        importMenuRef.current &&
-        !importMenuRef.current.contains(e.target as Node)
-      ) {
-        setImportMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   // ---- data loading ----
   const loadData = useCallback(
@@ -483,6 +540,7 @@ function App() {
         setImportResult(
           `Imported ${result.conversationCount} conversations and ${result.messageCount} messages from ${source}.`
         );
+        setImportRefreshKey((k) => k + 1);
         await loadData(activeSource);
       }
     } catch (err) {
@@ -541,55 +599,6 @@ function App() {
     }
   }
 
-  async function handleOpenConversationFromSearchPage(
-    conversationId: string,
-    activeQuery: string,
-    messageId?: string | null
-  ) {
-    setOpenedConversationFromSearch(true);
-    setSearchPageQuery(activeQuery);
-    setMessageSearchQuery(activeQuery);
-    setActiveView("conversations");
-    if (activeSource !== null) {
-      setActiveSource(null);
-      await loadData(null);
-    }
-
-    // If the selected conversation is not in the currently loaded list,
-    // inject it from search snapshot so the left panel can highlight it.
-    setConversations((prev) => {
-      if (prev.some((c) => c.id === conversationId)) {
-        return prev;
-      }
-      const fromSearch = searchPageSnapshot.results.find(
-        (row) => row.conversation_id === conversationId
-      );
-      if (!fromSearch) {
-        return prev;
-      }
-      return [
-        {
-          id: fromSearch.conversation_id,
-          source: fromSearch.source,
-          title: fromSearch.title || "Untitled",
-          created_at: fromSearch.created_at,
-          last_message_at: fromSearch.last_occurrence,
-          message_count: 0,
-        },
-        ...prev,
-      ];
-    });
-
-    await handleConversationClick(conversationId, messageId);
-
-    // Open and focus the conversation search bar with the query pre-filled
-    setViewerSearchOpen(true);
-    setTimeout(() => {
-      viewerSearchInputRef.current?.focus();
-      viewerSearchInputRef.current?.select();
-    }, 150);
-  }
-
   // ---- source helpers ----
   const availableSources = useMemo(() => {
     const dbSources = sourceStats.map((s) => s.source);
@@ -609,132 +618,238 @@ function App() {
     return sourceStats.find((s) => s.source === source)?.conversationCount ?? 0;
   }
 
+  async function handleSearchResultSelect(convId: string, title: string, source: string) {
+    setSearchSelectedConvId(convId);
+    setSearchSelectedTitle(title);
+    setSearchSelectedSource(source);
+    setSearchDetailLoading(true);
+    try {
+      const msgs = await getMessages(convId);
+      setSearchDetailMessages(msgs);
+    } catch {
+      setSearchDetailMessages([]);
+    } finally {
+      setSearchDetailLoading(false);
+    }
+  }
+
+  function handleCopySearchDetailThread() {
+    const lines = searchDetailMessages.map((m) => {
+      const sender = m.sender === "human" ? "You" : searchSelectedSource;
+      return `**${sender}** (${formatTimestamp(m.created_at)}):\n\n${m.content}`;
+    });
+    const text = lines.join("\n\n");
+    copyToClipboard(text).then((ok) => ok && showCopyToast("Copied"));
+  }
+
+  function handleOverviewSelectConversation(convId: string) {
+    setActiveView("conversations");
+    setActiveSource(null);
+    void loadData(null).then(() => {
+      setSelectedConvId(convId);
+      setMessagesLoading(true);
+      getMessages(convId).then((data) => {
+        setMessages(data);
+        setMessagesLoading(false);
+      }).catch(() => setMessagesLoading(false));
+    });
+  }
+
+  const searchPanelClosed = activeView === "search" && !searchSelectedConvId;
+  const shellLayoutClass =
+    activeView === "search"
+      ? searchPanelClosed
+        ? "search-layout search-panel-closed"
+        : "search-layout"
+      : activeView === "overview"
+        ? "overview-layout"
+        : activeView === "settings"
+          ? "settings-layout"
+          : activeView === "import"
+            ? "import-layout"
+            : "conversations-layout";
+
   // ---- render ----
   return (
-    <div className="app-shell">
-      {/* ---- LEFT NAV ---- */}
-      <nav className="nav-rail">
-        <div className="nav-brand">
-          <span className="brand-mark">M</span>
-          <span className="brand-text">Memex</span>
+    <div className={`app-shell ${shellLayoutClass}`}>
+      {/* ---- Collapsed sidebar ---- */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <MemexLogoIcon size={26} />
         </div>
-
-        <div className="nav-views">
-          <button
-            className={`nav-source-btn ${activeView === "conversations" ? "active" : ""}`}
-            onClick={() => setActiveView("conversations")}
-          >
-            <span>Chats</span>
-          </button>
-          <button
-            className={`nav-source-btn ${activeView === "search" ? "active" : ""}`}
-            onClick={() => {
-              setOpenedConversationFromSearch(false);
-              setActiveView("search");
-            }}
-          >
-            <span>Search</span>
-          </button>
-        </div>
-
-        {/* Source tabs */}
-        <div className="nav-sources">
-          <button
-            className={`nav-source-btn ${activeSource === null ? "active" : ""}`}
-            onClick={() => {
-              setActiveView("conversations");
-              setActiveSource(null);
-            }}
-          >
-            <span>All</span>
-            {stats && <span className="nav-badge">{stats.conversationCount}</span>}
-          </button>
-
-          {availableSources.map((src) => (
-            <button
-              key={src}
-              className={`nav-source-btn ${activeSource === src ? "active" : ""}`}
-              onClick={() => {
-                setActiveView("conversations");
-                setActiveSource(src);
-              }}
-            >
-              <span>{sourceLabel(src)}</span>
-              <span className="nav-badge">{sourceConvCount(src)}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Import/Clear controls */}
-        <div className="nav-bottom">
-          <div className="import-wrapper" ref={importMenuRef}>
-            <button
-              type="button"
-              className="import-trigger"
-              onClick={() => setImportMenuOpen((v) => !v)}
-              disabled={importing || clearingData}
-            >
-              {importing ? "Importing..." : "+ Import"}
-            </button>
-
-            {importMenuOpen && (
-              <div className="import-menu">
-                {IMPORT_SOURCES.map((src) => (
-                  <button
-                    type="button"
-                    key={src.id}
-                    className="import-menu-item"
-                    disabled={!src.available || clearingData}
-                    onClick={() => void handleImportSource(src.id)}
-                  >
-                    <span>{src.label}</span>
-                    {!src.available && (
-                      <span className="coming-soon">Coming soon</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
+        <nav className="sidebar-nav" aria-label="Main">
           <button
             type="button"
-            className="clear-data-trigger"
-            onClick={handleClearAllDataClick}
-            disabled={importing || clearingData || loading}
+            className={`sidebar-item ${activeView === "overview" ? "active" : ""}`}
+            onClick={() => setActiveView("overview")}
+            title="Overview"
+            aria-label="Overview"
+            aria-current={activeView === "overview" ? "page" : undefined}
           >
-            {clearingData ? "Clearing..." : "Clear Data"}
+            <Home size={20} strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            className={`sidebar-item ${activeView === "search" ? "active" : ""}`}
+            onClick={() => setActiveView("search")}
+            title="Search (⌘K)"
+            aria-label="Search"
+            aria-current={activeView === "search" ? "page" : undefined}
+          >
+            <Search size={20} strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            className={`sidebar-item ${activeView === "conversations" ? "active" : ""}`}
+            onClick={() => setActiveView("conversations")}
+            title="Conversations"
+            aria-label="Conversations"
+            aria-current={activeView === "conversations" ? "page" : undefined}
+          >
+            <MessageCircle size={20} strokeWidth={1.5} />
+          </button>
+        </nav>
+        <div className="sidebar-bottom">
+          <button
+            type="button"
+            className={`sidebar-item ${activeView === "import" ? "active" : ""}`}
+            onClick={() => {
+              setActiveView("import");
+              setImportMenuOpen(false);
+            }}
+            title="Import"
+            aria-label="Import"
+            aria-current={activeView === "import" ? "page" : undefined}
+          >
+            <Upload size={20} strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            className={`sidebar-item ${activeView === "settings" ? "active" : ""}`}
+            onClick={() => setActiveView("settings")}
+            title="Settings"
+            aria-label="Settings"
+            aria-current={activeView === "settings" ? "page" : undefined}
+          >
+            <Settings size={20} strokeWidth={1.5} />
           </button>
         </div>
-      </nav>
+      </aside>
 
-      {activeView === "search" ? (
-        <main className="search-main">
-          <SearchPage
-            query={searchPageQuery}
-            onQueryChange={setSearchPageQuery}
-            availableSources={availableSources}
-            sourceLabel={sourceLabel}
-            focusRequestId={searchFocusRequestId}
-            snapshot={searchPageSnapshot}
-            onSnapshotChange={setSearchPageSnapshot}
-            skipSearchOnceRef={skipSearchOnceRef}
-            restoreSelectedConversationId={searchRestoreConversationId}
-            onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
-            onOpenConversation={(conversationId, activeQuery, messageId) => {
-              void handleOpenConversationFromSearchPage(conversationId, activeQuery, messageId);
-            }}
-          />
+      {activeView === "overview" && (
+        <OverviewPage
+          onOpenImport={() => setActiveView("import")}
+          onSelectConversation={handleOverviewSelectConversation}
+        />
+      )}
+
+      {activeView === "import" && (
+        <ImportPage
+          onImport={(source) => void handleImportSource(source)}
+          importing={importing}
+          importError={importError}
+          importResult={importResult}
+          refreshKey={importRefreshKey}
+        />
+      )}
+
+      {activeView === "settings" && (
+        <main className="settings-main">
+          <h1 className="settings-title">Settings</h1>
+          <div className="settings-section">
+            <h3>Theme</h3>
+            <div className="settings-theme-options">
+              {(["light", "dark", "system"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`settings-theme-option ${theme === mode ? "selected" : ""}`}
+                  onClick={() => setThemeAndPersist(mode)}
+                >
+                  {theme === mode && <span aria-hidden>●</span>}
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="settings-section">
+            <h3>Data</h3>
+            <button
+              type="button"
+              className="settings-danger-btn"
+              onClick={handleClearAllDataClick}
+              disabled={importing || clearingData || loading}
+            >
+              {clearingData ? "Clearing..." : "Clear all data"}
+            </button>
+          </div>
         </main>
-      ) : (
+      )}
+
+      {activeView === "search" && (
+        <>
+          <main className="search-main">
+            <SearchPage
+              query={searchPageQuery}
+              onQueryChange={setSearchPageQuery}
+              availableSources={availableSources}
+              sourceLabel={sourceLabel}
+              onSelectResult={handleSearchResultSelect}
+              selectedConversationId={searchSelectedConvId}
+              focusRequestId={searchFocusRequestId}
+              snapshot={searchPageSnapshot}
+              onSnapshotChange={setSearchPageSnapshot}
+              skipSearchOnceRef={skipSearchOnceRef}
+              restoreSelectedConversationId={searchRestoreConversationId}
+              onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
+            />
+          </main>
+          {searchSelectedConvId && (
+            <div className="search-detail-panel">
+              <ConversationDetailPanel
+                title={searchSelectedTitle}
+                source={searchSelectedSource}
+                messages={searchDetailMessages}
+                loading={searchDetailLoading}
+                onCopyThread={handleCopySearchDetailThread}
+                onClose={() => setSearchSelectedConvId(null)}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {activeView === "conversations" && (
         <>
           {/* ---- CONVERSATION LIST ---- */}
           <aside className="conv-panel">
             <div className="conv-panel-header">
               <div className="conv-header-top">
-                <h2>{activeSource ? sourceLabel(activeSource) : "All Conversations"}</h2>
+                <h2>Conversations</h2>
                 <span className="conv-count">{conversations.length}</span>
               </div>
+              <select
+                value={activeSource ?? ""}
+                onChange={(e) => setActiveSource(e.target.value || null)}
+                aria-label="Filter by source"
+                style={{
+                  marginTop: "8px",
+                  width: "100%",
+                  padding: "6px 8px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-card)",
+                  color: "var(--color-foreground)",
+                  fontSize: "12px",
+                }}
+              >
+                <option value="">All sources</option>
+                {availableSources.map((src) => (
+                  <option key={src} value={src}>
+                    {sourceLabel(src)} ({sourceConvCount(src)})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {loading ? (
@@ -828,14 +943,36 @@ function App() {
                     </div>
                   </div>
                   <div className="viewer-header-actions">
-                    <button
-                      type="button"
-                      className="viewer-copy-conv-btn"
-                      onClick={() => copyConversationToClipboard(sourceLabel(selectedConversation.source))}
-                      title="Copy conversation (Markdown)"
-                    >
-                      Copy conversation
-                    </button>
+                    <div className="viewer-header-menu-wrap" ref={viewerMenuRef}>
+                      <button
+                        type="button"
+                        className="viewer-menu-trigger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewerMenuOpen((open) => !open);
+                        }}
+                        title="Options"
+                        aria-label="Options"
+                        aria-expanded={viewerMenuOpen}
+                        aria-haspopup="true"
+                      >
+                        <MoreHorizontal size={20} />
+                      </button>
+                      {viewerMenuOpen && (
+                        <div className="viewer-header-menu">
+                          <button
+                            type="button"
+                            className="viewer-header-menu-item"
+                            onClick={() => {
+                              copyConversationToClipboard(sourceLabel(selectedConversation.source));
+                              setViewerMenuOpen(false);
+                            }}
+                          >
+                            Copy conversation
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     {viewerSearchOpen ? (
                       <div className="viewer-search">
                         <input
