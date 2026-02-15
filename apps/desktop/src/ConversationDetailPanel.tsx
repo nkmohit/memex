@@ -1,7 +1,8 @@
+import { useRef, useState, useEffect } from "react";
 import type { MessageRow } from "./db";
 import { formatTimestamp } from "./utils";
 import { IMPORT_SOURCES } from "./importer";
-import { X } from "lucide-react";
+import { MoreHorizontal, X } from "lucide-react";
 
 interface ConversationDetailPanelProps {
   title: string;
@@ -25,6 +26,20 @@ export default function ConversationDetailPanel({
   onCopyThread,
   onClose,
 }: ConversationDetailPanelProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [menuOpen]);
+
   return (
     <div className="search-detail-panel">
       <div className="viewer-header">
@@ -36,21 +51,43 @@ export default function ConversationDetailPanel({
           </p>
         </div>
         <div className="viewer-header-actions">
-          <button
-            type="button"
-            className="viewer-copy-conv-btn"
-            onClick={onCopyThread}
-            title="Copy thread"
-          >
-            Copy Thread
-          </button>
+          <div className="viewer-header-menu-wrap" ref={menuRef}>
+            <button
+              type="button"
+              className="viewer-menu-trigger"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((open) => !open);
+              }}
+              title="Options"
+              aria-label="Options"
+              aria-expanded={menuOpen}
+              aria-haspopup="true"
+            >
+              <MoreHorizontal size={20} />
+            </button>
+            {menuOpen && (
+              <div className="viewer-header-menu">
+                <button
+                  type="button"
+                  className="viewer-header-menu-item"
+                  onClick={() => {
+                    onCopyThread();
+                    setMenuOpen(false);
+                  }}
+                >
+                  Copy Thread
+                </button>
+              </div>
+            )}
+          </div>
           {onClose && (
             <button
               type="button"
               className="viewer-close-panel-btn"
               onClick={onClose}
-              title="Close conversation"
-              aria-label="Close conversation"
+              title="Close panel"
+              aria-label="Close panel"
             >
               <X size={18} />
             </button>

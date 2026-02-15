@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, MessageCircle, Search, Settings, Upload } from "lucide-react";
+import { Home, MessageCircle, MoreHorizontal, Search, Settings, Upload } from "lucide-react";
 import {
   ConversationRow,
   DbStats,
@@ -129,7 +129,9 @@ function App() {
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
   const [viewerSearchOpen, setViewerSearchOpen] = useState(false);
+  const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   const viewerSearchInputRef = useRef<HTMLInputElement>(null);
+  const viewerMenuRef = useRef<HTMLDivElement>(null);
 
   // ---- search state (initialized from persisted state if present) ----
   const [searchPageQuery, setSearchPageQuery] = useState(() => {
@@ -335,6 +337,17 @@ function App() {
     }
   }, [viewerSearchOpen, selectedConvId]);
 
+  useEffect(() => {
+    if (!viewerMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (viewerMenuRef.current && !viewerMenuRef.current.contains(e.target as Node)) {
+        setViewerMenuOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [viewerMenuOpen]);
+
   // Keyboard: Up/Down/Enter navigate between occurrences; Escape closes search UI (keeps query)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -342,8 +355,12 @@ function App() {
       if (!inViewer) return;
 
       if (e.key === "Escape") {
+        e.preventDefault();
+        if (viewerMenuOpen) {
+          setViewerMenuOpen(false);
+          return;
+        }
         if (viewerSearchOpen) {
-          e.preventDefault();
           const searchInput = viewerSearchInputRef.current;
           if (searchInput) {
             searchInput.blur();
@@ -943,14 +960,36 @@ function App() {
                     </div>
                   </div>
                   <div className="viewer-header-actions">
-                    <button
-                      type="button"
-                      className="viewer-copy-conv-btn"
-                      onClick={() => copyConversationToClipboard(sourceLabel(selectedConversation.source))}
-                      title="Copy conversation (Markdown)"
-                    >
-                      Copy conversation
-                    </button>
+                    <div className="viewer-header-menu-wrap" ref={viewerMenuRef}>
+                      <button
+                        type="button"
+                        className="viewer-menu-trigger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewerMenuOpen((open) => !open);
+                        }}
+                        title="Options"
+                        aria-label="Options"
+                        aria-expanded={viewerMenuOpen}
+                        aria-haspopup="true"
+                      >
+                        <MoreHorizontal size={20} />
+                      </button>
+                      {viewerMenuOpen && (
+                        <div className="viewer-header-menu">
+                          <button
+                            type="button"
+                            className="viewer-header-menu-item"
+                            onClick={() => {
+                              copyConversationToClipboard(sourceLabel(selectedConversation.source));
+                              setViewerMenuOpen(false);
+                            }}
+                          >
+                            Copy conversation
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     {viewerSearchOpen ? (
                       <div className="viewer-search">
                         <input
