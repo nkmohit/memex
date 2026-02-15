@@ -31,11 +31,13 @@
   --font-heading: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  /* Radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  /* Radius — squarish (no circles) */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
+  /* Glass */
+  --blur-glass: 24px;
   /* Shadows */
   --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-panel: 0 1px 3px rgb(0 0 0 / 0.06);
@@ -93,16 +95,20 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Layout: app shell — solid background, gap for floating panels
+   Layout: app shell — small spacing, subtle gradient for glass depth
    ------------------------------------------------------------------- */
 .app-shell {
   display: grid;
   height: 100vh;
   overflow: hidden;
-  background: var(--color-background);
+  background: linear-gradient(165deg, #f0f0f0 0%, #e8e8e8 100%);
   color: var(--color-foreground);
-  padding: 12px;
-  gap: 12px;
+  padding: 6px;
+  gap: 6px;
+}
+
+.dark .app-shell {
+  background: linear-gradient(165deg, #1a1a1c 0%, #141416 100%);
 }
 
 /* Sidebar width — narrow, glassy rail */
@@ -114,6 +120,10 @@ body {
   grid-template-columns: 52px 320px 1fr;
 }
 
+.app-shell.search-layout.search-panel-closed {
+  grid-template-columns: 52px 1fr;
+}
+
 .app-shell.overview-layout {
   grid-template-columns: 52px 1fr;
 }
@@ -123,28 +133,28 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Sidebar — narrow, glass, professional
+   Sidebar — narrow, Apple-level glass, squarish
    ------------------------------------------------------------------- */
 .sidebar {
   display: flex;
   flex-direction: column;
   width: 52px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
   padding: 8px 0;
   overflow: visible;
   z-index: 10;
 }
 
 .dark .sidebar {
-  background: rgba(37, 37, 38, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  background: rgba(37, 37, 38, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
 }
 
 .sidebar-logo {
@@ -176,7 +186,7 @@ body {
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-muted-foreground);
   cursor: pointer;
@@ -218,7 +228,7 @@ body {
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   cursor: pointer;
@@ -243,12 +253,19 @@ body {
   left: calc(100% + 8px);
   bottom: 0;
   min-width: 200px;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-md);
   padding: 4px;
   z-index: 100;
   box-shadow: var(--shadow-panel-strong);
+}
+
+.dark .import-popover {
+  background: rgba(37, 37, 38, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .import-popover-item {
@@ -258,7 +275,7 @@ body {
   width: 100%;
   padding: 10px 12px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-foreground);
   font-size: 13px;
@@ -283,16 +300,23 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Conversation list panel — floating panel
+   Conversation list panel — glass, squarish
    ------------------------------------------------------------------- */
 .conv-panel {
   display: flex;
   flex-direction: column;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
   overflow: hidden;
+}
+
+.dark .conv-panel {
+  background: rgba(37, 37, 38, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .conv-panel-header {
@@ -317,7 +341,7 @@ body {
   color: var(--color-muted-foreground);
   background: var(--color-muted);
   padding: 2px 8px;
-  border-radius: 9999px;
+  border-radius: var(--radius-sm);
 }
 
 .conv-list {
@@ -374,22 +398,29 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--color-muted);
   color: var(--color-muted-foreground);
 }
 
 /* -------------------------------------------------------------------
-   Message viewer / detail panel — floating panel
+   Message viewer / detail panel — glass, squarish
    ------------------------------------------------------------------- */
 .viewer {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
+}
+
+.dark .viewer {
+  background: rgba(37, 37, 38, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .viewer-empty {
@@ -502,7 +533,7 @@ body {
 
 .msg {
   padding: 12px 16px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   max-width: 85%;
   transition: transform 0.15s;
 }
@@ -565,16 +596,23 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Search page (center panel) — floating panel
+   Search page (center panel) — glass, squarish
    ------------------------------------------------------------------- */
 .search-main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
+}
+
+.dark .search-main {
+  background: rgba(37, 37, 38, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .search-page {
@@ -602,7 +640,7 @@ body {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-family: inherit;
   background: var(--color-card);
@@ -662,7 +700,7 @@ body {
   width: 100%;
   border: 1px solid var(--color-border);
   background: var(--color-card);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   text-align: left;
   cursor: pointer;
@@ -694,17 +732,24 @@ body {
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   padding: 0 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .search-detail-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
+}
+
+.dark .search-detail-panel {
+  background: rgba(37, 37, 38, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .search-detail-empty {
@@ -719,15 +764,22 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Overview / Dashboard — floating panel
+   Overview / Dashboard — glass, squarish
    ------------------------------------------------------------------- */
 .overview-main {
   overflow-y: auto;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
   padding: 24px 32px;
+}
+
+.dark .overview-main {
+  background: rgba(37, 37, 38, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .overview-title {
@@ -747,11 +799,17 @@ body {
 }
 
 .overview-card {
-  background: var(--color-card);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   padding: 16px;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dark .overview-card {
+  background: rgba(55, 55, 55, 0.5);
 }
 
 .overview-card:hover {
@@ -797,7 +855,7 @@ body {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   border: none;
   background: transparent;
   color: var(--color-foreground);
@@ -817,7 +875,7 @@ body {
   gap: 8px;
   padding: 10px 16px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   font-size: 14px;
@@ -836,15 +894,22 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Settings — floating panel
+   Settings — glass, squarish
    ------------------------------------------------------------------- */
 .settings-main {
   overflow-y: auto;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
   padding: 24px 32px;
+}
+
+.dark .settings-main {
+  background: rgba(37, 37, 38, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .settings-title {
@@ -880,7 +945,7 @@ body {
   gap: 8px;
   padding: 10px 14px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--color-card);
   color: var(--color-foreground);
   font-size: 14px;
@@ -928,7 +993,7 @@ body {
 
 .banner {
   padding: 8px 12px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: 12px;
 }
 
@@ -964,7 +1029,7 @@ body {
   padding: 10px 20px;
   background: var(--color-foreground);
   color: var(--color-background);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
   z-index: 200;
@@ -998,11 +1063,18 @@ body {
 
 .confirm-dialog {
   width: min(420px, 100%);
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   padding: 20px;
   box-shadow: var(--shadow-panel-strong);
+}
+
+.dark .confirm-dialog {
+  background: rgba(37, 37, 38, 0.92);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .confirm-dialog h3 {
@@ -1101,7 +1173,8 @@ body {
 
 .viewer-back-to-search-btn,
 .viewer-copy-conv-btn,
-.viewer-search-icon-btn {
+.viewer-search-icon-btn,
+.viewer-close-panel-btn {
   padding: 6px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -1113,9 +1186,17 @@ body {
   transition: background-color 0.15s;
 }
 
+.viewer-close-panel-btn {
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .viewer-back-to-search-btn:hover,
 .viewer-copy-conv-btn:hover,
-.viewer-search-icon-btn:hover {
+.viewer-search-icon-btn:hover,
+.viewer-close-panel-btn:hover {
   background: var(--color-accent);
 }
 

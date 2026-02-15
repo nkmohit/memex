@@ -1,6 +1,7 @@
 import type { MessageRow } from "./db";
 import { formatTimestamp } from "./utils";
 import { IMPORT_SOURCES } from "./importer";
+import { X } from "lucide-react";
 
 interface ConversationDetailPanelProps {
   title: string;
@@ -8,6 +9,7 @@ interface ConversationDetailPanelProps {
   messages: MessageRow[];
   loading: boolean;
   onCopyThread: () => void;
+  onClose?: () => void;
 }
 
 function sourceLabel(source: string): string {
@@ -21,6 +23,7 @@ export default function ConversationDetailPanel({
   messages,
   loading,
   onCopyThread,
+  onClose,
 }: ConversationDetailPanelProps) {
   return (
     <div className="search-detail-panel">
@@ -41,6 +44,17 @@ export default function ConversationDetailPanel({
           >
             Copy Thread
           </button>
+          {onClose && (
+            <button
+              type="button"
+              className="viewer-close-panel-btn"
+              onClick={onClose}
+              title="Close conversation"
+              aria-label="Close conversation"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
       </div>
       {loading ? (

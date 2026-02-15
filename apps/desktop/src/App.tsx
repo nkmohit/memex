@@ -650,9 +650,12 @@ function App() {
     });
   }
 
+  const searchPanelClosed = activeView === "search" && !searchSelectedConvId;
   const shellLayoutClass =
     activeView === "search"
-      ? "search-layout"
+      ? searchPanelClosed
+        ? "search-layout search-panel-closed"
+        : "search-layout"
       : activeView === "overview"
         ? "overview-layout"
         : activeView === "settings"
@@ -801,21 +804,18 @@ function App() {
               onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
             />
           </main>
-          <div className="search-detail-panel">
-            {!searchSelectedConvId ? (
-              <div className="search-detail-empty">
-                No conversation selected. Choose a result to view its messages.
-              </div>
-            ) : (
+          {searchSelectedConvId && (
+            <div className="search-detail-panel">
               <ConversationDetailPanel
                 title={searchSelectedTitle}
                 source={searchSelectedSource}
                 messages={searchDetailMessages}
                 loading={searchDetailLoading}
                 onCopyThread={handleCopySearchDetailThread}
+                onClose={() => setSearchSelectedConvId(null)}
               />
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
 
