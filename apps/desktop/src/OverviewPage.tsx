@@ -87,9 +87,20 @@ export default function OverviewPage({
     ? formatTimestamp(stats.latestMessageTimestamp)
     : "—";
 
+  const isEmpty = totalConvs === 0 && totalMsgs === 0;
+
   return (
     <main className="overview-main">
       <h1 className="overview-title">Overview</h1>
+
+      {isEmpty && (
+        <div className="overview-empty-state">
+          <p className="overview-empty-text">No data yet. Import conversations to get started.</p>
+          <button type="button" className="overview-cta overview-empty-cta" onClick={onOpenImport}>
+            Import
+          </button>
+        </div>
+      )}
 
       <div className="overview-metrics">
         <div className="overview-card">

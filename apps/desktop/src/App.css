@@ -136,6 +136,52 @@ body {
   grid-template-columns: 52px 1fr;
 }
 
+.app-shell.has-global-banner {
+  grid-template-rows: auto 1fr;
+}
+
+.app-shell.has-global-banner > .global-banner-area {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px 0;
+  min-height: 0;
+}
+
+.global-banner-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.global-banner-dismiss {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 18px;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.global-banner-dismiss:hover {
+  opacity: 1;
+}
+
+.app-shell.has-global-banner > .sidebar,
+.app-shell.has-global-banner > main,
+.app-shell.has-global-banner > .conv-panel,
+.app-shell.has-global-banner > .viewer,
+.app-shell.has-global-banner > .search-main,
+.app-shell.has-global-banner > .search-detail-panel {
+  grid-row: 2;
+}
+
 /* -------------------------------------------------------------------
    Sidebar — narrow, Apple-level glass, squarish
    ------------------------------------------------------------------- */
@@ -858,6 +904,24 @@ body {
   margin-bottom: 24px;
 }
 
+.overview-empty-state {
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  background: var(--color-muted);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.overview-empty-text {
+  font-size: 14px;
+  color: var(--color-foreground);
+  margin-bottom: 12px;
+}
+
+.overview-empty-cta {
+  margin-top: 4px;
+}
+
 .overview-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -988,6 +1052,13 @@ body {
   margin-bottom: 24px;
 }
 
+.settings-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
 .settings-section {
   margin-bottom: 24px;
 }
@@ -1094,6 +1165,29 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.import-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.import-banner-dismiss {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 18px;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.import-banner-dismiss:hover {
+  opacity: 1;
 }
 
 .import-retry-btn {

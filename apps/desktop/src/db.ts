@@ -64,9 +64,9 @@ export function initDatabase(): Promise<void> {
   initPromise = withDbLock(async () => {
     const database = await rawGetDb();
 
-    // PRAGMAs
+    // PRAGMAs — long busy_timeout so writes wait instead of failing with "database is locked"
     await database.execute("PRAGMA journal_mode = WAL");
-    await database.execute("PRAGMA busy_timeout = 5000");
+    await database.execute("PRAGMA busy_timeout = 30000");
 
     // Migrate: drop old tables that lack the new columns.
     const cols = await database.select<{ name: string }[]>(
@@ -669,26 +669,45 @@ export function searchMessages(
   });
 }
 
+const MAX_CLEAR_RETRIES = 6;
+const CLEAR_RETRY_DELAY_MS = 500;
+
+function isBusyOrLocked(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes("database is locked") || msg.includes("SQLITE_BUSY") || msg.includes("code: 5");
+}
+
 export function clearAllData(): Promise<void> {
   return withDbLock(async () => {
     const database = await getDb();
-
-    // Use BEGIN IMMEDIATE to grab a write lock up-front, avoiding
-    // SQLITE_BUSY races that SAVEPOINTs are susceptible to when the
-    // Tauri SQL plugin processes requests on a connection pool.
-    await database.execute("BEGIN IMMEDIATE");
-    try {
-      await database.execute("DELETE FROM messages_fts");
-      await database.execute("DELETE FROM messages");
-      await database.execute("DELETE FROM conversations");
-      await database.execute("COMMIT");
-    } catch (err) {
-      try {
-        await database.execute("ROLLBACK");
-      } catch (rollbackErr) {
-        console.error("Rollback of clear-all failed:", rollbackErr);
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < MAX_CLEAR_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, CLEAR_RETRY_DELAY_MS * attempt));
       }
-      throw err;
+      let began = false;
+      try {
+        // Ensure this connection waits for locks (plugin may use a pool; pragma is per-connection)
+        await database.execute("PRAGMA busy_timeout = 30000");
+        await database.execute("BEGIN IMMEDIATE");
+        began = true;
+        await database.execute("DELETE FROM messages_fts");
+        await database.execute("DELETE FROM messages");
+        await database.execute("DELETE FROM conversations");
+        await database.execute("COMMIT");
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (began) {
+          try {
+            await database.execute("ROLLBACK");
+          } catch (rollbackErr) {
+            console.error("Rollback of clear-all failed:", rollbackErr);
+          }
+        }
+        if (!isBusyOrLocked(err) || attempt === MAX_CLEAR_RETRIES - 1) throw err;
+      }
     }
+    throw lastErr;
   });
 }

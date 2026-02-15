@@ -194,6 +194,8 @@ function App() {
   const [, setImportMenuOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [clearResult, setClearResult] = useState<string | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -606,8 +608,8 @@ function App() {
 
     setClearConfirmOpen(false);
     setClearingData(true);
-    setImportError(null);
-    setImportResult(null);
+    setClearResult(null);
+    setClearError(null);
 
     try {
       // Actually delete data from DB first — only reset UI state after success.
@@ -633,11 +635,11 @@ function App() {
       });
       setSelectedConvId(null);
       setMessages([]);
-      setImportResult("All imported data was removed.");
+      setClearResult("All imported data was removed.");
       await loadData(activeSource);
     } catch (err) {
       console.error("Clear data failed:", err);
-      setImportError(err instanceof Error ? err.message : "Clear data failed");
+      setClearError(err instanceof Error ? err.message : "Clear data failed");
     } finally {
       setClearingData(false);
     }
@@ -712,10 +714,21 @@ function App() {
           : activeView === "import"
             ? "import-layout"
             : "conversations-layout";
+  const hasGlobalError = Boolean(loadError);
 
   // ---- render ----
   return (
-    <div className={`app-shell ${shellLayoutClass}`}>
+    <div className={`app-shell ${shellLayoutClass}${hasGlobalError ? " has-global-banner" : ""}`}>
+      {hasGlobalError && (
+        <div className="global-banner-area" role="alert">
+          {loadError && (
+            <div className="banner error global-banner-item">
+              <span>{loadError}</span>
+              <button type="button" className="global-banner-dismiss" onClick={() => setLoadError(null)} aria-label="Dismiss">×</button>
+            </div>
+          )}
+        </div>
+      )}
       {/* ---- Collapsed sidebar ---- */}
       <aside className="sidebar">
         <div className="sidebar-logo">
@@ -788,18 +801,25 @@ function App() {
       )}
 
       {activeView === "import" && (
-        <ImportPage
-          onImport={(source) => void handleImportSource(source)}
-          importing={importing}
-          importError={importError}
-          importResult={importResult}
-          refreshKey={importRefreshKey}
-        />
+          <ImportPage
+              onImport={(source) => void handleImportSource(source)}
+              importing={importing}
+              importError={importError}
+              importResult={importResult}
+              onDismissImportError={() => setImportError(null)}
+              refreshKey={importRefreshKey}
+            />
       )}
 
       {activeView === "settings" && (
         <main className="settings-main">
           <h1 className="settings-title">Settings</h1>
+          {(clearResult || clearError) && (
+            <div className="settings-banners">
+              {clearResult && <div className="banner success" role="status">{clearResult}</div>}
+              {clearError && <div className="banner error" role="alert">{clearError}</div>}
+            </div>
+          )}
           <div className="settings-section">
             <h3>Theme</h3>
             <div className="settings-theme-options">
@@ -931,15 +951,6 @@ function App() {
 
           {/* ---- MESSAGE VIEWER ---- */}
           <main className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
-            {/* banner messages */}
-            {(importResult || importError || loadError) && (
-              <div className="banner-area">
-                {importResult && <div className="banner success">{importResult}</div>}
-                {importError && <div className="banner error">{importError}</div>}
-                {loadError && <div className="banner error">{loadError}</div>}
-              </div>
-            )}
-
             {!selectedConversation ? (
               <div className="viewer-empty">
                 <p className="viewer-empty-text">
