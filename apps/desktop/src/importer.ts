@@ -7,7 +7,7 @@ import { insertConversations } from "./dbInsert";
 // Source registry — add new sources here as they become available
 // ---------------------------------------------------------------------------
 
-export type ImportSource = "claude" | "chatgpt" | "grok";
+export type ImportSource = "claude" | "chatgpt" | "gemini" | "grok";
 
 export interface SourceMeta {
   id: ImportSource;
@@ -18,6 +18,7 @@ export interface SourceMeta {
 export const IMPORT_SOURCES: SourceMeta[] = [
   { id: "claude", label: "Claude", available: true },
   { id: "chatgpt", label: "ChatGPT", available: false },
+  { id: "gemini", label: "Gemini", available: false },
   { id: "grok", label: "Grok", available: false },
 ];
 
