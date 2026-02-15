@@ -132,6 +132,10 @@ body {
   grid-template-columns: 52px 1fr;
 }
 
+.app-shell.import-layout {
+  grid-template-columns: 52px 1fr;
+}
+
 /* -------------------------------------------------------------------
    Sidebar — narrow, Apple-level glass, squarish
    ------------------------------------------------------------------- */
@@ -1042,6 +1046,165 @@ body {
 .settings-danger-btn:hover {
   background: var(--color-destructive);
   color: var(--color-destructive-foreground);
+}
+
+/* -------------------------------------------------------------------
+   Import page — glass, squarish
+   ------------------------------------------------------------------- */
+.import-main {
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  padding: 24px 32px;
+}
+
+.dark .import-main {
+  background: rgba(37, 37, 38, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.import-title {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-foreground);
+  margin-bottom: 8px;
+}
+
+.import-description {
+  font-size: 14px;
+  color: var(--color-muted-foreground);
+  margin-bottom: 20px;
+}
+
+.import-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.import-summary {
+  margin-bottom: 28px;
+}
+
+.import-section-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-bottom: 8px;
+}
+
+.import-section-desc {
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+  margin-bottom: 16px;
+}
+
+.import-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.import-summary-card {
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.import-summary-label {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+}
+
+.import-summary-value {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+
+.import-sources {
+  margin-bottom: 24px;
+}
+
+.import-source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-source-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  padding: 16px 20px;
+}
+
+.import-source-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.import-source-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.import-source-label {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-foreground);
+}
+
+.import-source-meta {
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+}
+
+.import-source-last {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+}
+
+.import-source-action {
+  flex-shrink: 0;
+}
+
+.import-source-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.import-source-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.import-source-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* -------------------------------------------------------------------

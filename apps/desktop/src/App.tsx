@@ -14,6 +14,7 @@ import {
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
 import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
 import OverviewPage from "./OverviewPage";
+import ImportPage from "./ImportPage";
 import ConversationDetailPanel from "./ConversationDetailPanel";
 import { MemexLogoIcon } from "./icons";
 import { formatDate, formatTimestamp } from "./utils";
@@ -22,7 +23,7 @@ import "./App.css";
 const SEARCH_STATE_KEY = "memex-search-state";
 const THEME_KEY = "memex-theme";
 type ThemeMode = "light" | "dark" | "system";
-type ActiveView = "overview" | "search" | "conversations" | "settings";
+type ActiveView = "overview" | "search" | "conversations" | "import" | "settings";
 
 type PersistedSearchState = {
   query: string;
@@ -156,6 +157,7 @@ function App() {
   );
   const [openedConversationFromSearch, setOpenedConversationFromSearch] = useState(false);
   const [searchRestoreConversationId, setSearchRestoreConversationId] = useState<string | null>(null);
+  const [importRefreshKey, setImportRefreshKey] = useState(0);
   const skipSearchOnceRef = useRef(false);
 
   // ---- persist search state to localStorage ----
@@ -189,12 +191,11 @@ function App() {
   const [importing, setImporting] = useState(false);
   const [clearingData, setClearingData] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  const [importMenuOpen, setImportMenuOpen] = useState(false);
+  const [, setImportMenuOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const importMenuRef = useRef<HTMLDivElement>(null);
   const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -392,20 +393,6 @@ function App() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [viewerSearchOpen, messageSearchQuery, matchCount, goToPrevMatch, goToNextMatch]);
 
-  // ---- close import menu on outside click ----
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        importMenuRef.current &&
-        !importMenuRef.current.contains(e.target as Node)
-      ) {
-        setImportMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
   // ---- data loading ----
   const loadData = useCallback(
     async (source?: string | null) => {
@@ -553,6 +540,7 @@ function App() {
         setImportResult(
           `Imported ${result.conversationCount} conversations and ${result.messageCount} messages from ${source}.`
         );
+        setImportRefreshKey((k) => k + 1);
         await loadData(activeSource);
       }
     } catch (err) {
@@ -677,7 +665,9 @@ function App() {
         ? "overview-layout"
         : activeView === "settings"
           ? "settings-layout"
-          : "conversations-layout";
+          : activeView === "import"
+            ? "import-layout"
+            : "conversations-layout";
 
   // ---- render ----
   return (
@@ -720,36 +710,19 @@ function App() {
           </button>
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-import-wrapper" ref={importMenuRef}>
-            <button
-              type="button"
-              className="sidebar-import-trigger"
-              onClick={() => setImportMenuOpen((v) => !v)}
-              disabled={importing || clearingData}
-              title="Import"
-              aria-label="Import conversations"
-            >
-              <Upload size={20} strokeWidth={1.5} />
-            </button>
-            {importMenuOpen && (
-              <div className="import-popover">
-                {IMPORT_SOURCES.map((src) => (
-                  <button
-                    type="button"
-                    key={src.id}
-                    className="import-popover-item"
-                    disabled={!src.available || clearingData}
-                    onClick={() => void handleImportSource(src.id)}
-                  >
-                    <span>{src.label}</span>
-                    {!src.available && (
-                      <span className="import-coming-soon">Coming soon</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            className={`sidebar-item ${activeView === "import" ? "active" : ""}`}
+            onClick={() => {
+              setActiveView("import");
+              setImportMenuOpen(false);
+            }}
+            title="Import"
+            aria-label="Import"
+            aria-current={activeView === "import" ? "page" : undefined}
+          >
+            <Upload size={20} strokeWidth={1.5} />
+          </button>
           <button
             type="button"
             className={`sidebar-item ${activeView === "settings" ? "active" : ""}`}
@@ -765,8 +738,18 @@ function App() {
 
       {activeView === "overview" && (
         <OverviewPage
-          onOpenImport={() => setImportMenuOpen(true)}
+          onOpenImport={() => setActiveView("import")}
           onSelectConversation={handleOverviewSelectConversation}
+        />
+      )}
+
+      {activeView === "import" && (
+        <ImportPage
+          onImport={(source) => void handleImportSource(source)}
+          importing={importing}
+          importError={importError}
+          importResult={importResult}
+          refreshKey={importRefreshKey}
         />
       )}
 

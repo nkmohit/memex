@@ -175,6 +175,8 @@ export interface SourceStats {
   source: string;
   conversationCount: number;
   messageCount: number;
+  /** Latest message timestamp for this source (for "last sync" display). */
+  lastActivityTimestamp: number | null;
 }
 
 export interface ConversationRow {
@@ -274,7 +276,8 @@ export function getSourceStats(): Promise<SourceStats[]> {
       `SELECT
          c.source AS source,
          COUNT(DISTINCT c.id) AS conversationCount,
-         COUNT(m.id) AS messageCount
+         COUNT(m.id) AS messageCount,
+         MAX(m.created_at) AS lastActivityTimestamp
        FROM conversations c
        LEFT JOIN messages m ON m.conversation_id = c.id
        GROUP BY c.source
