@@ -95,6 +95,9 @@ export default function SearchPage({
   const [error, setError] = useState<string | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(snapshot.latencyMs);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [filtersOpen, setFiltersOpen] = useState(() => {
+    return Boolean(snapshot.source || snapshot.dateFrom || snapshot.dateTo || snapshot.sort !== "last_occurrence_desc");
+  });
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const PAGE_SIZE = 50;
@@ -380,7 +383,17 @@ export default function SearchPage({
           onChange={(e) => onQueryChange(e.target.value)}
         />
 
-        <div className="search-filters">
+        <button
+          type="button"
+          className="search-filters-toggle"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="search-filters"
+        >
+          Options
+        </button>
+
+        <div className="search-filters" id="search-filters" hidden={!filtersOpen}>
           <label htmlFor="search-source">
             Source
             <select

@@ -411,88 +411,6 @@ body {
   align-items: center;
 }
 
-.sidebar-import-wrapper {
-  position: relative;
-}
-
-.sidebar-import-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  cursor: pointer;
-  transition: opacity 0.15s ease, transform 0.1s ease;
-}
-
-.sidebar-import-trigger:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.sidebar-import-trigger:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.sidebar-import-trigger:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.import-popover {
-  position: absolute;
-  left: calc(100% + 8px);
-  bottom: 0;
-  min-width: 200px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: var(--radius-md);
-  padding: 4px;
-  z-index: 100;
-  box-shadow: var(--shadow-panel-strong);
-}
-
-.dark .import-popover {
-  background: rgba(37, 37, 38, 0.9);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.import-popover-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-foreground);
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.import-popover-item:hover:not(:disabled) {
-  background: var(--color-accent);
-}
-
-.import-popover-item:disabled {
-  color: var(--color-muted-foreground);
-  cursor: default;
-}
-
-.import-coming-soon {
-  font-size: 10px;
-  color: var(--color-muted-foreground);
-  font-style: italic;
-}
-
 /* -------------------------------------------------------------------
    Conversation list panel — glass, squarish
    ------------------------------------------------------------------- */
@@ -971,6 +889,33 @@ body {
   outline: none;
   border-color: var(--border-2);
   box-shadow: 0 0 0 3px var(--ring);
+}
+
+.search-filters-toggle {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--border-1);
+  background: rgb(255 255 255 / 0.18);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.search-filters-toggle:hover {
+  background: rgb(255 255 255 / 0.28);
+  border-color: var(--border-2);
+}
+
+.dark .search-filters-toggle {
+  background: rgb(0 0 0 / 0.14);
+  border-color: var(--border-1);
+}
+
+.dark .search-filters-toggle:hover {
+  background: rgb(0 0 0 / 0.2);
+  border-color: var(--border-2);
 }
 
 .search-filters {
@@ -1618,13 +1563,6 @@ body {
 /* -------------------------------------------------------------------
    Banners & toasts
    ------------------------------------------------------------------- */
-.banner-area {
-  padding: 8px 20px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .banner {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
@@ -1805,8 +1743,7 @@ body {
   cursor: not-allowed;
 }
 
-.viewer-back-to-search-btn,
-.viewer-copy-conv-btn {
+.viewer-back-to-search-btn {
   padding: 6px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -1858,8 +1795,7 @@ body {
   color: var(--color-foreground);
 }
 
-.viewer-back-to-search-btn:hover,
-.viewer-copy-conv-btn:hover {
+.viewer-back-to-search-btn:hover {
   background: var(--color-accent);
 }
 
