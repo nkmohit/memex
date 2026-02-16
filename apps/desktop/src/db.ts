@@ -689,6 +689,16 @@ export function clearAllData(): Promise<void> {
       try {
         // Ensure this connection waits for locks (plugin may use a pool; pragma is per-connection)
         await database.execute("PRAGMA busy_timeout = 30000");
+
+        // Defensive cleanup: if a previous attempt failed after BEGIN but before
+        // we could reliably observe the state, SQLite may still consider a
+        // transaction active on this connection.
+        try {
+          await database.execute("ROLLBACK");
+        } catch {
+          // ignore
+        }
+
         await database.execute("BEGIN IMMEDIATE");
         began = true;
         await database.execute("DELETE FROM messages_fts");
@@ -698,12 +708,11 @@ export function clearAllData(): Promise<void> {
         return;
       } catch (err) {
         lastErr = err;
-        if (began) {
-          try {
-            await database.execute("ROLLBACK");
-          } catch (rollbackErr) {
-            console.error("Rollback of clear-all failed:", rollbackErr);
-          }
+        // Always attempt rollback. If no transaction is active, ignore.
+        try {
+          await database.execute("ROLLBACK");
+        } catch {
+          // ignore
         }
         if (!isBusyOrLocked(err) || attempt === MAX_CLEAR_RETRIES - 1) throw err;
       }

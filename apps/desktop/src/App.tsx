@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, MessageCircle, MoreHorizontal, Search, Settings, Upload } from "lucide-react";
 import {
   ConversationRow,
   DbStats,
@@ -12,111 +11,25 @@ import {
   getStats,
 } from "./db";
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
-import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
 import OverviewPage from "./OverviewPage";
 import ImportPage from "./ImportPage";
-import { MemexLogoIcon } from "./icons";
-import { formatDate, formatTimestamp } from "./utils";
+import { formatTimestamp } from "./utils";
 import "./App.css";
 
-const SEARCH_STATE_KEY = "memex-search-state";
-const THEME_KEY = "memex-theme";
-type ThemeMode = "light" | "dark" | "system";
-type ActiveView = "overview" | "search" | "conversations" | "import" | "settings";
+import Sidebar, { type ActiveView } from "./components/Sidebar";
+import ClearDataConfirmDialog from "./panels/ClearDataConfirmDialog";
+import ConversationListPanel from "./panels/ConversationListPanel";
+import ConversationViewerPanel from "./panels/ConversationViewerPanel";
+import SearchPanel from "./panels/SearchPanel";
+import SettingsPanel from "./panels/SettingsPanel";
 
-type PersistedSearchState = {
-  query: string;
-  source: string;
-  dateFrom: string;
-  dateTo: string;
-  sort: SearchPageSnapshot["sort"];
-};
-
-function loadSearchState(): Partial<PersistedSearchState> | null {
-  try {
-    const raw = localStorage.getItem(SEARCH_STATE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (parsed && typeof parsed === "object" && "query" in parsed) {
-      const p = parsed as Record<string, unknown>;
-      return {
-        query: typeof p.query === "string" ? p.query : "",
-        source: typeof p.source === "string" ? p.source : "",
-        dateFrom: typeof p.dateFrom === "string" ? p.dateFrom : "",
-        dateTo: typeof p.dateTo === "string" ? p.dateTo : "",
-        sort:
-          typeof p.sort === "string" &&
-          ["relevance", "last_occurrence_desc", "occurrence_count_desc", "title_az", "title_za"].includes(p.sort)
-            ? (p.sort as PersistedSearchState["sort"])
-            : "last_occurrence_desc",
-      };
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-function saveSearchState(state: PersistedSearchState) {
-  try {
-    localStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
-  }
-}
+import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
+import { usePersistedSearchState } from "./hooks/usePersistedSearchState";
+import { useThemeMode } from "./hooks/useThemeMode";
 
 function App() {
-  // ---- theme ----
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const stored = localStorage.getItem(THEME_KEY);
-    if (stored === "light" || stored === "dark" || stored === "system") return stored;
-    return "system";
-  });
-
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setPrefersReducedMotion(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "light") {
-      root.classList.remove("dark");
-    } else if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        root.classList.add("dark");
-      } else {
-        root.classList.remove("dark");
-      }
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = () => {
-      if (theme !== "system") return;
-      if (mq.matches) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
-    mq.addEventListener("change", listener);
-    return () => mq.removeEventListener("change", listener);
-  }, [theme]);
-
-  function setThemeAndPersist(next: ThemeMode) {
-    setTheme(next);
-    localStorage.setItem(THEME_KEY, next);
-  }
+  const { theme, setThemeAndPersist } = useThemeMode();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   // ---- data state ----
   const [loading, setLoading] = useState(true);
@@ -142,24 +55,13 @@ function App() {
   const viewerSearchInputRef = useRef<HTMLInputElement>(null);
   const viewerMenuRef = useRef<HTMLDivElement>(null);
 
-  // ---- search state (initialized from persisted state if present) ----
-  const [searchPageQuery, setSearchPageQuery] = useState(() => {
-    const loaded = loadSearchState();
-    return loaded?.query ?? "";
-  });
-  const [searchPageSnapshot, setSearchPageSnapshot] = useState<SearchPageSnapshot>(() => {
-    const loaded = loadSearchState();
-    return {
-      source: loaded?.source ?? "",
-      dateFrom: loaded?.dateFrom ?? "",
-      dateTo: loaded?.dateTo ?? "",
-      sort: loaded?.sort ?? "last_occurrence_desc",
-      results: [],
-      totalMatches: 0,
-      totalOccurrences: 0,
-      latencyMs: null,
-    };
-  });
+  const {
+    query: searchPageQuery,
+    setQuery: setSearchPageQuery,
+    snapshot: searchPageSnapshot,
+    setSnapshot: setSearchPageSnapshot,
+    clearPersistedState: clearPersistedSearchState,
+  } = usePersistedSearchState();
   const [searchFocusRequestId, setSearchFocusRequestId] = useState<number | null>(
     null
   );
@@ -167,23 +69,6 @@ function App() {
   const [searchRestoreConversationId, setSearchRestoreConversationId] = useState<string | null>(null);
   const [importRefreshKey, setImportRefreshKey] = useState(0);
   const skipSearchOnceRef = useRef(false);
-
-  // ---- persist search state to localStorage ----
-  useEffect(() => {
-    saveSearchState({
-      query: searchPageQuery,
-      source: searchPageSnapshot.source,
-      dateFrom: searchPageSnapshot.dateFrom,
-      dateTo: searchPageSnapshot.dateTo,
-      sort: searchPageSnapshot.sort,
-    });
-  }, [
-    searchPageQuery,
-    searchPageSnapshot.source,
-    searchPageSnapshot.dateFrom,
-    searchPageSnapshot.dateTo,
-    searchPageSnapshot.sort,
-  ]);
 
   // ---- clear skipSearchOnceRef after SearchPage has read it (when on search tab) ----
   useEffect(() => {
@@ -631,24 +516,7 @@ function App() {
       // Actually delete data from DB first — only reset UI state after success.
       await clearAllData();
 
-      setSearchPageQuery("");
-      setSearchPageSnapshot({
-        source: "",
-        dateFrom: "",
-        dateTo: "",
-        sort: "last_occurrence_desc",
-        results: [],
-        totalMatches: 0,
-        totalOccurrences: 0,
-        latencyMs: null,
-      });
-      saveSearchState({
-        query: "",
-        source: "",
-        dateFrom: "",
-        dateTo: "",
-        sort: "last_occurrence_desc",
-      });
+      clearPersistedSearchState();
       setSelectedConvId(null);
       setMessages([]);
       setClearResult("All imported data was removed.");
@@ -736,68 +604,14 @@ function App() {
         </div>
       )}
       {/* ---- Collapsed sidebar ---- */}
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <MemexLogoIcon size={26} />
-        </div>
-        <nav className="sidebar-nav" aria-label="Main">
-          <button
-            type="button"
-            className={`sidebar-item ${activeView === "overview" ? "active" : ""}`}
-            onClick={() => setActiveView("overview")}
-            title="Overview"
-            aria-label="Overview"
-            aria-current={activeView === "overview" ? "page" : undefined}
-          >
-            <Home size={20} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            className={`sidebar-item ${activeView === "search" ? "active" : ""}`}
-            onClick={() => setActiveView("search")}
-            title="Search (⌘K)"
-            aria-label="Search"
-            aria-current={activeView === "search" ? "page" : undefined}
-          >
-            <Search size={20} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            className={`sidebar-item ${activeView === "conversations" ? "active" : ""}`}
-            onClick={() => setActiveView("conversations")}
-            title="Conversations"
-            aria-label="Conversations"
-            aria-current={activeView === "conversations" ? "page" : undefined}
-          >
-            <MessageCircle size={20} strokeWidth={1.5} />
-          </button>
-        </nav>
-        <div className="sidebar-bottom">
-          <button
-            type="button"
-            className={`sidebar-item ${activeView === "import" ? "active" : ""}`}
-            onClick={() => {
-              setActiveView("import");
-              setImportMenuOpen(false);
-            }}
-            title="Import"
-            aria-label="Import"
-            aria-current={activeView === "import" ? "page" : undefined}
-          >
-            <Upload size={20} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            className={`sidebar-item ${activeView === "settings" ? "active" : ""}`}
-            onClick={() => setActiveView("settings")}
-            title="Settings"
-            aria-label="Settings"
-            aria-current={activeView === "settings" ? "page" : undefined}
-          >
-            <Settings size={20} strokeWidth={1.5} />
-          </button>
-        </div>
-      </aside>
+      <Sidebar
+        activeView={activeView}
+        onSelectView={setActiveView}
+        onOpenImport={() => {
+          setActiveView("import");
+          setImportMenuOpen(false);
+        }}
+      />
 
       {activeView === "overview" && (
         <OverviewPage
@@ -818,494 +632,119 @@ function App() {
       )}
 
       {activeView === "settings" && (
-        <main className="settings-main" id="main-content">
-          <h1 className="settings-title">Settings</h1>
-          {(clearResult || clearError) && (
-            <div className="settings-banners">
-              {clearResult && <div className="banner success" role="status">{clearResult}</div>}
-              {clearError && <div className="banner error" role="alert">{clearError}</div>}
-            </div>
-          )}
-          <div className="settings-section">
-            <h2>Theme</h2>
-            <div className="settings-theme-options">
-              {(["light", "dark", "system"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={`settings-theme-option ${theme === mode ? "selected" : ""}`}
-                  onClick={() => setThemeAndPersist(mode)}
-                >
-                  {theme === mode && <span aria-hidden>●</span>}
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="settings-section">
-            <h2>Data</h2>
-            <button
-              ref={clearDataTriggerRef}
-              type="button"
-              className="settings-danger-btn"
-              onClick={handleClearAllDataClick}
-              disabled={importing || clearingData || loading}
-            >
-              {clearingData ? "Clearing..." : "Clear all data"}
-            </button>
-          </div>
-        </main>
+        <SettingsPanel
+          theme={theme}
+          onSetTheme={setThemeAndPersist}
+          clearResult={clearResult}
+          clearError={clearError}
+          clearingData={clearingData}
+          importing={importing}
+          loading={loading}
+          onClearAllDataClick={handleClearAllDataClick}
+          clearDataTriggerRef={clearDataTriggerRef}
+        />
       )}
 
       {activeView === "search" && (
-        <>
-          <main className="search-main" id="main-content">
-            <SearchPage
-              query={searchPageQuery}
-              onQueryChange={setSearchPageQuery}
-              availableSources={availableSources}
-              sourceLabel={sourceLabel}
-              onSelectResult={handleSearchResultSelect}
-              selectedConversationId={searchSelectedConvId}
-              focusRequestId={searchFocusRequestId}
-              snapshot={searchPageSnapshot}
-              onSnapshotChange={setSearchPageSnapshot}
-              skipSearchOnceRef={skipSearchOnceRef}
-              restoreSelectedConversationId={searchRestoreConversationId}
-              onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
-            />
-          </main>
-          {searchSelectedConvId && (
-            <main
-              className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}
-            >
-              {!selectedConversation ? (
-                <div className="viewer-empty">
-                  <p className="viewer-empty-text" aria-live="polite">
-                    Select a conversation to view messages.
-                  </p>
-                </div>
-              ) : messagesLoading ? (
-                <div className="viewer-empty">
-                  <p className="viewer-empty-text">Loading messages...</p>
-                </div>
-              ) : (
-                <>
-                  <div className="viewer-header">
-                    <div className="viewer-header-left">
-                      <div>
-                        <h2>{selectedConversation.title || "Untitled"}</h2>
-                        <p className="viewer-header-meta">
-                          <span className="source-tag">
-                            {sourceLabel(selectedConversation.source)}
-                          </span>
-                          <span>
-                            {viewerSearchOpen && messageSearchQuery.trim()
-                              ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}`
-                              : `${messages.length} messages`}
-                          </span>
-                          <span>{formatDate(selectedConversation.last_message_at)}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="viewer-header-actions">
-                      {viewerSearchOpen ? (
-                        <div className="viewer-search">
-                          <input
-                            ref={viewerSearchInputRef}
-                            type="search"
-                            className="viewer-search-input"
-                            placeholder="Search in conversation..."
-                            value={messageSearchQuery}
-                            onChange={(e) => setMessageSearchQuery(e.target.value)}
-                          />
-                          {messageSearchQuery.trim() && matchCount > 0 && (
-                            <div className="viewer-search-nav">
-                              <span className="viewer-search-count">
-                                {currentMatchIndex + 1} of {matchCount}
-                              </span>
-                              <button
-                                type="button"
-                                className="viewer-search-nav-btn"
-                                onClick={goToPrevMatch}
-                                title="Previous match"
-                                aria-label="Previous match"
-                              >
-                                ↑
-                              </button>
-                              <button
-                                type="button"
-                                className="viewer-search-nav-btn"
-                                onClick={goToNextMatch}
-                                title="Next match"
-                                aria-label="Next match"
-                              >
-                                ↓
-                              </button>
-                            </div>
-                          )}
-                          {messageSearchQuery.trim() && matchCount === 0 && (
-                            <span className="viewer-search-no-results">No results</span>
-                          )}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="viewer-search-icon-btn"
-                          onClick={() => setViewerSearchOpen(true)}
-                          title="Search in conversation (⌘F)"
-                          aria-label="Search in conversation"
-                        >
-                          <span className="viewer-search-icon" aria-hidden="true">
-                            ⌕
-                          </span>
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        className="viewer-close-panel-btn"
-                        onClick={() => {
-                          setSearchSelectedConvId(null);
-                          setSelectedConvId(null);
-                          setOpenedConversationFromSearch(false);
-                        }}
-                        title="Close panel"
-                        aria-label="Close panel"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                  {copyToast && (
-                    <div className="copy-toast" role="status" aria-live="polite">
-                      {copyToast}
-                    </div>
-                  )}
-                  <div className="msg-list">
-                    {messages.map((m) => (
-                      <article
-                        key={m.id}
-                        ref={(el) => {
-                          messageRefs.current[m.id] = el;
-                        }}
-                        className={`msg ${m.sender === "human" ? "human" : "assistant"}${
-                          highlightedMessageId === m.id ? " highlighted" : ""
-                        }`}
-                      >
-                        <div className="msg-top">
-                          <span className="sender-pill">
-                            {m.sender === "human" ? "You" : sourceLabel(selectedConversation.source)}
-                          </span>
-                          <span className="msg-top-right">
-                            <time>{formatTimestamp(m.created_at)}</time>
-                            <button
-                              type="button"
-                              className="msg-copy-btn"
-                              onClick={() => copyMessageToClipboard(m, sourceLabel(selectedConversation.source))}
-                              title="Copy message"
-                              aria-label="Copy message"
-                            >
-                              Copy
-                            </button>
-                          </span>
-                        </div>
-                        <div className="msg-body">
-                          {highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </>
-              )}
-            </main>
-          )}
-        </>
+        <SearchPanel
+          query={searchPageQuery}
+          onQueryChange={setSearchPageQuery}
+          availableSources={availableSources}
+          sourceLabel={sourceLabel}
+          onSelectResult={(convId) => void handleSearchResultSelect(convId)}
+          selectedConversationId={searchSelectedConvId}
+          focusRequestId={searchFocusRequestId}
+          snapshot={searchPageSnapshot}
+          onSnapshotChange={setSearchPageSnapshot}
+          skipSearchOnceRef={skipSearchOnceRef}
+          restoreSelectedConversationId={searchRestoreConversationId}
+          onRestoreSelectionDone={() => setSearchRestoreConversationId(null)}
+          viewer={{
+            open: Boolean(searchSelectedConvId),
+            onClose: () => {
+              setSearchSelectedConvId(null);
+              setSelectedConvId(null);
+              setOpenedConversationFromSearch(false);
+            },
+            selectedConversation,
+            messages,
+            messagesLoading,
+            viewerSearchOpen,
+            onOpenViewerSearch: () => setViewerSearchOpen(true),
+            messageSearchQuery,
+            onMessageSearchQueryChange: setMessageSearchQuery,
+            viewerSearchInputRef,
+            matchCount,
+            messageMatchCount,
+            currentMatchIndex,
+            onPrevMatch: goToPrevMatch,
+            onNextMatch: goToNextMatch,
+            copyToast,
+            onCopyMessage: (m) => copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? "")),
+            messageRefs,
+            highlightedMessageId,
+            highlightText,
+          }}
+        />
       )}
 
       {activeView === "conversations" && (
         <>
-          {/* ---- CONVERSATION LIST ---- */}
-          <aside className="conv-panel">
-            <div className="conv-panel-header">
-              <div className="conv-header-top">
-                <h1>Conversations</h1>
-                <span className="conv-count">{conversations.length}</span>
-              </div>
-              <select
-                value={activeSource ?? ""}
-                onChange={(e) => setActiveSource(e.target.value || null)}
-                aria-label="Filter by source"
-                className="conv-source-select"
-              >
-                <option value="">All sources</option>
-                {availableSources.map((src) => (
-                  <option key={src} value={src}>
-                    {sourceLabel(src)} ({sourceConvCount(src)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {loading ? (
-              <div className="conv-list conv-list-skeleton" aria-hidden="true">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="conv-item skeleton">
-                    <div className="conv-title-skeleton" />
-                    <div className="conv-meta-skeleton" />
-                  </div>
-                ))}
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className="empty-text" aria-live="polite">
-                No conversations yet. Import to get started.
-              </div>
-            ) : (
-              <div className="conv-list">
-                {conversations.map((c) => (
-                  <button
-                    key={c.id}
-                    ref={(element) => {
-                      convItemRefs.current[c.id] = element;
-                    }}
-                    className={`conv-item ${selectedConvId === c.id ? "selected" : ""}`}
-                    onClick={() => {
-                      setOpenedConversationFromSearch(false);
-                      void handleConversationClick(c.id);
-                    }}
-                  >
-                    <span className="conv-title">{c.title || "Untitled"}</span>
-                    <span className="conv-meta">
-                      <span className="source-tag">{sourceLabel(c.source)}</span>
-                      <span>{c.message_count} msgs</span>
-                      <span>{formatDate(c.last_message_at)}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </aside>
-
-          {/* ---- MESSAGE VIEWER ---- */}
-          <main
-            id="main-content"
-            className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}
-          >
-            {!selectedConversation ? (
-              <div className="viewer-empty">
-                <p className="viewer-empty-text" aria-live="polite">
-                  {stats && stats.conversationCount > 0
-                    ? "Select a conversation to view messages."
-                    : "Import conversations to get started."}
-                </p>
-                {stats && stats.conversationCount > 0 && (
-                  <p className="viewer-empty-stats">
-                    {stats.conversationCount} conversations
-                    {" \u00B7 "}
-                    {stats.messageCount} messages
-                    {" \u00B7 "}
-                    Last: {formatTimestamp(stats.latestMessageTimestamp)}
-                  </p>
-                )}
-              </div>
-            ) : messagesLoading ? (
-              <div className="viewer-empty">
-                <p className="viewer-empty-text">Loading messages...</p>
-              </div>
-            ) : (
-              <>
-                <div className="viewer-header">
-                  <div className="viewer-header-left">
-                    {openedConversationFromSearch && (
-                      <button
-                        type="button"
-                        className="viewer-back-to-search-btn"
-                        onClick={goBackToSearch}
-                        title="Back to search (Backspace)"
-                        aria-label="Back to search"
-                      >
-                        ←
-                      </button>
-                    )}
-                    <div>
-                      <h2>{selectedConversation.title || "Untitled"}</h2>
-                      <p className="viewer-header-meta">
-                        <span className="source-tag">
-                          {sourceLabel(selectedConversation.source)}
-                        </span>
-                        <span>{viewerSearchOpen && messageSearchQuery.trim() ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}` : `${messages.length} messages`}</span>
-                        <span>{formatDate(selectedConversation.last_message_at)}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="viewer-header-actions">
-                    <div className="viewer-header-menu-wrap" ref={viewerMenuRef}>
-                      <button
-                        type="button"
-                        className="viewer-menu-trigger"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewerMenuOpen((open) => !open);
-                        }}
-                        title="Options"
-                        aria-label="Options"
-                        aria-expanded={viewerMenuOpen}
-                        aria-haspopup="true"
-                      >
-                        <MoreHorizontal size={20} />
-                      </button>
-                      {viewerMenuOpen && (
-                        <div className="viewer-header-menu">
-                          <button
-                            type="button"
-                            className="viewer-header-menu-item"
-                            onClick={() => {
-                              copyConversationToClipboard(sourceLabel(selectedConversation.source));
-                              setViewerMenuOpen(false);
-                            }}
-                          >
-                            Copy conversation
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {viewerSearchOpen ? (
-                      <div className="viewer-search">
-                        <input
-                          ref={viewerSearchInputRef}
-                          type="search"
-                          className="viewer-search-input"
-                          placeholder="Search in conversation..."
-                          value={messageSearchQuery}
-                          onChange={(e) => setMessageSearchQuery(e.target.value)}
-                        />
-                        {messageSearchQuery.trim() && matchCount > 0 && (
-                          <div className="viewer-search-nav">
-                            <span className="viewer-search-count">
-                              {currentMatchIndex + 1} of {matchCount}
-                            </span>
-                            <button
-                              type="button"
-                              className="viewer-search-nav-btn"
-                              onClick={goToPrevMatch}
-                              title="Previous match"
-                              aria-label="Previous match"
-                            >
-                              ↑
-                            </button>
-                            <button
-                              type="button"
-                              className="viewer-search-nav-btn"
-                              onClick={goToNextMatch}
-                              title="Next match"
-                              aria-label="Next match"
-                            >
-                              ↓
-                            </button>
-                          </div>
-                        )}
-                        {messageSearchQuery.trim() && matchCount === 0 && (
-                          <span className="viewer-search-no-results">No results</span>
-                        )}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="viewer-search-icon-btn"
-                        onClick={() => setViewerSearchOpen(true)}
-                        title="Search in conversation (⌘F)"
-                        aria-label="Search in conversation"
-                      >
-                        <span className="viewer-search-icon" aria-hidden="true">⌕</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {copyToast && (
-                  <div className="copy-toast" role="status" aria-live="polite">
-                    {copyToast}
-                  </div>
-                )}
-                <div className="msg-list">
-                  {messages.map((m) => (
-                    <article
-                      key={m.id}
-                      ref={(el) => {
-                        messageRefs.current[m.id] = el;
-                      }}
-                      className={`msg ${m.sender === "human" ? "human" : "assistant"}${
-                        highlightedMessageId === m.id ? " highlighted" : ""
-                      }`}
-                    >
-                      <div className="msg-top">
-                        <span className="sender-pill">
-                          {m.sender === "human" ? "You" : sourceLabel(selectedConversation.source)}
-                        </span>
-                        <span className="msg-top-right">
-                          <time>{formatTimestamp(m.created_at)}</time>
-                          <button
-                            type="button"
-                            className="msg-copy-btn"
-                            onClick={() => copyMessageToClipboard(m, sourceLabel(selectedConversation.source))}
-                            title="Copy message"
-                            aria-label="Copy message"
-                          >
-                            Copy
-                          </button>
-                        </span>
-                      </div>
-                      <div className="msg-body">{highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}</div>
-                    </article>
-                  ))}
-                </div>
-              </>
-            )}
-          </main>
+          <ConversationListPanel
+            conversations={conversations}
+            loading={loading}
+            selectedConvId={selectedConvId}
+            activeSource={activeSource}
+            availableSources={availableSources}
+            sourceStats={sourceStats}
+            convItemRefs={convItemRefs}
+            onSelectSource={setActiveSource}
+            onSelectConversation={(convId) => {
+              setOpenedConversationFromSearch(false);
+              void handleConversationClick(convId);
+            }}
+            sourceLabel={sourceLabel}
+          />
+          <ConversationViewerPanel
+            stats={stats}
+            selectedConversation={selectedConversation}
+            messages={messages}
+            messagesLoading={messagesLoading}
+            openedConversationFromSearch={openedConversationFromSearch}
+            onBackToSearch={goBackToSearch}
+            viewerMenuOpen={viewerMenuOpen}
+            onToggleViewerMenu={() => setViewerMenuOpen((open) => !open)}
+            onCloseViewerMenu={() => setViewerMenuOpen(false)}
+            viewerMenuRef={viewerMenuRef}
+            viewerSearchOpen={viewerSearchOpen}
+            onOpenViewerSearch={() => setViewerSearchOpen(true)}
+            messageSearchQuery={messageSearchQuery}
+            onMessageSearchQueryChange={setMessageSearchQuery}
+            viewerSearchInputRef={viewerSearchInputRef}
+            matchCount={matchCount}
+            messageMatchCount={messageMatchCount}
+            currentMatchIndex={currentMatchIndex}
+            onPrevMatch={goToPrevMatch}
+            onNextMatch={goToNextMatch}
+            copyToast={copyToast}
+            onCopyConversation={() => copyConversationToClipboard(sourceLabel(selectedConversation?.source ?? ""))}
+            onCopyMessage={(m) => copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? ""))}
+            messageRefs={messageRefs}
+            highlightedMessageId={highlightedMessageId}
+            highlightText={highlightText}
+            sourceLabel={sourceLabel}
+          />
         </>
       )}
 
-      {clearConfirmOpen && (
-        <div
-          className="confirm-overlay"
-          role="presentation"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setClearConfirmOpen(false);
-          }}
-        >
-          <div
-            ref={clearConfirmDialogRef}
-            className="confirm-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="clear-data-title"
-          >
-            <h3 id="clear-data-title">Clear imported data?</h3>
-            <p>
-              This will permanently remove all imported conversations and
-              messages from this app.
-            </p>
-            <div className="confirm-actions">
-              <button
-                ref={clearConfirmCancelBtnRef}
-                type="button"
-                className="confirm-cancel-btn"
-                onClick={() => setClearConfirmOpen(false)}
-                disabled={clearingData}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="confirm-danger-btn"
-                onClick={() => void handleClearAllDataConfirm()}
-                disabled={clearingData}
-              >
-                {clearingData ? "Clearing..." : "Clear Data"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ClearDataConfirmDialog
+        open={clearConfirmOpen}
+        clearingData={clearingData}
+        onCancel={() => setClearConfirmOpen(false)}
+        onConfirm={() => void handleClearAllDataConfirm()}
+        cancelBtnRef={clearConfirmCancelBtnRef}
+        dialogRef={clearConfirmDialogRef}
+      />
     </div>
   );
 }
