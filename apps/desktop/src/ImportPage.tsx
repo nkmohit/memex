@@ -81,7 +81,7 @@ export default function ImportPage({
 
   if (loading && !stats && !loadError) {
     return (
-      <main className="import-main">
+      <main className="import-main" id="main-content">
         <h1 className="import-title">Import</h1>
         <p className="empty-text">Loading...</p>
       </main>
@@ -95,7 +95,7 @@ export default function ImportPage({
     : "—";
 
   return (
-    <main className="import-main">
+    <main className="import-main" id="main-content">
       <h1 className="import-title">Import</h1>
       <p className="import-description">
         Add conversations from supported providers. Data is stored only on your device.
