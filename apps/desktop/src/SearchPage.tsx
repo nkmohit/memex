@@ -488,6 +488,7 @@ export default function SearchPage({
                   resultRefs.current[index] = element;
                 }}
                 className={`search-result ${selectedIndex === index || row.conversation_id === selectedConversationId ? "selected" : ""}`}
+                data-selected={row.conversation_id === selectedConversationId ? "true" : "false"}
                 onClick={() => {
                   if (onSelectResult) {
                     onSelectResult(row.conversation_id, row.title || "Untitled", row.source);

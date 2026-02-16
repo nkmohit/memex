@@ -15,7 +15,6 @@ import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
 import SearchPage, { type SearchPageSnapshot } from "./SearchPage";
 import OverviewPage from "./OverviewPage";
 import ImportPage from "./ImportPage";
-import ConversationDetailPanel from "./ConversationDetailPanel";
 import { MemexLogoIcon } from "./icons";
 import { formatDate, formatTimestamp } from "./utils";
 import "./App.css";
@@ -132,12 +131,10 @@ function App() {
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("overview");
 
-  // ---- search detail panel (when on search view, in-place) ----
+  // ---- search: re-use the main conversation viewer panel ----
+  // When browsing search results, selecting a result should open it in the
+  // same viewer used by the Conversations tab (and preserve query highlights).
   const [searchSelectedConvId, setSearchSelectedConvId] = useState<string | null>(null);
-  const [searchSelectedTitle, setSearchSelectedTitle] = useState("");
-  const [searchSelectedSource, setSearchSelectedSource] = useState("");
-  const [searchDetailMessages, setSearchDetailMessages] = useState<MessageRow[]>([]);
-  const [searchDetailLoading, setSearchDetailLoading] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
   const [viewerSearchOpen, setViewerSearchOpen] = useState(false);
@@ -683,28 +680,15 @@ function App() {
     return sourceStats.find((s) => s.source === source)?.conversationCount ?? 0;
   }
 
-  async function handleSearchResultSelect(convId: string, title: string, source: string) {
+  async function handleSearchResultSelect(convId: string) {
+    // Switch the right panel to the standard viewer with in-thread search open.
     setSearchSelectedConvId(convId);
-    setSearchSelectedTitle(title);
-    setSearchSelectedSource(source);
-    setSearchDetailLoading(true);
-    try {
-      const msgs = await getMessages(convId);
-      setSearchDetailMessages(msgs);
-    } catch {
-      setSearchDetailMessages([]);
-    } finally {
-      setSearchDetailLoading(false);
-    }
-  }
-
-  function handleCopySearchDetailThread() {
-    const lines = searchDetailMessages.map((m) => {
-      const sender = m.sender === "human" ? "You" : searchSelectedSource;
-      return `**${sender}** (${formatTimestamp(m.created_at)}):\n\n${m.content}`;
-    });
-    const text = lines.join("\n\n");
-    copyToClipboard(text).then((ok) => ok && showCopyToast("Copied"));
+    setSelectedConvId(convId);
+    setOpenedConversationFromSearch(true);
+    setViewerSearchOpen(true);
+    setMessageSearchQuery(searchPageQuery);
+    setMessageSearchMatchIndex(0);
+    await handleConversationClick(convId, null);
   }
 
   function handleOverviewSelectConversation(convId: string) {
@@ -892,16 +876,149 @@ function App() {
             />
           </main>
           {searchSelectedConvId && (
-            <div className="search-detail-panel">
-              <ConversationDetailPanel
-                title={searchSelectedTitle}
-                source={searchSelectedSource}
-                messages={searchDetailMessages}
-                loading={searchDetailLoading}
-                onCopyThread={handleCopySearchDetailThread}
-                onClose={() => setSearchSelectedConvId(null)}
-              />
-            </div>
+            <main
+              className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}
+            >
+              {!selectedConversation ? (
+                <div className="viewer-empty">
+                  <p className="viewer-empty-text" aria-live="polite">
+                    Select a conversation to view messages.
+                  </p>
+                </div>
+              ) : messagesLoading ? (
+                <div className="viewer-empty">
+                  <p className="viewer-empty-text">Loading messages...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="viewer-header">
+                    <div className="viewer-header-left">
+                      <div>
+                        <h2>{selectedConversation.title || "Untitled"}</h2>
+                        <p className="viewer-header-meta">
+                          <span className="source-tag">
+                            {sourceLabel(selectedConversation.source)}
+                          </span>
+                          <span>
+                            {viewerSearchOpen && messageSearchQuery.trim()
+                              ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${messageMatchCount !== 1 ? "s" : ""}`
+                              : `${messages.length} messages`}
+                          </span>
+                          <span>{formatDate(selectedConversation.last_message_at)}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="viewer-header-actions">
+                      {viewerSearchOpen ? (
+                        <div className="viewer-search">
+                          <input
+                            ref={viewerSearchInputRef}
+                            type="search"
+                            className="viewer-search-input"
+                            placeholder="Search in conversation..."
+                            value={messageSearchQuery}
+                            onChange={(e) => setMessageSearchQuery(e.target.value)}
+                          />
+                          {messageSearchQuery.trim() && matchCount > 0 && (
+                            <div className="viewer-search-nav">
+                              <span className="viewer-search-count">
+                                {currentMatchIndex + 1} of {matchCount}
+                              </span>
+                              <button
+                                type="button"
+                                className="viewer-search-nav-btn"
+                                onClick={goToPrevMatch}
+                                title="Previous match"
+                                aria-label="Previous match"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                className="viewer-search-nav-btn"
+                                onClick={goToNextMatch}
+                                title="Next match"
+                                aria-label="Next match"
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          )}
+                          {messageSearchQuery.trim() && matchCount === 0 && (
+                            <span className="viewer-search-no-results">No results</span>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="viewer-search-icon-btn"
+                          onClick={() => setViewerSearchOpen(true)}
+                          title="Search in conversation (⌘F)"
+                          aria-label="Search in conversation"
+                        >
+                          <span className="viewer-search-icon" aria-hidden="true">
+                            ⌕
+                          </span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="viewer-close-panel-btn"
+                        onClick={() => {
+                          setSearchSelectedConvId(null);
+                          setSelectedConvId(null);
+                          setOpenedConversationFromSearch(false);
+                        }}
+                        title="Close panel"
+                        aria-label="Close panel"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  {copyToast && (
+                    <div className="copy-toast" role="status" aria-live="polite">
+                      {copyToast}
+                    </div>
+                  )}
+                  <div className="msg-list">
+                    {messages.map((m) => (
+                      <article
+                        key={m.id}
+                        ref={(el) => {
+                          messageRefs.current[m.id] = el;
+                        }}
+                        className={`msg ${m.sender === "human" ? "human" : "assistant"}${
+                          highlightedMessageId === m.id ? " highlighted" : ""
+                        }`}
+                      >
+                        <div className="msg-top">
+                          <span className="sender-pill">
+                            {m.sender === "human" ? "You" : sourceLabel(selectedConversation.source)}
+                          </span>
+                          <span className="msg-top-right">
+                            <time>{formatTimestamp(m.created_at)}</time>
+                            <button
+                              type="button"
+                              className="msg-copy-btn"
+                              onClick={() => copyMessageToClipboard(m, sourceLabel(selectedConversation.source))}
+                              title="Copy message"
+                              aria-label="Copy message"
+                            >
+                              Copy
+                            </button>
+                          </span>
+                        </div>
+                        <div className="msg-body">
+                          {highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+            </main>
           )}
         </>
       )}

@@ -150,6 +150,9 @@
   --color-ring: var(--ring);
   --shadow-panel: var(--shadow-1);
   --shadow-panel-strong: var(--shadow-2);
+
+  /* Helps native controls/titlebar render appropriately in dark mode */
+  color-scheme: dark;
 }
 
 /* -------------------------------------------------------------------
@@ -219,7 +222,7 @@ body {
 }
 
 .app-shell.search-layout {
-  grid-template-columns: 52px 320px 1fr;
+  grid-template-columns: 52px 280px 1fr;
 }
 
 .app-shell.search-layout.search-panel-closed {
@@ -367,6 +370,11 @@ body {
 .sidebar-item:hover {
   background: var(--selection);
   color: var(--text-1);
+  transform: translateY(-1px);
+}
+
+.sidebar-item:active {
+  transform: translateY(0px);
 }
 
 .sidebar-item.active {
@@ -588,6 +596,16 @@ body {
   background: var(--selection);
   border-left: 3px solid var(--accent);
   padding-left: 11px;
+}
+
+/* When searching inside the viewer, ensure the selected conversation row
+   has a distinct shade from match highlighting. */
+.viewer.viewer-has-search .conv-item.selected {
+  background: rgb(10 132 255 / 0.08);
+}
+
+.dark .viewer.viewer-has-search .conv-item.selected {
+  background: rgb(47 129 247 / 0.12);
 }
 
 .conv-title {
@@ -1037,6 +1055,19 @@ body {
   box-shadow: 0 0 0 1px var(--border-2);
 }
 
+/* Distinguish the "opened/selected" conversation from the keyboard-hover row */
+.search-result.selected[data-selected="true"] {
+  background: rgb(10 132 255 / 0.12);
+  border-color: rgb(10 132 255 / 0.22);
+  box-shadow: 0 0 0 1px rgb(10 132 255 / 0.22);
+}
+
+.dark .search-result.selected[data-selected="true"] {
+  background: rgb(47 129 247 / 0.16);
+  border-color: rgb(47 129 247 / 0.3);
+  box-shadow: 0 0 0 1px rgb(47 129 247 / 0.3);
+}
+
 .search-result-title {
   font-size: 14px;
   font-weight: 600;
@@ -1044,14 +1075,22 @@ body {
 }
 
 .search-result-snippet mark {
-  background: rgb(10 132 255 / 0.16);
+  background: rgb(255 214 10 / 0.75);
   color: inherit;
   padding: 0 2px;
   border-radius: 4px;
 }
 
 .dark .search-result-snippet mark {
-  background: rgb(47 129 247 / 0.22);
+  background: rgb(255 214 10 / 0.55);
+}
+
+/* In-conversation search: distinguish current match from other marks */
+.msg-body mark.current-match {
+  background: rgb(255 159 10 / 0.9);
+  color: rgb(11 13 18 / 0.95);
+  box-shadow: 0 0 0 2px rgb(255 159 10 / 0.55);
+  border-radius: 4px;
 }
 
 .search-detail-panel {
