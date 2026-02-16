@@ -919,16 +919,7 @@ function App() {
                 value={activeSource ?? ""}
                 onChange={(e) => setActiveSource(e.target.value || null)}
                 aria-label="Filter by source"
-                style={{
-                  marginTop: "8px",
-                  width: "100%",
-                  padding: "6px 8px",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                  background: "var(--color-card)",
-                  color: "var(--color-foreground)",
-                  fontSize: "12px",
-                }}
+                className="conv-source-select"
               >
                 <option value="">All sources</option>
                 {availableSources.map((src) => (
