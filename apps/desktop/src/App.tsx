@@ -637,6 +637,8 @@ function App() {
           onSetTheme={setThemeAndPersist}
           clearResult={clearResult}
           clearError={clearError}
+          onDismissClearResult={() => setClearResult(null)}
+          onDismissClearError={() => setClearError(null)}
           clearingData={clearingData}
           importing={importing}
           loading={loading}

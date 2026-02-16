@@ -6,6 +6,8 @@ type SettingsPanelProps = {
   onSetTheme: (mode: ThemeMode) => void;
   clearResult: string | null;
   clearError: string | null;
+  onDismissClearResult: () => void;
+  onDismissClearError: () => void;
   clearingData: boolean;
   importing: boolean;
   loading: boolean;
@@ -18,6 +20,8 @@ export default function SettingsPanel({
   onSetTheme,
   clearResult,
   clearError,
+  onDismissClearResult,
+  onDismissClearError,
   clearingData,
   importing,
   loading,
@@ -30,13 +34,31 @@ export default function SettingsPanel({
       {(clearResult || clearError) && (
         <div className="settings-banners">
           {clearResult && (
-            <div className="banner success" role="status">
-              {clearResult}
+            <div className="banner success dismissible" role="status">
+              <span>{clearResult}</span>
+              <button
+                type="button"
+                className="banner-dismiss"
+                onClick={onDismissClearResult}
+                aria-label="Dismiss"
+                title="Dismiss"
+              >
+                ×
+              </button>
             </div>
           )}
           {clearError && (
-            <div className="banner error" role="alert">
-              {clearError}
+            <div className="banner error dismissible" role="alert">
+              <span>{clearError}</span>
+              <button
+                type="button"
+                className="banner-dismiss"
+                onClick={onDismissClearError}
+                aria-label="Dismiss"
+                title="Dismiss"
+              >
+                ×
+              </button>
             </div>
           )}
         </div>
