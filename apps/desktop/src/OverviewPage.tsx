@@ -90,7 +90,7 @@ export default function OverviewPage({
   const isEmpty = totalConvs === 0 && totalMsgs === 0;
 
   return (
-    <main className="overview-main">
+    <main className="overview-main" id="main-content">
       <h1 className="overview-title">Overview</h1>
 
       {isEmpty && (
@@ -112,7 +112,7 @@ export default function OverviewPage({
           <div className="overview-card-value">{totalMsgs.toLocaleString()}</div>
         </div>
         <div className="overview-card">
-          <div className="overview-card-label">Last Import</div>
+          <div className="overview-card-label">Latest activity</div>
           <div className="overview-card-value">{lastImport}</div>
         </div>
         <div className="overview-card">
@@ -123,9 +123,9 @@ export default function OverviewPage({
         </div>
       </div>
 
-      <div className="overview-section-title" style={{ marginTop: "8px" }}>
+      <h2 className="overview-section-title" style={{ marginTop: "8px" }}>
         30-day activity
-      </div>
+      </h2>
       <div className="overview-heatmap" style={{ marginBottom: "24px" }}>
         <div
           style={{
@@ -158,10 +158,12 @@ export default function OverviewPage({
         </p>
       </div>
 
-      <div className="overview-section-title">Recent conversations</div>
+      <h2 className="overview-section-title">Recent conversations</h2>
       <div className="overview-recent-list" style={{ marginBottom: "24px" }}>
         {recent.length === 0 ? (
-          <p className="empty-text">No conversations yet. Import to get started.</p>
+          <p className="empty-text" aria-live="polite">
+            No conversations yet. Import to get started.
+          </p>
         ) : (
           recent.map((c) => (
             <button
@@ -182,7 +184,7 @@ export default function OverviewPage({
         )}
       </div>
 
-      <div className="overview-section-title">Source breakdown</div>
+      <h2 className="overview-section-title">Source breakdown</h2>
       <div style={{ marginBottom: "24px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
         {sourceStats.length === 0 ? (
           <p style={{ fontSize: "13px", color: "var(--color-muted-foreground)" }}>No data yet.</p>
@@ -207,19 +209,19 @@ export default function OverviewPage({
         )}
       </div>
 
-      <div className="overview-section-title">Insights & tips</div>
+      <h2 className="overview-section-title">Insights & tips</h2>
       <p style={{ fontSize: "13px", color: "var(--color-muted-foreground)", marginBottom: "24px" }}>
         Placeholder for future AI-powered insights.
       </p>
 
-      <div className="overview-section-title">Frequent topics</div>
+      <h2 className="overview-section-title">Frequent topics</h2>
       <p style={{ fontSize: "13px", color: "var(--color-muted-foreground)", marginBottom: "24px" }}>
         Coming soon
       </p>
 
-      <div className="overview-section-title">Data status</div>
+      <h2 className="overview-section-title">Data status</h2>
       <p style={{ fontSize: "13px", color: "var(--color-muted-foreground)", marginBottom: "12px" }}>
-        All data is stored locally. Last sync: {lastImport}
+        All data is stored locally. Latest activity: {lastImport}
       </p>
       <button type="button" className="overview-cta" onClick={onOpenImport}>
         Import New Data

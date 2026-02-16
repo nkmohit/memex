@@ -74,6 +74,17 @@ function App() {
     return "system";
   });
 
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPrefersReducedMotion(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "light") {
@@ -241,6 +252,8 @@ function App() {
   function copyMessageToClipboard(m: MessageRow, assistantLabel: string) {
     const sender = m.sender === "human" ? "You" : assistantLabel;
     const line = `${sender} (${formatTimestamp(m.created_at)}): ${m.content}`;
+    // Note: we intentionally do not move focus when copying; the toast is
+    // announced via aria-live and focus stays on the triggering button.
     copyToClipboard(line).then((ok) => ok && showCopyToast("Copied"));
   }
 
@@ -328,7 +341,10 @@ function App() {
       const marks = el.querySelectorAll("mark");
       const mark = marks[occ.localIndex] ?? marks[0];
       if (mark) mark.classList.add("current-match");
-      (mark || el).scrollIntoView({ behavior: "smooth", block: "center" });
+      (mark || el).scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "center",
+      });
     }
   }, [viewerSearchOpen, messageSearchQuery, currentMatchIndex, matchCount, occurrences]);
 
@@ -493,7 +509,10 @@ function App() {
           const messageEl = messageRefs.current[scrollToMessageId];
           if (messageEl) {
             const mark = messageEl.querySelector("mark");
-            (mark || messageEl).scrollIntoView({ behavior: "smooth", block: "center" });
+            (mark || messageEl).scrollIntoView({
+              behavior: prefersReducedMotion ? "auto" : "smooth",
+              block: "center",
+            });
             setHighlightedMessageId(scrollToMessageId);
             
             // Remove highlight after 2 seconds
@@ -515,7 +534,7 @@ function App() {
     if (activeView !== "conversations" || !selectedConvId) return;
     convItemRefs.current[selectedConvId]?.scrollIntoView({
       block: "nearest",
-      behavior: "smooth",
+      behavior: prefersReducedMotion ? "auto" : "smooth",
     });
   }, [activeView, selectedConvId]);
 
@@ -719,6 +738,9 @@ function App() {
   // ---- render ----
   return (
     <div className={`app-shell ${shellLayoutClass}${hasGlobalError ? " has-global-banner" : ""}`}>
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       {hasGlobalError && (
         <div className="global-banner-area" role="alert">
           {loadError && (
@@ -801,18 +823,18 @@ function App() {
       )}
 
       {activeView === "import" && (
-          <ImportPage
-              onImport={(source) => void handleImportSource(source)}
-              importing={importing}
-              importError={importError}
-              importResult={importResult}
-              onDismissImportError={() => setImportError(null)}
-              refreshKey={importRefreshKey}
-            />
+        <ImportPage
+          onImport={(source) => void handleImportSource(source)}
+          importing={importing}
+          importError={importError}
+          importResult={importResult}
+          onDismissImportError={() => setImportError(null)}
+          refreshKey={importRefreshKey}
+        />
       )}
 
       {activeView === "settings" && (
-        <main className="settings-main">
+        <main className="settings-main" id="main-content">
           <h1 className="settings-title">Settings</h1>
           {(clearResult || clearError) && (
             <div className="settings-banners">
@@ -821,7 +843,7 @@ function App() {
             </div>
           )}
           <div className="settings-section">
-            <h3>Theme</h3>
+            <h2>Theme</h2>
             <div className="settings-theme-options">
               {(["light", "dark", "system"] as const).map((mode) => (
                 <button
@@ -837,7 +859,7 @@ function App() {
             </div>
           </div>
           <div className="settings-section">
-            <h3>Data</h3>
+            <h2>Data</h2>
             <button
               ref={clearDataTriggerRef}
               type="button"
@@ -853,7 +875,7 @@ function App() {
 
       {activeView === "search" && (
         <>
-          <main className="search-main">
+          <main className="search-main" id="main-content">
             <SearchPage
               query={searchPageQuery}
               onQueryChange={setSearchPageQuery}
@@ -890,7 +912,7 @@ function App() {
           <aside className="conv-panel">
             <div className="conv-panel-header">
               <div className="conv-header-top">
-                <h2>Conversations</h2>
+                <h1>Conversations</h1>
                 <span className="conv-count">{conversations.length}</span>
               </div>
               <select
@@ -918,9 +940,16 @@ function App() {
             </div>
 
             {loading ? (
-              <div className="empty-text">Loading...</div>
+              <div className="conv-list conv-list-skeleton" aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="conv-item skeleton">
+                    <div className="conv-title-skeleton" />
+                    <div className="conv-meta-skeleton" />
+                  </div>
+                ))}
+              </div>
             ) : conversations.length === 0 ? (
-              <div className="empty-text">
+              <div className="empty-text" aria-live="polite">
                 No conversations yet. Import to get started.
               </div>
             ) : (
@@ -950,10 +979,13 @@ function App() {
           </aside>
 
           {/* ---- MESSAGE VIEWER ---- */}
-          <main className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
+          <main
+            id="main-content"
+            className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}
+          >
             {!selectedConversation ? (
               <div className="viewer-empty">
-                <p className="viewer-empty-text">
+                <p className="viewer-empty-text" aria-live="polite">
                   {stats && stats.conversationCount > 0
                     ? "Select a conversation to view messages."
                     : "Import conversations to get started."}

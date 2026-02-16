@@ -136,6 +136,24 @@ body {
   grid-template-columns: 52px 1fr;
 }
 
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -40px;
+  padding: 6px 10px;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  text-decoration: none;
+  z-index: 20;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 10px;
+}
+
 .app-shell.has-global-banner {
   grid-template-rows: auto 1fr;
 }
@@ -742,7 +760,7 @@ body {
   gap: 10px;
 }
 
-.search-header h2 {
+.search-header h1 {
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 700;
@@ -807,6 +825,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  list-style: none;
+  margin: 0;
 }
 
 .search-result {
@@ -1000,6 +1020,25 @@ body {
   background: var(--color-accent);
 }
 
+.conv-list-skeleton .conv-item.skeleton {
+  border: none;
+  background: var(--color-muted);
+  border-radius: var(--radius-sm);
+}
+
+.conv-title-skeleton,
+.conv-meta-skeleton {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-border);
+  margin-bottom: 6px;
+}
+
+.conv-meta-skeleton {
+  width: 70%;
+  margin-bottom: 0;
+}
+
 .overview-cta {
   display: inline-flex;
   align-items: center;
@@ -1063,7 +1102,7 @@ body {
   margin-bottom: 24px;
 }
 
-.settings-section h3 {
+.settings-section h2 {
   font-family: var(--font-heading);
   font-size: 16px;
   font-weight: 600;
@@ -1117,6 +1156,25 @@ body {
 .settings-danger-btn:hover {
   background: var(--color-destructive);
   color: var(--color-destructive-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+
+  .overview-card,
+  .overview-recent-item,
+  .overview-cta,
+  .sidebar-item,
+  .search-input,
+  .search-result,
+  .settings-theme-option,
+  .settings-danger-btn,
+  .conv-item,
+  .import-source-btn {
+    transition: none !important;
+  }
 }
 
 /* -------------------------------------------------------------------

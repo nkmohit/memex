@@ -236,7 +236,10 @@ export default function SearchPage({
     if (selectedIndex < 0) return;
     resultRefs.current[selectedIndex]?.scrollIntoView({
       block: "nearest",
-      behavior: "smooth",
+      behavior: window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
     });
   }, [selectedIndex]);
 
@@ -366,7 +369,7 @@ export default function SearchPage({
   return (
     <section className="search-page">
       <header className="search-header">
-        <h2>Search</h2>
+        <h1>Search</h1>
         <input
           ref={searchInputRef}
           className="search-input"
@@ -378,9 +381,13 @@ export default function SearchPage({
         />
 
         <div className="search-filters">
-          <label>
+          <label htmlFor="search-source">
             Source
-            <select value={source} onChange={(e) => setSource(e.target.value)}>
+            <select
+              id="search-source"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            >
               <option value="">All</option>
               {availableSources.map((src) => (
                 <option key={src} value={src}>
@@ -390,27 +397,33 @@ export default function SearchPage({
             </select>
           </label>
 
-          <label>
+          <label htmlFor="search-from">
             From
             <input
+              id="search-from"
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
           </label>
 
-          <label>
+          <label htmlFor="search-to">
             To
             <input
+              id="search-to"
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
             />
           </label>
 
-          <label>
+          <label htmlFor="search-sort">
             Sort
-            <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+            <select
+              id="search-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as typeof sort)}
+            >
               <option value="last_occurrence_desc">Last occurrence</option>
               <option value="relevance">Relevance</option>
               <option value="occurrence_count_desc">Occurrence count</option>
@@ -452,12 +465,12 @@ export default function SearchPage({
           )}
         </div>
 
-        {error && <div className="banner error">{error}</div>}
+        {error && <div className="banner error" role="alert">{error}</div>}
       </header>
 
-      <div className="search-results">
+      <ul className="search-results">
         {hasQuery && !loading && results.length === 0 ? (
-          <div className="search-empty-state">
+          <div className="search-empty-state" role="status" aria-live="polite">
             <p className="search-empty-title">No matches found.</p>
             <p>Try:</p>
             <ul className="search-empty-tips">
@@ -468,58 +481,59 @@ export default function SearchPage({
           </div>
         ) : (
           results.map((row, index) => (
-            <button
-              type="button"
-              key={row.conversation_id}
-              ref={(element) => {
-                resultRefs.current[index] = element;
-              }}
-              className={`search-result ${selectedIndex === index || row.conversation_id === selectedConversationId ? "selected" : ""}`}
-              onClick={() => {
-                if (onSelectResult) {
-                  onSelectResult(row.conversation_id, row.title || "Untitled", row.source);
-                } else if (onOpenConversation) {
-                  onOpenConversation(row.conversation_id, query, row.first_match_message_id);
-                }
-              }}
-              onMouseEnter={() => setSelectedIndex(index)}
-            >
-              <div className="search-result-header">
-                <div className="search-result-title">{row.title || "Untitled"}</div>
-                {hasQuery ? (
-                  <div className="search-result-occurrences">
-                    {row.occurrence_count}{" "}
-                    {row.occurrence_count === 1 ? "occurrence" : "occurrences"}
-                    {" in "}
-                    {row.message_match_count}{" "}
-                    {row.message_match_count === 1 ? "message" : "messages"}
-                  </div>
-                ) : (
-                  <div className="search-result-occurrences">
-                    {row.occurrence_count}{" "}
-                    {row.occurrence_count === 1 ? "message" : "messages"}
-                  </div>
-                )}
-              </div>
-              {hasQuery && (
-                <div className="search-result-snippets">
-                  {(row.snippets.length > 0 ? row.snippets : [row.snippet]).map(
-                    (snippet, snippetIndex) => (
-                    <div
-                      key={`${row.conversation_id}-snippet-${snippetIndex}`}
-                      className="search-result-snippet"
-                    >
-                      {renderHighlightedSnippet(snippet)}
+            <li key={row.conversation_id}>
+              <button
+                type="button"
+                ref={(element) => {
+                  resultRefs.current[index] = element;
+                }}
+                className={`search-result ${selectedIndex === index || row.conversation_id === selectedConversationId ? "selected" : ""}`}
+                onClick={() => {
+                  if (onSelectResult) {
+                    onSelectResult(row.conversation_id, row.title || "Untitled", row.source);
+                  } else if (onOpenConversation) {
+                    onOpenConversation(row.conversation_id, query, row.first_match_message_id);
+                  }
+                }}
+                onMouseEnter={() => setSelectedIndex(index)}
+              >
+                <div className="search-result-header">
+                  <div className="search-result-title">{row.title || "Untitled"}</div>
+                  {hasQuery ? (
+                    <div className="search-result-occurrences">
+                      {row.occurrence_count}{" "}
+                      {row.occurrence_count === 1 ? "occurrence" : "occurrences"}
+                      {" in "}
+                      {row.message_match_count}{" "}
+                      {row.message_match_count === 1 ? "message" : "messages"}
                     </div>
-                    )
+                  ) : (
+                    <div className="search-result-occurrences">
+                      {row.occurrence_count}{" "}
+                      {row.occurrence_count === 1 ? "message" : "messages"}
+                    </div>
                   )}
                 </div>
-              )}
-              <div className="search-result-meta">
-                <span className="source-tag">{sourceLabel(row.source)}</span>
-                <span>{formatDate(row.last_occurrence)}</span>
-              </div>
-            </button>
+                {hasQuery && (
+                  <div className="search-result-snippets">
+                    {(row.snippets.length > 0 ? row.snippets : [row.snippet]).map(
+                      (snippet, snippetIndex) => (
+                      <div
+                        key={`${row.conversation_id}-snippet-${snippetIndex}`}
+                        className="search-result-snippet"
+                      >
+                        {renderHighlightedSnippet(snippet)}
+                      </div>
+                      )
+                    )}
+                  </div>
+                )}
+                <div className="search-result-meta">
+                  <span className="source-tag">{sourceLabel(row.source)}</span>
+                  <span>{formatDate(row.last_occurrence)}</span>
+                </div>
+              </button>
+            </li>
           ))
         )}
 
@@ -542,7 +556,7 @@ export default function SearchPage({
             )}
           </button>
         )}
-      </div>
+      </ul>
     </section>
   );
 }
