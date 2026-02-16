@@ -176,8 +176,9 @@ html {
 
 body {
   color: var(--color-foreground);
-  background-color: var(--color-background);
+  background: var(--surface-0);
 }
+
 
 /* -------------------------------------------------------------------
    Layout: app shell — small spacing, subtle gradient for glass depth
@@ -200,6 +201,42 @@ body {
   color: var(--color-foreground);
   padding: var(--space-2);
   gap: var(--space-2);
+}
+
+/* -------------------------------------------------------------------
+   macOS titlebar overlay
+   ------------------------------------------------------------------- */
+.titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 34px;
+  z-index: 9999;
+  pointer-events: none;
+  background: var(--surface-0);
+}
+
+.dark .titlebar {
+  background: var(--surface-0);
+}
+
+.titlebar-drag-region {
+  height: 100%;
+  width: 100%;
+  -webkit-app-region: drag;
+}
+
+/* Keep content clear of the overlay titlebar for interactive elements,
+   but let the background use the full window height. */
+.app-shell {
+  position: relative;
+  padding-top: var(--space-2);
+}
+
+/* Push the primary panels down below the titlebar */
+.app-shell > :not(.titlebar):not(.skip-link):not(.global-banner-area) {
+  margin-top: 34px;
 }
 
 .dark .app-shell {

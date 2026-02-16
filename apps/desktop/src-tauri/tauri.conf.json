@@ -3,16 +3,13 @@
   "productName": "memex-desktop",
   "version": "0.1.0",
   "identifier": "com.memex.app",
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
-  },
   "app": {
     "windows": [
       {
         "title": "memex-desktop",
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": false,
         "width": 800,
         "height": 600
       }
@@ -20,6 +17,12 @@
     "security": {
       "csp": null
     }
+  },
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
   },
   "bundle": {
     "active": true,
