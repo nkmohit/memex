@@ -1,7 +1,7 @@
 export interface ParsedConversation {
   id: string;
   externalId: string;
-  source: "claude";
+  source: "claude" | "chatgpt" | "gemini" | "grok";
   title: string;
   createdAt: number;
   updatedAt: number;

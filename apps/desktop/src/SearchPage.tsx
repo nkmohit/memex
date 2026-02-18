@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { SearchResultRow, getAllConversationsForSearch, searchMessages } from "./db";
-import { formatDate } from "./utils";
+import SearchFilters from "./SearchFilters";
+import SearchResultsList from "./SearchResultsList";
 
 interface SearchPageProps {
   query: string;
@@ -47,25 +48,6 @@ function toEndOfDayTimestamp(dateValue: string): number | undefined {
   const date = new Date(`${dateValue}T23:59:59.999`);
   const ts = date.getTime();
   return Number.isNaN(ts) ? undefined : ts;
-}
-
-function renderHighlightedSnippet(snippet: string) {
-  const parts = snippet.split(/(<mark>|<\/mark>)/g);
-  let highlighted = false;
-  let idx = 0;
-
-  return parts.map((part) => {
-    if (part === "<mark>") {
-      highlighted = true;
-      return null;
-    }
-    if (part === "</mark>") {
-      highlighted = false;
-      return null;
-    }
-    const key = `snippet-${idx++}`;
-    return highlighted ? <mark key={key}>{part}</mark> : <span key={key}>{part}</span>;
-  });
 }
 
 export default function SearchPage({
@@ -382,69 +364,20 @@ export default function SearchPage({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
         />
-
-        <button
-          type="button"
-          className="search-filters-toggle"
-          onClick={() => setFiltersOpen((open) => !open)}
-          aria-expanded={filtersOpen}
-          aria-controls="search-filters"
-        >
-          Options
-        </button>
-
-        <div className="search-filters" id="search-filters" hidden={!filtersOpen}>
-          <label htmlFor="search-source">
-            Source
-            <select
-              id="search-source"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-            >
-              <option value="">All</option>
-              {availableSources.map((src) => (
-                <option key={src} value={src}>
-                  {sourceLabel(src)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label htmlFor="search-from">
-            From
-            <input
-              id="search-from"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </label>
-
-          <label htmlFor="search-to">
-            To
-            <input
-              id="search-to"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </label>
-
-          <label htmlFor="search-sort">
-            Sort
-            <select
-              id="search-sort"
-              value={sort}
-              onChange={(e) => setSort(e.target.value as typeof sort)}
-            >
-              <option value="last_occurrence_desc">Last occurrence</option>
-              <option value="relevance">Relevance</option>
-              <option value="occurrence_count_desc">Occurrence count</option>
-              <option value="title_az">Title A-Z</option>
-              <option value="title_za">Title Z-A</option>
-            </select>
-          </label>
-        </div>
+        <SearchFilters
+          availableSources={availableSources}
+          source={source}
+          onSourceChange={setSource}
+          dateFrom={dateFrom}
+          onDateFromChange={setDateFrom}
+          dateTo={dateTo}
+          onDateToChange={setDateTo}
+          sort={sort}
+          onSortChange={setSort}
+          filtersOpen={filtersOpen}
+          onToggleFilters={() => setFiltersOpen((open) => !open)}
+          sourceLabel={sourceLabel}
+        />
 
         <div className="search-meta">
           {loading && results.length === 0 ? (
@@ -481,96 +414,26 @@ export default function SearchPage({
         {error && <div className="banner error" role="alert">{error}</div>}
       </header>
 
-      <ul className="search-results">
-        {hasQuery && !loading && results.length === 0 ? (
-          <div className="search-empty-state" role="status" aria-live="polite">
-            <p className="search-empty-title">No matches found.</p>
-            <p>Try:</p>
-            <ul className="search-empty-tips">
-              <li>Shorter keywords</li>
-              <li>Different wording</li>
-              <li>Removing filters</li>
-            </ul>
-          </div>
-        ) : (
-          results.map((row, index) => (
-            <li key={row.conversation_id}>
-              <button
-                type="button"
-                ref={(element) => {
-                  resultRefs.current[index] = element;
-                }}
-                className={`search-result ${selectedIndex === index || row.conversation_id === selectedConversationId ? "selected" : ""}`}
-                data-selected={row.conversation_id === selectedConversationId ? "true" : "false"}
-                onClick={() => {
-                  if (onSelectResult) {
-                    onSelectResult(row.conversation_id, row.title || "Untitled", row.source);
-                  } else if (onOpenConversation) {
-                    onOpenConversation(row.conversation_id, query, row.first_match_message_id);
-                  }
-                }}
-                onMouseEnter={() => setSelectedIndex(index)}
-              >
-                <div className="search-result-header">
-                  <div className="search-result-title">{row.title || "Untitled"}</div>
-                  {hasQuery ? (
-                    <div className="search-result-occurrences">
-                      {row.occurrence_count}{" "}
-                      {row.occurrence_count === 1 ? "occurrence" : "occurrences"}
-                      {" in "}
-                      {row.message_match_count}{" "}
-                      {row.message_match_count === 1 ? "message" : "messages"}
-                    </div>
-                  ) : (
-                    <div className="search-result-occurrences">
-                      {row.occurrence_count}{" "}
-                      {row.occurrence_count === 1 ? "message" : "messages"}
-                    </div>
-                  )}
-                </div>
-                {hasQuery && (
-                  <div className="search-result-snippets">
-                    {(row.snippets.length > 0 ? row.snippets : [row.snippet]).map(
-                      (snippet, snippetIndex) => (
-                      <div
-                        key={`${row.conversation_id}-snippet-${snippetIndex}`}
-                        className="search-result-snippet"
-                      >
-                        {renderHighlightedSnippet(snippet)}
-                      </div>
-                      )
-                    )}
-                  </div>
-                )}
-                <div className="search-result-meta">
-                  <span className="source-tag">{sourceLabel(row.source)}</span>
-                  <span>{formatDate(row.last_occurrence)}</span>
-                </div>
-              </button>
-            </li>
-          ))
-        )}
-
-        {!loading && results.length > 0 && totalMatches > results.length && (
-          <button
-            type="button"
-            className="search-load-more-btn"
-            onClick={() => void handleLoadMore()}
-            disabled={loadingMore}
-          >
-            {loadingMore ? (
-              "Loading..."
-            ) : (
-              <>
-                <span className="load-more-icon" aria-hidden="true">
-                  v
-                </span>{" "}
-                Load more
-              </>
-            )}
-          </button>
-        )}
-      </ul>
+      <SearchResultsList
+        results={results}
+        hasQuery={hasQuery}
+        selectedConversationId={selectedConversationId}
+        selectedIndex={selectedIndex}
+        onSelectRow={(row) => {
+          if (onSelectResult) {
+            onSelectResult(row.conversation_id, row.title || "Untitled", row.source);
+          } else if (onOpenConversation) {
+            onOpenConversation?.(row.conversation_id, query, row.first_match_message_id);
+          }
+        }}
+        onHoverRow={(index) => setSelectedIndex(index)}
+        resultRefs={resultRefs}
+        sourceLabel={sourceLabel}
+        loading={loading}
+        loadingMore={loadingMore}
+        totalMatches={totalMatches}
+        onLoadMore={() => void handleLoadMore()}
+      />
     </section>
   );
 }

@@ -42,6 +42,10 @@ export async function importConversations(
   switch (source) {
     case "claude":
       return importClaude();
+    case "chatgpt":
+      return importChatGPT();
+    case "grok":
+      return importGrok();
     default:
       throw new Error(`Importer for "${source}" is not available yet.`);
   }
@@ -86,4 +90,78 @@ async function importClaude(): Promise<ImportResult | null> {
     source: "claude",
     ...result,
   };
+}
+
+// ---------------------------------------------------------------------------
+// OpenAI / ChatGPT importer (template)
+// ---------------------------------------------------------------------------
+
+async function importChatGPT(): Promise<ImportResult | null> {
+  const filePath = await open({
+    title: "Select OpenAI / ChatGPT Export JSON",
+    filters: [{ name: "JSON", extensions: ["json"] }],
+    multiple: false,
+    directory: false,
+  });
+
+  if (!filePath) return null;
+
+  // TODO: Once implemented, parse the export into ParsedConversation[]
+  // and insert into the database, mirroring the Claude flow:
+  //
+  // const content = await readTextFile(filePath as string);
+  // const rawData = JSON.parse(content);
+  // const parsed = parseOpenAIConversations(rawData);
+  // if (parsed.length === 0) {
+  //   throw new Error("No conversations found in the export file");
+  // }
+  // const result = await insertConversations(parsed);
+  // console.log(
+  //   `OpenAI / ChatGPT import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
+  // );
+  // return {
+  //   source: "chatgpt",
+  //   ...result,
+  // };
+
+  throw new Error(
+    "OpenAI / ChatGPT importer template is in place, but parsing is not implemented yet."
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Grok importer (template)
+// ---------------------------------------------------------------------------
+
+async function importGrok(): Promise<ImportResult | null> {
+  const filePath = await open({
+    title: "Select Grok Export JSON",
+    filters: [{ name: "JSON", extensions: ["json"] }],
+    multiple: false,
+    directory: false,
+  });
+
+  if (!filePath) return null;
+
+  // TODO: Once implemented, parse the export into ParsedConversation[]
+  // and insert into the database:
+  //
+  // const content = await readTextFile(filePath as string);
+  // const rawData = JSON.parse(content);
+  // const parsed = parseGrokConversations(rawData);
+  // if (parsed.length === 0) {
+  //   throw new Error("No conversations found in the export file");
+  // }
+  // const result = await insertConversations(parsed);
+  // console.log(
+  //   `Grok import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
+  // );
+  // return {
+  //   source: "grok",
+  //   ...result,
+  // };
+
+  throw new Error(
+    "Grok importer template is in place, but parsing is not implemented yet."
+  );
 }
