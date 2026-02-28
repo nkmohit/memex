@@ -31,6 +31,7 @@ interface ImportPageProps {
   importError: string | null;
   importResult: string | null;
   onDismissImportError?: () => void;
+  onDismissImportResult?: () => void;
   refreshKey: number;
 }
 
@@ -40,6 +41,7 @@ export default function ImportPage({
   importError,
   importResult,
   onDismissImportError,
+  onDismissImportResult,
   refreshKey,
 }: ImportPageProps) {
   const [stats, setStats] = useState<DbStats | null>(null);
@@ -134,8 +136,18 @@ export default function ImportPage({
             </div>
           )}
           {importResult && (
-            <div className="banner success" role="status">
-              {importResult}
+            <div className="banner success import-result-banner" role="status">
+              <span>{importResult}</span>
+              {onDismissImportResult && (
+                <button
+                  type="button"
+                  className="import-banner-dismiss"
+                  onClick={onDismissImportResult}
+                  aria-label="Dismiss"
+                >
+                  ×
+                </button>
+              )}
             </div>
           )}
         </div>

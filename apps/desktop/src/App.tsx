@@ -627,6 +627,7 @@ function App() {
           importError={importError}
           importResult={importResult}
           onDismissImportError={() => setImportError(null)}
+          onDismissImportResult={() => setImportResult(null)}
           refreshKey={importRefreshKey}
         />
       )}

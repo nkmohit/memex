@@ -1409,6 +1409,13 @@ body {
   gap: 8px;
 }
 
+.import-result-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .import-banner-dismiss {
   flex-shrink: 0;
   padding: 2px 6px;
