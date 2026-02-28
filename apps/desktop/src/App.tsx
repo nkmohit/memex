@@ -590,9 +590,6 @@ function App() {
   // ---- render ----
   return (
     <div className={`app-shell ${shellLayoutClass}${hasGlobalError ? " has-global-banner" : ""}`}>
-      <div className="titlebar" aria-hidden="true">
-        <div className="titlebar-drag-region" />
-      </div>
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
