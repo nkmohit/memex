@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { parseClaudeConversations } from "@memex/core";
+import { parseChatGPTConversations, parseClaudeConversations } from "@memex/core";
 import { insertConversations } from "./dbInsert";
 
 // ---------------------------------------------------------------------------
@@ -17,7 +17,7 @@ export interface SourceMeta {
 
 export const IMPORT_SOURCES: SourceMeta[] = [
   { id: "claude", label: "Claude", available: true },
-  { id: "chatgpt", label: "ChatGPT", available: false },
+  { id: "chatgpt", label: "ChatGPT", available: true },
   { id: "gemini", label: "Gemini", available: false },
   { id: "grok", label: "Grok", available: false },
 ];
@@ -106,27 +106,31 @@ async function importChatGPT(): Promise<ImportResult | null> {
 
   if (!filePath) return null;
 
-  // TODO: Once implemented, parse the export into ParsedConversation[]
-  // and insert into the database, mirroring the Claude flow:
-  //
-  // const content = await readTextFile(filePath as string);
-  // const rawData = JSON.parse(content);
-  // const parsed = parseOpenAIConversations(rawData);
-  // if (parsed.length === 0) {
-  //   throw new Error("No conversations found in the export file");
-  // }
-  // const result = await insertConversations(parsed);
-  // console.log(
-  //   `OpenAI / ChatGPT import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
-  // );
-  // return {
-  //   source: "chatgpt",
-  //   ...result,
-  // };
+  const content = await readTextFile(filePath as string);
+  const rawData = JSON.parse(content);
 
-  throw new Error(
-    "OpenAI / ChatGPT importer template is in place, but parsing is not implemented yet."
+  if (!Array.isArray(rawData)) {
+    throw new Error(
+      "Invalid OpenAI / ChatGPT export: expected a JSON array of conversations"
+    );
+  }
+
+  const parsed = parseChatGPTConversations(rawData);
+
+  if (parsed.length === 0) {
+    throw new Error("No conversations found in the export file");
+  }
+
+  const result = await insertConversations(parsed);
+
+  console.log(
+    `OpenAI / ChatGPT import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
   );
+
+  return {
+    source: "chatgpt",
+    ...result,
+  };
 }
 
 // ---------------------------------------------------------------------------
