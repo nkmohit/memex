@@ -454,10 +454,9 @@ export function getAllConversationsForSearch(
       LIMIT ${safeLimit}
       OFFSET ${safeOffset}`;
 
-    const [countRows, rows] = await Promise.all([
-      database.select<{ total: number }[]>(countSql, params),
-      database.select<ConversationListRow[]>(rowsSql, params),
-    ]);
+    // Run sequentially to avoid concurrent IPC calls on the same DB connection.
+    const countRows = await database.select<{ total: number }[]>(countSql, params);
+    const rows = await database.select<ConversationListRow[]>(rowsSql, params);
 
     return {
       rows,
@@ -609,11 +608,10 @@ export function searchMessages(
       LIMIT ${safeLimit}
       OFFSET ${safeOffset}`;
 
-    const [countRows, totalOccurrencesRows, rawRows] = await Promise.all([
-      database.select<{ total: number }[]>(countSql, params),
-      database.select<{ total: number }[]>(totalOccurrencesSql, params),
-      database.select<Omit<SearchResultRow, "snippet" | "snippets">[]>(rowsSql, params),
-    ]);
+    // Run sequentially to avoid concurrent IPC calls on the same DB connection.
+    const countRows = await database.select<{ total: number }[]>(countSql, params);
+    const totalOccurrencesRows = await database.select<{ total: number }[]>(totalOccurrencesSql, params);
+    const rawRows = await database.select<Omit<SearchResultRow, "snippet" | "snippets">[]>(rowsSql, params);
     const rows: SearchResultRow[] = [];
 
     for (const row of rawRows) {
