@@ -9,10 +9,12 @@ import {
   getMessages,
   getSourceStats,
   getStats,
+  rebuildSearchIndex,
 } from "./db";
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
 import OverviewPage from "./OverviewPage";
 import ImportPage from "./ImportPage";
+import OnboardingPage from "./OnboardingPage";
 import { formatTimestamp } from "./utils";
 import "./App.css";
 
@@ -84,6 +86,7 @@ function App() {
   // ---- import state ----
   const [importing, setImporting] = useState(false);
   const [importingSource, setImportingSource] = useState<ImportSource | null>(null);
+  const [skipOnboarding, setSkipOnboarding] = useState(false);
   const [clearingData, setClearingData] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [, setImportMenuOpen] = useState(false);
@@ -507,6 +510,17 @@ function App() {
     }
   }
 
+  async function handleRebuildIndex() {
+    try {
+      setLoadError(null);
+      await rebuildSearchIndex();
+      await loadData(activeSource);
+    } catch (err) {
+      console.error("Rebuild index failed:", err);
+      setLoadError(err instanceof Error ? err.message : "Rebuild index failed");
+    }
+  }
+
   function handleClearAllDataClick() {
     if (importing || clearingData || loading) return;
     setImportMenuOpen(false);
@@ -529,6 +543,7 @@ function App() {
       setSelectedConvId(null);
       setMessages([]);
       setClearResult("All imported data was removed.");
+      setSkipOnboarding(false);
       await loadData(activeSource);
     } catch (err) {
       console.error("Clear data failed:", err);
@@ -608,8 +623,24 @@ function App() {
             ? "import-layout"
             : "conversations-layout";
   const hasGlobalError = Boolean(loadError);
+  const isEmpty = !loading && stats?.conversationCount === 0;
+  const showOnboarding = isEmpty && !skipOnboarding;
 
   // ---- render ----
+  if (showOnboarding) {
+    return (
+      <OnboardingPage
+        onImport={(source) => void handleImportSource(source)}
+        importing={importing}
+        importingSource={importingSource}
+        onSkip={() => {
+          setSkipOnboarding(true);
+          setActiveView("overview");
+        }}
+      />
+    );
+  }
+
   return (
     <div className={`app-shell ${shellLayoutClass}${hasGlobalError ? " has-global-banner" : ""}`}>
       <a href="#main-content" className="skip-link">
@@ -639,6 +670,7 @@ function App() {
         <OverviewPage
           onOpenImport={() => setActiveView("import")}
           onSelectConversation={handleOverviewSelectConversation}
+          onRebuildIndex={handleRebuildIndex}
         />
       )}
 
