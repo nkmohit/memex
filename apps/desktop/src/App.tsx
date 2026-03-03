@@ -83,6 +83,7 @@ function App() {
 
   // ---- import state ----
   const [importing, setImporting] = useState(false);
+  const [importingSource, setImportingSource] = useState<ImportSource | null>(null);
   const [clearingData, setClearingData] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [, setImportMenuOpen] = useState(false);
@@ -484,6 +485,7 @@ function App() {
 
     setImportMenuOpen(false);
     setImporting(true);
+    setImportingSource(source);
     setImportError(null);
     setImportResult(null);
 
@@ -501,6 +503,7 @@ function App() {
       setImportError(err instanceof Error ? err.message : "Import failed");
     } finally {
       setImporting(false);
+      setImportingSource(null);
     }
   }
 
@@ -643,6 +646,7 @@ function App() {
         <ImportPage
           onImport={(source) => void handleImportSource(source)}
           importing={importing}
+          importingSource={importingSource}
           importError={importError}
           importResult={importResult}
           onDismissImportError={() => setImportError(null)}

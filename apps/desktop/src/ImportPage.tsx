@@ -28,6 +28,7 @@ function SourceIcon({ source }: { source: string }) {
 interface ImportPageProps {
   onImport: (source: ImportSource) => void;
   importing: boolean;
+  importingSource: ImportSource | null;
   importError: string | null;
   importResult: string | null;
   onDismissImportError?: () => void;
@@ -38,6 +39,7 @@ interface ImportPageProps {
 export default function ImportPage({
   onImport,
   importing,
+  importingSource,
   importError,
   importResult,
   onDismissImportError,
@@ -206,7 +208,7 @@ export default function ImportPage({
                         onClick={() => onImport(src.id)}
                         disabled={importing}
                       >
-                        {importing ? "Importing…" : "Import"}
+                        {importing && importingSource === src.id ? "Importing…" : "Import"}
                       </button>
                     ) : (
                       <span className="import-coming-soon">Coming soon</span>
