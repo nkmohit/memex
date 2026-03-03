@@ -1058,6 +1058,12 @@ body {
   align-items: center;
 }
 
+.onboarding-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .onboarding-brand {
   display: flex;
   align-items: center;
@@ -1203,58 +1209,6 @@ body {
   color: var(--text-3);
 }
 
-.onboarding-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-1);
-}
-
-.onboarding-status-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.onboarding-status-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--color-muted);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.onboarding-status-title {
-  font-weight: 600;
-}
-
-.onboarding-status-sub {
-  font-size: 12px;
-  color: var(--text-3);
-}
-
-.onboarding-status-btn {
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--accent-contrast);
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.onboarding-status-btn:disabled {
-  opacity: 0.45;
-}
-
 .onboarding-privacy {
   margin: 0 auto;
   display: inline-flex;
@@ -1322,6 +1276,59 @@ body {
 
 .overview-index-btn:hover {
   background: rgb(248 113 113 / 0.26);
+}
+
+/* -------------------------------------------------------------------
+   Toasts
+   ------------------------------------------------------------------- */
+.toast-stack {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+  z-index: 1000;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  box-shadow: var(--shadow-1);
+  color: var(--text-1);
+  font-size: 12px;
+}
+
+.toast.success {
+  border-left: 3px solid var(--accent);
+}
+
+.toast.error {
+  border-left: 3px solid var(--danger);
+}
+
+.toast.info {
+  border-left: 3px solid var(--border-2);
+}
+
+.toast-dismiss {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.toast-dismiss:hover {
+  color: var(--text-1);
 }
 
 
@@ -1825,6 +1832,11 @@ body {
 .import-source-last {
   font-size: 12px;
   color: var(--color-muted-foreground);
+}
+
+.import-source-guide {
+  font-size: 12px;
+  color: var(--text-2);
 }
 
 .import-source-action {

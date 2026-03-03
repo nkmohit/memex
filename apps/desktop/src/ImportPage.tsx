@@ -120,41 +120,6 @@ export default function ImportPage({
         </div>
       )}
 
-      {(importError || importResult) && (
-        <div className="import-banners">
-          {importError && (
-            <div className="banner error import-error-banner" role="alert">
-              <span>{importError}</span>
-              {onDismissImportError && (
-                <button
-                  type="button"
-                  className="import-banner-dismiss"
-                  onClick={onDismissImportError}
-                  aria-label="Dismiss"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          )}
-          {importResult && (
-            <div className="banner success import-result-banner" role="status">
-              <span>{importResult}</span>
-              {onDismissImportResult && (
-                <button
-                  type="button"
-                  className="import-banner-dismiss"
-                  onClick={onDismissImportResult}
-                  aria-label="Dismiss"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       <section className="import-summary">
         <h2 className="import-section-title">Your data</h2>
         <div className="import-summary-grid">
@@ -199,6 +164,7 @@ export default function ImportPage({
                     <span className="import-source-last">
                       Last sync: {lastSync}
                     </span>
+                    <span className="import-source-guide">Export guide →</span>
                   </div>
                   <div className="import-source-action">
                     {src.available ? (

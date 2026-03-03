@@ -97,19 +97,6 @@ export default function OnboardingPage({
         })}
       </section>
 
-      <section className="onboarding-status">
-        <div className="onboarding-status-left">
-          <div className="onboarding-status-icon">Sync</div>
-          <div>
-            <div className="onboarding-status-title">Ready to index</div>
-            <div className="onboarding-status-sub">No files selected yet</div>
-          </div>
-        </div>
-        <button type="button" className="onboarding-status-btn" disabled>
-          Start Indexing
-        </button>
-      </section>
-
       <div className="onboarding-privacy">
         <span className="onboarding-privacy-icon">Lock</span>
         <span>No data leaves this device.</span>

@@ -72,6 +72,25 @@ function App() {
   const [searchRestoreConversationId, setSearchRestoreConversationId] = useState<string | null>(null);
   const [importRefreshKey, setImportRefreshKey] = useState(0);
   const skipSearchOnceRef = useRef(false);
+  const toastIdRef = useRef(0);
+  const [toasts, setToasts] = useState<
+    Array<{ id: number; message: string; variant: "success" | "error" | "info" }>
+  >([]);
+
+  const pushToast = useCallback(
+    (message: string, variant: "success" | "error" | "info" = "info") => {
+      const id = (toastIdRef.current += 1);
+      setToasts((prev) => [...prev, { id, message, variant }]);
+      window.setTimeout(() => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      }, 4000);
+    },
+    []
+  );
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
   // ---- clear skipSearchOnceRef after SearchPage has read it (when on search tab) ----
   useEffect(() => {
@@ -87,6 +106,7 @@ function App() {
   const [importing, setImporting] = useState(false);
   const [importingSource, setImportingSource] = useState<ImportSource | null>(null);
   const [skipOnboarding, setSkipOnboarding] = useState(false);
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [clearingData, setClearingData] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [, setImportMenuOpen] = useState(false);
@@ -372,14 +392,14 @@ function App() {
         }
       } catch (err) {
         console.error("Failed to load data:", err);
-        setLoadError(
-          err instanceof Error ? err.message : "Failed to load data"
-        );
+        const message = err instanceof Error ? err.message : "Failed to load data";
+        setLoadError(message);
+        pushToast(message, "error");
       } finally {
         setLoading(false);
       }
     },
-    [selectedConvId]
+    [pushToast, selectedConvId]
   );
 
   useEffect(() => {
@@ -495,15 +515,17 @@ function App() {
     try {
       const result = await importConversations(source);
       if (result) {
-        setImportResult(
-          `Imported ${result.conversationCount} conversations and ${result.messageCount} messages from ${source}.`
-        );
+        const message = `Import completed: ${result.conversationCount} conversations and ${result.messageCount} messages from ${sourceLabel(source)}.`;
+        setImportResult(message);
+        pushToast(message, "success");
         setImportRefreshKey((k) => k + 1);
         await loadData(activeSource);
       }
     } catch (err) {
       console.error("Import failed:", err);
-      setImportError(err instanceof Error ? err.message : "Import failed");
+      const message = err instanceof Error ? err.message : "Import failed";
+      setImportError(message);
+      pushToast(message, "error");
     } finally {
       setImporting(false);
       setImportingSource(null);
@@ -515,9 +537,12 @@ function App() {
       setLoadError(null);
       await rebuildSearchIndex();
       await loadData(activeSource);
+      pushToast("Search index rebuilt.", "success");
     } catch (err) {
       console.error("Rebuild index failed:", err);
-      setLoadError(err instanceof Error ? err.message : "Rebuild index failed");
+      const message = err instanceof Error ? err.message : "Rebuild index failed";
+      setLoadError(message);
+      pushToast(message, "error");
     }
   }
 
@@ -542,12 +567,17 @@ function App() {
       clearPersistedSearchState();
       setSelectedConvId(null);
       setMessages([]);
-      setClearResult("All imported data was removed.");
+      const message = "All imported data was removed.";
+      setClearResult(message);
+      pushToast(message, "success");
       setSkipOnboarding(false);
+      setOnboardingVisible(true);
       await loadData(activeSource);
     } catch (err) {
       console.error("Clear data failed:", err);
-      setClearError(err instanceof Error ? err.message : "Clear data failed");
+      const message = err instanceof Error ? err.message : "Clear data failed";
+      setClearError(message);
+      pushToast(message, "error");
     } finally {
       setClearingData(false);
     }
@@ -622,40 +652,55 @@ function App() {
           : activeView === "import"
             ? "import-layout"
             : "conversations-layout";
-  const hasGlobalError = Boolean(loadError);
   const isEmpty = !loading && stats?.conversationCount === 0;
-  const showOnboarding = isEmpty && !skipOnboarding;
+  const showOnboarding = onboardingVisible && !skipOnboarding;
+
+  useEffect(() => {
+    if (!loading && isEmpty && !skipOnboarding) {
+      setOnboardingVisible(true);
+    }
+  }, [isEmpty, loading, skipOnboarding]);
 
   // ---- render ----
   if (showOnboarding) {
     return (
-      <OnboardingPage
-        onImport={(source) => void handleImportSource(source)}
-        importing={importing}
-        importingSource={importingSource}
-        onSkip={() => {
-          setSkipOnboarding(true);
-          setActiveView("overview");
-        }}
-      />
+      <>
+        <OnboardingPage
+          onImport={(source) => void handleImportSource(source)}
+          importing={importing}
+          importingSource={importingSource}
+          onSkip={() => {
+            setSkipOnboarding(true);
+            setOnboardingVisible(false);
+            setActiveView("overview");
+            setImportError(null);
+            setImportResult(null);
+          }}
+        />
+        <div className="toast-stack" aria-live="polite">
+          {toasts.map((toast) => (
+            <div key={toast.id} className={`toast ${toast.variant}`}>
+              <span>{toast.message}</span>
+              <button
+                type="button"
+                className="toast-dismiss"
+                onClick={() => dismissToast(toast.id)}
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
 
   return (
-    <div className={`app-shell ${shellLayoutClass}${hasGlobalError ? " has-global-banner" : ""}`}>
+    <div className={`app-shell ${shellLayoutClass}`}>
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
-      {hasGlobalError && (
-        <div className="global-banner-area" role="alert">
-          {loadError && (
-            <div className="banner error global-banner-item">
-              <span>{loadError}</span>
-              <button type="button" className="global-banner-dismiss" onClick={() => setLoadError(null)} aria-label="Dismiss">×</button>
-            </div>
-          )}
-        </div>
-      )}
       {/* ---- Collapsed sidebar ---- */}
       <Sidebar
         activeView={activeView}
@@ -806,6 +851,22 @@ function App() {
         cancelBtnRef={clearConfirmCancelBtnRef}
         dialogRef={clearConfirmDialogRef}
       />
+
+      <div className="toast-stack" aria-live="polite">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`toast ${toast.variant}`}>
+            <span>{toast.message}</span>
+            <button
+              type="button"
+              className="toast-dismiss"
+              onClick={() => dismissToast(toast.id)}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
