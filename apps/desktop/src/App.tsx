@@ -48,6 +48,7 @@ function App() {
   // When browsing search results, selecting a result should open it in the
   // same viewer used by the Conversations tab (and preserve query highlights).
   const [searchSelectedConvId, setSearchSelectedConvId] = useState<string | null>(null);
+  const [searchSelectedConversation, setSearchSelectedConversation] = useState<ConversationRow | null>(null);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [messageSearchMatchIndex, setMessageSearchMatchIndex] = useState(0);
   const [viewerSearchOpen, setViewerSearchOpen] = useState(false);
@@ -150,10 +151,15 @@ function App() {
   }
 
   // ---- derived ----
-  const selectedConversation = useMemo(
-    () => conversations.find((c) => c.id === selectedConvId) ?? null,
-    [conversations, selectedConvId]
-  );
+  const selectedConversation = useMemo(() => {
+    if (activeView === "search" && searchSelectedConvId) {
+      return (
+        conversations.find((c) => c.id === searchSelectedConvId) ??
+        searchSelectedConversation
+      );
+    }
+    return conversations.find((c) => c.id === selectedConvId) ?? null;
+  }, [activeView, conversations, searchSelectedConvId, searchSelectedConversation, selectedConvId]);
 
   // One entry per occurrence of the search query (across all messages)
   const occurrences = useMemo(() => {
@@ -548,10 +554,23 @@ function App() {
     return sourceStats.find((s) => s.source === source)?.conversationCount ?? 0;
   }
 
-  async function handleSearchResultSelect(convId: string) {
+  async function handleSearchResultSelect(
+    convId: string,
+    title: string,
+    source: string,
+    lastOccurrence: number
+  ) {
     // Switch the right panel to the standard viewer with in-thread search open.
     setSearchSelectedConvId(convId);
     setSelectedConvId(convId);
+    setSearchSelectedConversation({
+      id: convId,
+      source,
+      title,
+      created_at: 0,
+      last_message_at: lastOccurrence,
+      message_count: 0,
+    });
     setOpenedConversationFromSearch(true);
     setViewerSearchOpen(true);
     setMessageSearchQuery(searchPageQuery);
@@ -654,7 +673,9 @@ function App() {
           onQueryChange={setSearchPageQuery}
           availableSources={availableSources}
           sourceLabel={sourceLabel}
-          onSelectResult={(convId) => void handleSearchResultSelect(convId)}
+          onSelectResult={(convId, title, source, lastOccurrence) =>
+            void handleSearchResultSelect(convId, title, source, lastOccurrence)
+          }
           selectedConversationId={searchSelectedConvId}
           focusRequestId={searchFocusRequestId}
           snapshot={searchPageSnapshot}
@@ -666,6 +687,7 @@ function App() {
             open: Boolean(searchSelectedConvId),
             onClose: () => {
               setSearchSelectedConvId(null);
+              setSearchSelectedConversation(null);
               setSelectedConvId(null);
               setOpenedConversationFromSearch(false);
             },

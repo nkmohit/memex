@@ -5,6 +5,8 @@ import { formatDate } from "./utils";
 interface SearchResultsListProps {
   results: SearchResultRow[];
   hasQuery: boolean;
+  queryTooShort?: boolean;
+  minQueryLength?: number;
   selectedConversationId?: string | null;
   selectedIndex: number;
   onSelectRow: (row: SearchResultRow) => void;
@@ -39,6 +41,8 @@ function renderHighlightedSnippet(snippet: string) {
 export default function SearchResultsList({
   results,
   hasQuery,
+  queryTooShort = false,
+  minQueryLength = 3,
   selectedConversationId = null,
   selectedIndex,
   onSelectRow,
@@ -52,10 +56,16 @@ export default function SearchResultsList({
 }: SearchResultsListProps) {
   const hasResults = results.length > 0;
   const showEmptyState = hasQuery && !loading && !hasResults;
+  const showTooShortState = queryTooShort && !loading;
 
   return (
     <ul className="search-results">
-      {showEmptyState ? (
+      {showTooShortState ? (
+        <div className="search-empty-state" role="status" aria-live="polite">
+          <p className="search-empty-title">Keep typing to search.</p>
+          <p>Type at least {minQueryLength} characters.</p>
+        </div>
+      ) : showEmptyState ? (
         <div className="search-empty-state" role="status" aria-live="polite">
           <p className="search-empty-title">No matches found.</p>
           <p>Try:</p>
@@ -140,4 +150,3 @@ export default function SearchResultsList({
     </ul>
   );
 }
-

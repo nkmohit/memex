@@ -10,7 +10,12 @@ interface SearchPageProps {
   sourceLabel: (source: string) => string;
   onOpenConversation?: (conversationId: string, activeQuery: string, messageId?: string | null) => void;
   /** When provided, clicking a result only updates the detail panel (no view switch). */
-  onSelectResult?: (conversationId: string, title: string, source: string) => void;
+  onSelectResult?: (
+    conversationId: string,
+    title: string,
+    source: string,
+    lastOccurrence: number
+  ) => void;
   selectedConversationId?: string | null;
   focusRequestId?: number | null;
   snapshot: SearchPageSnapshot;
@@ -65,6 +70,7 @@ export default function SearchPage({
   restoreSelectedConversationId = null,
   onRestoreSelectionDone,
 }: SearchPageProps) {
+  const MIN_QUERY_LENGTH = 3;
   const [source, setSource] = useState(snapshot.source);
   const [dateFrom, setDateFrom] = useState(snapshot.dateFrom);
   const [dateTo, setDateTo] = useState(snapshot.dateTo);
@@ -82,9 +88,13 @@ export default function SearchPage({
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchRunIdRef = useRef(0);
   const PAGE_SIZE = 50;
 
-  const hasQuery = query.trim().length > 0;
+  const trimmedQuery = query.trim();
+  const hasQuery = trimmedQuery.length >= MIN_QUERY_LENGTH;
+  const hasAnyQuery = trimmedQuery.length > 0;
+  const queryTooShort = hasAnyQuery && !hasQuery;
 
   const searchParams = useMemo(
     () => ({
@@ -109,8 +119,32 @@ export default function SearchPage({
     }
     let cancelled = false;
     const debounceMs = 250;
+    const runId = ++searchRunIdRef.current;
+
+    if (queryTooShort) {
+      setError(null);
+      setLoading(false);
+      setLoadingMore(false);
+      setResults([]);
+      setTotalMatches(0);
+      setTotalOccurrences(0);
+      setSelectedIndex(-1);
+      setLatencyMs(null);
+      return;
+    }
 
     async function runSearch() {
+      if (queryTooShort) {
+        setError(null);
+        setLoading(false);
+        setLoadingMore(false);
+        setResults([]);
+        setTotalMatches(0);
+        setTotalOccurrences(0);
+        setSelectedIndex(-1);
+        setLatencyMs(null);
+        return;
+      }
       if (!hasQuery) {
         // Load all conversations sorted by last message date when no query
         setError(null);
@@ -123,7 +157,7 @@ export default function SearchPage({
             limit: PAGE_SIZE,
             offset: 0,
           });
-          if (cancelled) return;
+          if (cancelled || searchRunIdRef.current !== runId) return;
           
           // Convert ConversationListRow to SearchResultRow format
           const convertedResults: SearchResultRow[] = response.rows.map(row => ({
@@ -146,14 +180,14 @@ export default function SearchPage({
           setSelectedIndex(convertedResults.length > 0 ? 0 : -1);
           setLatencyMs(Math.round(performance.now() - start));
         } catch (err) {
-        if (cancelled) return;
+        if (cancelled || searchRunIdRef.current !== runId) return;
         setResults([]);
         setTotalMatches(0);
         setTotalOccurrences(0);
         setLatencyMs(null);
         setError(err instanceof Error ? err.message : "Failed to load conversations");
         } finally {
-          if (!cancelled) {
+          if (!cancelled && searchRunIdRef.current === runId) {
             setLoading(false);
             setLoadingMore(false);
           }
@@ -171,21 +205,21 @@ export default function SearchPage({
           limit: PAGE_SIZE,
           offset: 0,
         });
-        if (cancelled) return;
+        if (cancelled || searchRunIdRef.current !== runId) return;
         setResults(response.rows);
         setTotalMatches(response.totalMatches);
         setTotalOccurrences(response.totalOccurrences ?? 0);
         setSelectedIndex(response.rows.length > 0 ? 0 : -1);
         setLatencyMs(Math.round(performance.now() - start));
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || searchRunIdRef.current !== runId) return;
         setResults([]);
         setTotalMatches(0);
         setTotalOccurrences(0);
         setLatencyMs(null);
         setError(err instanceof Error ? err.message : "Search failed");
       } finally {
-        if (!cancelled) {
+        if (!cancelled && searchRunIdRef.current === runId) {
           setLoading(false);
           setLoadingMore(false);
         }
@@ -203,7 +237,7 @@ export default function SearchPage({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [PAGE_SIZE, hasQuery, query, searchParams, skipSearchOnceRef]);
+  }, [PAGE_SIZE, hasQuery, query, queryTooShort, searchParams, skipSearchOnceRef]);
 
   useEffect(() => {
     setSelectedIndex(results.length > 0 ? 0 : -1);
@@ -260,7 +294,12 @@ export default function SearchPage({
         if (!selected) return;
         event.preventDefault();
         if (onSelectResult) {
-          onSelectResult(selected.conversation_id, selected.title || "Untitled", selected.source);
+          onSelectResult(
+            selected.conversation_id,
+            selected.title || "Untitled",
+            selected.source,
+            selected.last_occurrence
+          );
         } else if (onOpenConversation) {
           onOpenConversation(selected.conversation_id, query, selected.first_match_message_id);
         }
@@ -309,6 +348,7 @@ export default function SearchPage({
     if (loading || loadingMore || results.length >= totalMatches) return;
     setLoadingMore(true);
     setError(null);
+    const runId = searchRunIdRef.current;
     try {
       if (!hasQuery) {
         // Load more conversations (browse mode)
@@ -331,7 +371,8 @@ export default function SearchPage({
           rank: 0,
           first_match_message_id: null,
         }));
-        
+
+        if (searchRunIdRef.current !== runId) return;
         setResults((prev) => [...prev, ...convertedResults]);
         setTotalMatches(response.totalMatches);
       } else {
@@ -341,6 +382,7 @@ export default function SearchPage({
           limit: PAGE_SIZE,
           offset: results.length,
         });
+        if (searchRunIdRef.current !== runId) return;
         setResults((prev) => [...prev, ...response.rows]);
         setTotalMatches(response.totalMatches);
       }
@@ -380,7 +422,9 @@ export default function SearchPage({
         />
 
         <div className="search-meta">
-          {loading && results.length === 0 ? (
+          {queryTooShort ? (
+            <span className="search-loading">Type at least {MIN_QUERY_LENGTH} characters to search.</span>
+          ) : loading && results.length === 0 ? (
             <span className="search-loading">{hasQuery ? "Searching" : "Loading"}... · {searchContext}{dateContext ? ` · ${dateContext}` : ""}</span>
           ) : !hasQuery ? (
             <>
@@ -417,11 +461,13 @@ export default function SearchPage({
       <SearchResultsList
         results={results}
         hasQuery={hasQuery}
+        queryTooShort={queryTooShort}
+        minQueryLength={MIN_QUERY_LENGTH}
         selectedConversationId={selectedConversationId}
         selectedIndex={selectedIndex}
         onSelectRow={(row) => {
           if (onSelectResult) {
-            onSelectResult(row.conversation_id, row.title || "Untitled", row.source);
+            onSelectResult(row.conversation_id, row.title || "Untitled", row.source, row.last_occurrence);
           } else if (onOpenConversation) {
             onOpenConversation?.(row.conversation_id, query, row.first_match_message_id);
           }
