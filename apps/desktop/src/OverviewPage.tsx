@@ -33,11 +33,13 @@ function sourceLabel(source: string): string {
 interface OverviewPageProps {
   onOpenImport: () => void;
   onSelectConversation: (convId: string) => void;
+  onRebuildIndex: () => void;
 }
 
 export default function OverviewPage({
   onOpenImport,
   onSelectConversation,
+  onRebuildIndex,
 }: OverviewPageProps) {
   const [stats, setStats] = useState<DbStats | null>(null);
   const [sourceStats, setSourceStats] = useState<SourceStats[]>([]);
@@ -88,6 +90,7 @@ export default function OverviewPage({
     : "—";
 
   const isEmpty = totalConvs === 0 && totalMsgs === 0;
+  const needsIndexRebuild = totalMsgs > 0 && (stats?.indexedMessageCount ?? 0) === 0;
 
   return (
     <main className="overview-main" id="main-content">
@@ -98,6 +101,18 @@ export default function OverviewPage({
           <p className="overview-empty-text">No data yet. Import conversations to get started.</p>
           <button type="button" className="overview-cta overview-empty-cta" onClick={onOpenImport}>
             Import
+          </button>
+        </div>
+      )}
+
+      {needsIndexRebuild && (
+        <div className="overview-index-banner" role="status">
+          <div>
+            <div className="overview-index-title">Search index needs rebuilding.</div>
+            <div className="overview-index-sub">Search will be unavailable until the index is rebuilt.</div>
+          </div>
+          <button type="button" className="overview-index-btn" onClick={onRebuildIndex}>
+            Rebuild Index
           </button>
         </div>
       )}

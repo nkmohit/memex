@@ -31,38 +31,6 @@ export default function SettingsPanel({
   return (
     <main className="settings-main" id="main-content">
       <h1 className="settings-title">Settings</h1>
-      {(clearResult || clearError) && (
-        <div className="settings-banners">
-          {clearResult && (
-            <div className="banner success dismissible" role="status">
-              <span>{clearResult}</span>
-              <button
-                type="button"
-                className="banner-dismiss"
-                onClick={onDismissClearResult}
-                aria-label="Dismiss"
-                title="Dismiss"
-              >
-                ×
-              </button>
-            </div>
-          )}
-          {clearError && (
-            <div className="banner error dismissible" role="alert">
-              <span>{clearError}</span>
-              <button
-                type="button"
-                className="banner-dismiss"
-                onClick={onDismissClearError}
-                aria-label="Dismiss"
-                title="Dismiss"
-              >
-                ×
-              </button>
-            </div>
-          )}
-        </div>
-      )}
       <div className="settings-section">
         <h2>Theme</h2>
         <div className="settings-theme-options">

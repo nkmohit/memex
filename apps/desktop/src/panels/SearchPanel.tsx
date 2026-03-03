@@ -192,7 +192,7 @@ type SearchPanelProps = {
   onQueryChange: (q: string) => void;
   availableSources: string[];
   sourceLabel: (source: string) => string;
-  onSelectResult: (convId: string) => void;
+  onSelectResult: (convId: string, title: string, source: string, lastOccurrence: number) => void;
   selectedConversationId: string | null;
   focusRequestId: number | null;
   snapshot: SearchPageSnapshot;

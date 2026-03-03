@@ -268,6 +268,19 @@ export function getStats(): Promise<DbStats> {
   });
 }
 
+export function rebuildSearchIndex(): Promise<void> {
+  return withDbLock(async () => {
+    const database = await getDb();
+    await database.execute("DELETE FROM messages_fts");
+    await database.execute(`
+      INSERT INTO messages_fts (content, title, conversation_id, message_id)
+      SELECT m.content, COALESCE(c.title, ''), m.conversation_id, m.id
+      FROM messages m
+      JOIN conversations c ON c.id = m.conversation_id
+    `);
+  });
+}
+
 /**
  * Returns message counts per day for the last N days.
  * result[0] = oldest day (N days ago), result[days-1] = most recent day.
