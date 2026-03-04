@@ -3195,3 +3195,135 @@ body {
 .onboarding-dropzone {
   background: color-mix(in srgb, var(--ov-card-bg) 56%, transparent) !important;
 }
+
+/* Full-panel rollout: make all panel internals consistent with translucent shell */
+.conv-panel-header,
+.viewer-header,
+.search-header,
+.search-filters,
+.search-result,
+.search-result.selected,
+.import-source-card,
+.import-summary-card,
+.settings-section,
+.confirm-dialog,
+.viewer-header-menu,
+.toast,
+.banner {
+  background: color-mix(in srgb, var(--ov-card-bg) 64%, transparent) !important;
+  border-color: color-mix(in srgb, var(--ov-card-border) 85%, transparent) !important;
+}
+
+.search-result.selected[data-selected="true"] {
+  background: color-mix(in srgb, var(--ov-accent-1) 14%, var(--ov-card-bg)) !important;
+}
+
+.search-filters select,
+.search-filters input[type="date"],
+.conv-source-select {
+  background: color-mix(in srgb, var(--ov-card-bg) 62%, transparent) !important;
+  border-color: color-mix(in srgb, var(--ov-card-border) 78%, transparent) !important;
+}
+
+/* Force-applied translucent panels across the entire app */
+.overview-main,
+.settings-main,
+.import-main,
+.conv-panel,
+.viewer,
+.search-main,
+.search-detail-panel,
+.onboarding-hero,
+.onboarding-card,
+.onboarding-privacy,
+.conv-panel-header,
+.viewer-header,
+.search-header,
+.search-filters,
+.search-result,
+.search-result.selected,
+.import-source-card,
+.import-summary-card,
+.settings-section,
+.confirm-dialog,
+.viewer-header-menu,
+.toast,
+.banner {
+  background: rgb(255 255 255 / 0.46) !important;
+  border-color: rgb(15 23 42 / 0.22) !important;
+}
+
+.onboarding-dropzone,
+.search-filters select,
+.search-filters input[type="date"],
+.conv-source-select,
+.viewer-search-input,
+.search-input,
+.app-select,
+.app-date {
+  background: rgb(255 255 255 / 0.36) !important;
+  border-color: rgb(15 23 42 / 0.2) !important;
+}
+
+.dark .overview-main,
+.dark .settings-main,
+.dark .import-main,
+.dark .conv-panel,
+.dark .viewer,
+.dark .search-main,
+.dark .search-detail-panel,
+.dark .onboarding-hero,
+.dark .onboarding-card,
+.dark .onboarding-privacy,
+.dark .conv-panel-header,
+.dark .viewer-header,
+.dark .search-header,
+.dark .search-filters,
+.dark .search-result,
+.dark .search-result.selected,
+.dark .import-source-card,
+.dark .import-summary-card,
+.dark .settings-section,
+.dark .confirm-dialog,
+.dark .viewer-header-menu,
+.dark .toast,
+.dark .banner {
+  background: rgb(16 20 28 / 0.56) !important;
+  border-color: rgb(226 232 240 / 0.2) !important;
+}
+
+.dark .onboarding-dropzone,
+.dark .search-filters select,
+.dark .search-filters input[type="date"],
+.dark .conv-source-select,
+.dark .viewer-search-input,
+.dark .search-input,
+.dark .app-select,
+.dark .app-date {
+  background: rgb(16 20 28 / 0.42) !important;
+  border-color: rgb(226 232 240 / 0.18) !important;
+}
+
+/* Sidebar explicit translucency (included by request) */
+.sidebar {
+  background: rgb(255 255 255 / 0.46) !important;
+  border-color: rgb(15 23 42 / 0.24) !important;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), 0 6px 16px rgb(0 0 0 / 0.12) !important;
+}
+
+.sidebar-logo,
+.sidebar-bottom {
+  background: transparent !important;
+  border-color: rgb(15 23 42 / 0.2) !important;
+}
+
+.dark .sidebar {
+  background: rgb(16 20 28 / 0.58) !important;
+  border-color: rgb(226 232 240 / 0.2) !important;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05), 0 6px 16px rgb(0 0 0 / 0.35) !important;
+}
+
+.dark .sidebar-logo,
+.dark .sidebar-bottom {
+  border-color: rgb(226 232 240 / 0.16) !important;
+}
