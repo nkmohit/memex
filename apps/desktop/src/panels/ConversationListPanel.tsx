@@ -42,7 +42,7 @@ export default function ConversationListPanel({
           value={activeSource ?? ""}
           onChange={(e) => onSelectSource(e.target.value || null)}
           aria-label="Filter by source"
-          className="conv-source-select"
+          className="conv-source-select app-select"
         >
           <option value="">All sources</option>
           {availableSources.map((src) => (

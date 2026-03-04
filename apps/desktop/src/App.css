@@ -308,6 +308,49 @@ body {
   --btn-shadow: 0 1px 0 rgb(255 255 255 / 0.1) inset;
 }
 
+/* -------------------------------------------------------------------
+   Unified desktop form controls (select/date)
+   ------------------------------------------------------------------- */
+.app-select,
+.app-date {
+  min-height: 32px;
+  border: 1px solid var(--border-1);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  color: var(--text-1);
+  font-size: 12px;
+  font-family: var(--font-body);
+  line-height: 1.2;
+  padding: 6px 10px;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.15) inset;
+}
+
+.app-select {
+  appearance: none;
+  padding-right: 28px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
+  background-position: calc(100% - 14px) calc(50% + 1px), calc(100% - 9px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.app-date::-webkit-calendar-picker-indicator {
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.app-select:focus,
+.app-date:focus {
+  outline: none;
+  border-color: var(--border-2);
+  box-shadow: 0 0 0 2px rgb(47 129 247 / 0.22);
+}
+
+.dark .app-select,
+.dark .app-date {
+  background-color: color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+
 
 /* -------------------------------------------------------------------
    Layout: app shell — small spacing, subtle gradient for glass depth
@@ -1406,7 +1449,7 @@ body {
 .onboarding-privacy {
   position: relative;
   z-index: 1;
-  margin: 0 auto;
+  margin: auto auto 0;
   display: inline-flex;
   gap: 10px;
   align-items: center;
@@ -2764,12 +2807,8 @@ body {
 }
 
 .overview-pulse-select {
-  border: 1px solid var(--ov-card-border);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--ov-card-bg) 96%, transparent);
-  color: var(--text-1);
+  border-color: var(--ov-card-border);
   font-size: 11px;
-  font-family: var(--font-body);
   padding: 5px 8px;
 }
 
@@ -3118,4 +3157,41 @@ body {
   min-height: 24px;
   padding: 0 8px;
   font-size: 11px;
+}
+
+/* -------------------------------------------------------------------
+   Transparency tuning: let atmospheric background show through
+   ------------------------------------------------------------------- */
+.overview-main,
+.settings-main,
+.import-main,
+.conv-panel,
+.viewer,
+.search-main,
+.search-detail-panel {
+  background: color-mix(in srgb, var(--ov-card-bg) 76%, transparent) !important;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.12) !important;
+}
+
+.overview-hero,
+.overview-empty-state,
+.overview-index-banner,
+.overview-metric-card,
+.overview-pulse-main,
+.overview-pulse-side,
+.overview-recent-activity,
+.overview-note-card,
+.import-summary,
+.import-sources,
+.settings-section,
+.import-source-card,
+.import-summary-card,
+.onboarding-hero,
+.onboarding-card,
+.onboarding-privacy {
+  background: color-mix(in srgb, var(--ov-card-bg) 70%, transparent) !important;
+}
+
+.onboarding-dropzone {
+  background: color-mix(in srgb, var(--ov-card-bg) 56%, transparent) !important;
 }

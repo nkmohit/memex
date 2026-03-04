@@ -46,6 +46,7 @@ export default function SearchFilters({
           Source
           <select
             id="search-source"
+            className="app-select"
             value={source}
             onChange={(e) => onSourceChange(e.target.value)}
           >
@@ -62,6 +63,7 @@ export default function SearchFilters({
           From
           <input
             id="search-from"
+            className="app-date"
             type="date"
             value={dateFrom}
             onChange={(e) => onDateFromChange(e.target.value)}
@@ -72,6 +74,7 @@ export default function SearchFilters({
           To
           <input
             id="search-to"
+            className="app-date"
             type="date"
             value={dateTo}
             onChange={(e) => onDateToChange(e.target.value)}
@@ -82,6 +85,7 @@ export default function SearchFilters({
           Sort
           <select
             id="search-sort"
+            className="app-select"
             value={sort}
             onChange={(e) => onSortChange(e.target.value as SearchPageSnapshot["sort"])}
           >

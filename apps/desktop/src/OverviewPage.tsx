@@ -254,7 +254,7 @@ export default function OverviewPage({
             </h2>
             <div className="overview-pulse-controls">
               <select
-                className="overview-pulse-select"
+                className="overview-pulse-select app-select"
                 value={pulseRange}
                 onChange={(e) => setPulseRange(e.target.value as "last30days" | "last30active" | "alltime")}
                 aria-label="Pulse timeframe"
