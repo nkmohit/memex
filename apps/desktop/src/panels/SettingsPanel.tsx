@@ -38,7 +38,7 @@ export default function SettingsPanel({
             <button
               key={mode}
               type="button"
-              className={`settings-theme-option ${theme === mode ? "selected" : ""}`}
+              className={`settings-theme-option ui-btn ui-btn--secondary ${theme === mode ? "selected" : ""}`}
               onClick={() => onSetTheme(mode)}
             >
               {theme === mode && <span aria-hidden>●</span>}
@@ -52,7 +52,7 @@ export default function SettingsPanel({
         <button
           ref={clearDataTriggerRef}
           type="button"
-          className="settings-danger-btn"
+          className="settings-danger-btn ui-btn ui-btn--danger"
           onClick={onClearAllDataClick}
           disabled={importing || clearingData || loading}
         >

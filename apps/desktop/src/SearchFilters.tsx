@@ -33,7 +33,7 @@ export default function SearchFilters({
     <>
       <button
         type="button"
-        className="search-filters-toggle"
+        className="search-filters-toggle ui-btn ui-btn--secondary ui-btn--sm"
         onClick={onToggleFilters}
         aria-expanded={filtersOpen}
         aria-controls="search-filters"
@@ -96,4 +96,3 @@ export default function SearchFilters({
     </>
   );
 }
-

@@ -136,12 +136,12 @@ export default function OverviewPage({
             <span>Latest activity: {lastImport}</span>
           </div>
           <div className="overview-hero-actions">
-            <button type="button" className="overview-btn outline" onClick={onOpenImport}>
+            <button type="button" className="overview-btn ui-btn ui-btn--secondary" onClick={onOpenImport}>
               <FilePlus2 size={15} /> Import data
             </button>
             <button
               type="button"
-              className="overview-btn"
+              className="overview-btn ui-btn ui-btn--primary"
               onClick={() => {
                 if (recent[0]?.id) onSelectConversation(recent[0].id);
               }}
@@ -156,7 +156,7 @@ export default function OverviewPage({
       {isEmpty && (
         <div className="overview-empty-state overview-stage stage-1">
           <p className="overview-empty-text">No data yet. Import a conversation archive to activate the dashboard.</p>
-          <button type="button" className="overview-btn" onClick={onOpenImport}>
+          <button type="button" className="overview-btn ui-btn ui-btn--primary" onClick={onOpenImport}>
             Start import
           </button>
         </div>
@@ -170,7 +170,7 @@ export default function OverviewPage({
               Rebuild now to restore full-text results and highlighting.
             </div>
           </div>
-          <button type="button" className="overview-index-btn" onClick={onRebuildIndex}>
+          <button type="button" className="overview-index-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={onRebuildIndex}>
             Rebuild index
           </button>
         </div>

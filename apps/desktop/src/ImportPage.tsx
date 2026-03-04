@@ -109,11 +109,11 @@ export default function ImportPage({
         <div className="import-banners">
           <div className="banner error import-load-error" role="alert">
             <span>{loadError}</span>
-            <button
-              type="button"
-              className="import-retry-btn"
-              onClick={() => setRetryTrigger((t) => t + 1)}
-            >
+              <button
+                type="button"
+                className="import-retry-btn ui-btn ui-btn--secondary ui-btn--sm"
+                onClick={() => setRetryTrigger((t) => t + 1)}
+              >
               Retry
             </button>
           </div>
@@ -170,7 +170,7 @@ export default function ImportPage({
                     {src.available ? (
                       <button
                         type="button"
-                        className="import-source-btn"
+                        className="import-source-btn ui-btn ui-btn--primary"
                         onClick={() => onImport(src.id)}
                         disabled={importing}
                       >

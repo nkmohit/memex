@@ -97,7 +97,7 @@ function SearchViewer({
                       </span>
                       <button
                         type="button"
-                        className="viewer-search-nav-btn"
+                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
                         onClick={onPrevMatch}
                         title="Previous match"
                         aria-label="Previous match"
@@ -106,7 +106,7 @@ function SearchViewer({
                       </button>
                       <button
                         type="button"
-                        className="viewer-search-nav-btn"
+                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
                         onClick={onNextMatch}
                         title="Next match"
                         aria-label="Next match"
@@ -122,7 +122,7 @@ function SearchViewer({
               ) : (
                 <button
                   type="button"
-                  className="viewer-search-icon-btn"
+                  className="viewer-search-icon-btn ui-btn ui-btn--ghost ui-btn--icon"
                   onClick={onOpenViewerSearch}
                   title="Search in conversation (⌘F)"
                   aria-label="Search in conversation"
@@ -135,7 +135,7 @@ function SearchViewer({
 
               <button
                 type="button"
-                className="viewer-close-panel-btn"
+                className="viewer-close-panel-btn ui-btn ui-btn--ghost ui-btn--icon"
                 onClick={onClose}
                 title="Close panel"
                 aria-label="Close panel"
@@ -168,7 +168,7 @@ function SearchViewer({
                     <time>{formatTimestamp(m.created_at)}</time>
                     <button
                       type="button"
-                      className="msg-copy-btn"
+                      className="msg-copy-btn ui-btn ui-btn--ghost ui-btn--sm"
                       onClick={() => onCopyMessage(m)}
                       title="Copy message"
                       aria-label="Copy message"

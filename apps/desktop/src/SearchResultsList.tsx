@@ -131,7 +131,7 @@ export default function SearchResultsList({
       {!loading && hasResults && totalMatches > results.length && (
         <button
           type="button"
-          className="search-load-more-btn"
+          className="search-load-more-btn ui-btn ui-btn--secondary"
           onClick={onLoadMore}
           disabled={loadingMore}
         >

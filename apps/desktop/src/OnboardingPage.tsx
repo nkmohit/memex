@@ -49,7 +49,7 @@ export default function OnboardingPage({
           <MemexLogoIcon size={28} />
           <span>Memex</span>
         </div>
-        <button type="button" className="onboarding-skip" onClick={onSkip}>
+        <button type="button" className="onboarding-skip ui-btn ui-btn--secondary ui-btn--sm" onClick={onSkip}>
           Skip setup
         </button>
       </header>
@@ -82,7 +82,7 @@ export default function OnboardingPage({
                 {src.available ? (
                   <button
                     type="button"
-                    className="onboarding-card-btn"
+                    className="onboarding-card-btn ui-btn ui-btn--primary ui-btn--sm"
                     onClick={() => onImport(src.id)}
                     disabled={importing}
                   >
