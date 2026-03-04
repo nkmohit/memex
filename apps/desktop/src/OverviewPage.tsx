@@ -9,12 +9,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  getActivityCountByDay,
+  getActivityTimeline,
   getConversations,
   getSourceStats,
   getStats,
 } from "./db";
-import type { ConversationRow, DbStats, SourceStats } from "./db";
+import type { ActivityDayPoint, ConversationRow, DbStats, SourceStats } from "./db";
 import { formatDate, formatTimestamp } from "./utils";
 import { IMPORT_SOURCES } from "./importer";
 
@@ -52,7 +52,8 @@ export default function OverviewPage({
   const [stats, setStats] = useState<DbStats | null>(null);
   const [sourceStats, setSourceStats] = useState<SourceStats[]>([]);
   const [recent, setRecent] = useState<ConversationRow[]>([]);
-  const [activityByDay, setActivityByDay] = useState<number[]>([]);
+  const [activityTimeline, setActivityTimeline] = useState<ActivityDayPoint[]>([]);
+  const [pulseRange, setPulseRange] = useState<"last30days" | "last30active" | "alltime">("last30days");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,13 +66,13 @@ export default function OverviewPage({
           getStats(),
           getSourceStats(),
           getConversations(12),
-          getActivityCountByDay(30),
+          getActivityTimeline(),
         ]);
         if (!cancelled) {
           setStats(s);
           setSourceStats(ss);
           setRecent(convs);
-          setActivityByDay(activity);
+          setActivityTimeline(activity);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -90,15 +91,6 @@ export default function OverviewPage({
     return [...sourceStats].sort((a, b) => b.messageCount - a.messageCount)[0] ?? null;
   }, [sourceStats]);
 
-  if (loading) {
-    return (
-      <main className="overview-main" id="main-content">
-        <h1 className="overview-title">Command Center</h1>
-        <p className="empty-text">Loading dashboard...</p>
-      </main>
-    );
-  }
-
   const totalConvs = stats?.conversationCount ?? 0;
   const totalMsgs = stats?.messageCount ?? 0;
   const indexedMsgs = stats?.indexedMessageCount ?? 0;
@@ -110,12 +102,62 @@ export default function OverviewPage({
   const needsIndexRebuild = totalMsgs > 0 && indexedMsgs === 0;
   const indexedPct = totalMsgs > 0 ? Math.round((indexedMsgs / totalMsgs) * 100) : 100;
 
+  function dateToKey(d: Date): string {
+    return d.toISOString().slice(0, 10);
+  }
+
+  const activityByDay = useMemo(() => {
+    if (activityTimeline.length === 0) return [];
+
+    const byDay = new Map(activityTimeline.map((p) => [p.day, p.count]));
+    const sorted = [...activityTimeline].sort((a, b) => a.day.localeCompare(b.day));
+    const firstDay = sorted[0]!.day;
+    const lastDay = sorted[sorted.length - 1]!.day;
+
+    if (pulseRange === "last30active") {
+      return sorted
+        .filter((p) => p.count > 0)
+        .slice(-30)
+        .map((p) => p.count);
+    }
+
+    if (pulseRange === "alltime") {
+      const full: number[] = [];
+      const start = new Date(`${firstDay}T00:00:00`);
+      const end = new Date(`${lastDay}T00:00:00`);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        full.push(byDay.get(dateToKey(d)) ?? 0);
+      }
+      return full;
+    }
+
+    const fullLast30: number[] = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    for (let i = 29; i >= 0; i -= 1) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      fullLast30.push(byDay.get(dateToKey(d)) ?? 0);
+    }
+    return fullLast30;
+  }, [activityTimeline, pulseRange]);
+
   const maxActivity = Math.max(1, ...activityByDay);
+  const midActivity = Math.floor(maxActivity / 2);
   const activeDays = activityByDay.filter((count) => count > 0).length;
   const activityTotal = activityByDay.reduce((sum, count) => sum + count, 0);
 
   const sourceMessageTotal = sourceStats.reduce((sum, source) => sum + source.messageCount, 0);
   const recentRows = recent.slice(0, 8);
+
+  if (loading) {
+    return (
+      <main className="overview-main" id="main-content">
+        <h1 className="overview-title">Command Center</h1>
+        <p className="empty-text">Loading dashboard...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="overview-main" id="main-content">
@@ -210,13 +252,32 @@ export default function OverviewPage({
             <h2 className="overview-section-title">
               <Activity size={16} /> Memory pulse strip
             </h2>
-            <p className="overview-section-meta">
-              {activityTotal.toLocaleString()} messages in the last 30 days • {activeDays} active day
-              {activeDays === 1 ? "" : "s"}
-            </p>
+            <div className="overview-pulse-controls">
+              <select
+                className="overview-pulse-select"
+                value={pulseRange}
+                onChange={(e) => setPulseRange(e.target.value as "last30days" | "last30active" | "alltime")}
+                aria-label="Pulse timeframe"
+              >
+                <option value="last30days">Last 30 days</option>
+                <option value="last30active">Last 30 active days</option>
+                <option value="alltime">All time</option>
+              </select>
+              <p className="overview-section-meta">
+                {activityTotal.toLocaleString()} messages • {activeDays} active day{activeDays === 1 ? "" : "s"}
+              </p>
+            </div>
           </div>
 
-          <div className="overview-pulse-strip" role="img" aria-label="Message activity intensity over the last 30 days">
+          <div
+            className="overview-pulse-strip"
+            role="img"
+            aria-label={`Message activity intensity: ${pulseRange}`}
+            style={{
+              gridTemplateColumns: `repeat(${Math.max(activityByDay.length, 1)}, minmax(8px, 1fr))`,
+              minWidth: `${Math.max(activityByDay.length * 11, 320)}px`,
+            }}
+          >
             {activityByDay.map((count, i) => {
               const ratio = count / maxActivity;
               const height = Math.max(12, Math.round(12 + ratio * 66));
@@ -229,9 +290,9 @@ export default function OverviewPage({
           </div>
 
           <div className="overview-pulse-legend" aria-hidden>
-            <span>Low</span>
-            <div className="overview-pulse-scale" />
-            <span>High</span>
+            <span>{maxActivity.toLocaleString()}</span>
+            <span>{midActivity.toLocaleString()}</span>
+            <span>0</span>
           </div>
         </div>
 

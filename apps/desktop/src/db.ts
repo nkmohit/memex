@@ -215,6 +215,11 @@ export interface SearchMessagesResult {
   totalOccurrences: number;
 }
 
+export interface ActivityDayPoint {
+  day: string; // YYYY-MM-DD in local time
+  count: number;
+}
+
 export interface SearchOptions {
   source?: string;
   dateFrom?: number;
@@ -317,6 +322,24 @@ export function getActivityCountByDay(days: number): Promise<number[]> {
       result.push(countByDay.get(dayStr) ?? 0);
     }
     return result;
+  });
+}
+
+/**
+ * Returns sparse day-count points for all available message history.
+ * Each row is one local calendar day (YYYY-MM-DD) with count > 0.
+ */
+export function getActivityTimeline(): Promise<ActivityDayPoint[]> {
+  return withDbLock(async () => {
+    const database = await getDb();
+    const rows = await database.select<{ day: string; cnt: number }[]>(
+      `SELECT date(created_at / 1000, 'unixepoch') AS day, COUNT(*) AS cnt
+       FROM messages
+       WHERE created_at IS NOT NULL
+       GROUP BY day
+       ORDER BY day`
+    );
+    return rows.map((r) => ({ day: r.day, count: r.cnt }));
   });
 }
 

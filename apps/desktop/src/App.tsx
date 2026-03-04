@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bell } from "lucide-react";
 import {
   ConversationRow,
   DbStats,
@@ -83,7 +84,7 @@ function App() {
       setToasts((prev) => [...prev, { id, message, variant }]);
       window.setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
-      }, 4000);
+      }, 3000);
     },
     []
   );
@@ -680,6 +681,7 @@ function App() {
         <div className="toast-stack" aria-live="polite">
           {toasts.map((toast) => (
             <div key={toast.id} className={`toast ${toast.variant}`}>
+              <Bell size={14} className="toast-icon" />
               <span>{toast.message}</span>
               <button
                 type="button"
@@ -855,6 +857,7 @@ function App() {
       <div className="toast-stack" aria-live="polite">
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast ${toast.variant}`}>
+            <Bell size={14} className="toast-icon" />
             <span>{toast.message}</span>
             <button
               type="button"

@@ -109,7 +109,9 @@ export default function ConversationViewerPanel({
               <div>
                 <h2>{selectedConversation.title || "Untitled"}</h2>
                 <p className="viewer-header-meta">
-                  <span className="source-tag">{sourceLabel(selectedConversation.source)}</span>
+                  <span className="source-tag" data-source={selectedConversation.source.toLowerCase()}>
+                    {sourceLabel(selectedConversation.source)}
+                  </span>
                   <span>
                     {viewerSearchOpen && messageSearchQuery.trim()
                       ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${

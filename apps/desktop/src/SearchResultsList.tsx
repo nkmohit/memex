@@ -120,7 +120,7 @@ export default function SearchResultsList({
                 </div>
               )}
               <div className="search-result-meta">
-                <span className="source-tag">{sourceLabel(row.source)}</span>
+                <span className="source-tag" data-source={row.source.toLowerCase()}>{sourceLabel(row.source)}</span>
                 <span>{formatDate(row.last_occurrence)}</span>
               </div>
             </button>

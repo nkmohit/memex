@@ -75,11 +75,12 @@ export default function ConversationListPanel({
                 convItemRefs.current[c.id] = element;
               }}
               className={`conv-item ${selectedConvId === c.id ? "selected" : ""}`}
+              data-source={c.source.toLowerCase()}
               onClick={() => onSelectConversation(c.id)}
             >
               <span className="conv-title">{c.title || "Untitled"}</span>
               <span className="conv-meta">
-                <span className="source-tag">{sourceLabel(c.source)}</span>
+                <span className="source-tag" data-source={c.source.toLowerCase()}>{sourceLabel(c.source)}</span>
                 <span>{c.message_count} msgs</span>
                 <span>{formatDate(c.last_message_at)}</span>
               </span>
