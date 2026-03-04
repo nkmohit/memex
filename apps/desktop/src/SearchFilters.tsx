@@ -1,4 +1,5 @@
 import type { SearchPageSnapshot } from "./SearchPage";
+import AppSelect from "./components/AppSelect";
 
 interface SearchFiltersProps {
   availableSources: string[];
@@ -33,7 +34,7 @@ export default function SearchFilters({
     <>
       <button
         type="button"
-        className="search-filters-toggle"
+        className="search-filters-toggle ui-btn ui-btn--secondary ui-btn--sm"
         onClick={onToggleFilters}
         aria-expanded={filtersOpen}
         aria-controls="search-filters"
@@ -42,26 +43,25 @@ export default function SearchFilters({
       </button>
 
       <div className="search-filters" id="search-filters" hidden={!filtersOpen}>
-        <label htmlFor="search-source">
+        <label>
           Source
-          <select
-            id="search-source"
+          <AppSelect
+            ariaLabel="Source filter"
+            className="app-select"
             value={source}
-            onChange={(e) => onSourceChange(e.target.value)}
-          >
-            <option value="">All</option>
-            {availableSources.map((src) => (
-              <option key={src} value={src}>
-                {sourceLabel(src)}
-              </option>
-            ))}
-          </select>
+            onChange={onSourceChange}
+            options={[
+              { value: "", label: "All" },
+              ...availableSources.map((src) => ({ value: src, label: sourceLabel(src) })),
+            ]}
+          />
         </label>
 
         <label htmlFor="search-from">
           From
           <input
             id="search-from"
+            className="app-date"
             type="date"
             value={dateFrom}
             onChange={(e) => onDateFromChange(e.target.value)}
@@ -72,28 +72,30 @@ export default function SearchFilters({
           To
           <input
             id="search-to"
+            className="app-date"
             type="date"
             value={dateTo}
             onChange={(e) => onDateToChange(e.target.value)}
           />
         </label>
 
-        <label htmlFor="search-sort">
+        <label>
           Sort
-          <select
-            id="search-sort"
+          <AppSelect
+            ariaLabel="Sort results"
+            className="app-select"
             value={sort}
-            onChange={(e) => onSortChange(e.target.value as SearchPageSnapshot["sort"])}
-          >
-            <option value="last_occurrence_desc">Last occurrence</option>
-            <option value="relevance">Relevance</option>
-            <option value="occurrence_count_desc">Occurrence count</option>
-            <option value="title_az">Title A-Z</option>
-            <option value="title_za">Title Z-A</option>
-          </select>
+            onChange={(value) => onSortChange(value as SearchPageSnapshot["sort"])}
+            options={[
+              { value: "last_occurrence_desc", label: "Last occurrence" },
+              { value: "relevance", label: "Relevance" },
+              { value: "occurrence_count_desc", label: "Occurrence count" },
+              { value: "title_az", label: "Title A-Z" },
+              { value: "title_za", label: "Title Z-A" },
+            ]}
+          />
         </label>
       </div>
     </>
   );
 }
-

@@ -396,7 +396,7 @@ export default function SearchPage({
   return (
     <section className="search-page">
       <header className="search-header">
-        <h1>Search</h1>
+        <h1 className="search-title">Search</h1>
         <input
           ref={searchInputRef}
           className="search-input"

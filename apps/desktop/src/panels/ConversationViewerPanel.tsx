@@ -98,7 +98,7 @@ export default function ConversationViewerPanel({
               {openedConversationFromSearch && (
                 <button
                   type="button"
-                  className="viewer-back-to-search-btn"
+                  className="viewer-back-to-search-btn ui-btn ui-btn--secondary ui-btn--sm"
                   onClick={onBackToSearch}
                   title="Back to search (Backspace)"
                   aria-label="Back to search"
@@ -109,7 +109,9 @@ export default function ConversationViewerPanel({
               <div>
                 <h2>{selectedConversation.title || "Untitled"}</h2>
                 <p className="viewer-header-meta">
-                  <span className="source-tag">{sourceLabel(selectedConversation.source)}</span>
+                  <span className="source-tag" data-source={selectedConversation.source.toLowerCase()}>
+                    {sourceLabel(selectedConversation.source)}
+                  </span>
                   <span>
                     {viewerSearchOpen && messageSearchQuery.trim()
                       ? `${matchCount} occurrence${matchCount !== 1 ? "s" : ""} in ${messageMatchCount} message${
@@ -125,7 +127,7 @@ export default function ConversationViewerPanel({
               <div className="viewer-header-menu-wrap" ref={viewerMenuRef}>
                 <button
                   type="button"
-                  className="viewer-menu-trigger"
+                  className="viewer-menu-trigger ui-btn ui-btn--ghost ui-btn--icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggleViewerMenu();
@@ -141,7 +143,7 @@ export default function ConversationViewerPanel({
                   <div className="viewer-header-menu">
                     <button
                       type="button"
-                      className="viewer-header-menu-item"
+                      className="viewer-header-menu-item ui-btn ui-btn--ghost ui-btn--sm"
                       onClick={() => {
                         onCopyConversation();
                         onCloseViewerMenu();
@@ -169,7 +171,7 @@ export default function ConversationViewerPanel({
                       </span>
                       <button
                         type="button"
-                        className="viewer-search-nav-btn"
+                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
                         onClick={onPrevMatch}
                         title="Previous match"
                         aria-label="Previous match"
@@ -178,7 +180,7 @@ export default function ConversationViewerPanel({
                       </button>
                       <button
                         type="button"
-                        className="viewer-search-nav-btn"
+                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
                         onClick={onNextMatch}
                         title="Next match"
                         aria-label="Next match"
@@ -194,7 +196,7 @@ export default function ConversationViewerPanel({
               ) : (
                 <button
                   type="button"
-                  className="viewer-search-icon-btn"
+                  className="viewer-search-icon-btn ui-btn ui-btn--ghost ui-btn--icon"
                   onClick={onOpenViewerSearch}
                   title="Search in conversation (⌘F)"
                   aria-label="Search in conversation"
@@ -230,7 +232,7 @@ export default function ConversationViewerPanel({
                     <time>{formatTimestamp(m.created_at)}</time>
                     <button
                       type="button"
-                      className="msg-copy-btn"
+                      className="msg-copy-btn ui-btn ui-btn--ghost ui-btn--sm"
                       onClick={() => onCopyMessage(m)}
                       title="Copy message"
                       aria-label="Copy message"

@@ -18,7 +18,7 @@ export default function Sidebar({ activeView, onSelectView, onOpenImport }: Side
       <nav className="sidebar-nav" aria-label="Main">
         <button
           type="button"
-          className={`sidebar-item ${activeView === "overview" ? "active" : ""}`}
+          className={`sidebar-item ui-btn ui-btn--ghost ui-btn--icon ${activeView === "overview" ? "active" : ""}`}
           onClick={() => onSelectView("overview")}
           title="Overview"
           aria-label="Overview"
@@ -28,7 +28,7 @@ export default function Sidebar({ activeView, onSelectView, onOpenImport }: Side
         </button>
         <button
           type="button"
-          className={`sidebar-item ${activeView === "search" ? "active" : ""}`}
+          className={`sidebar-item ui-btn ui-btn--ghost ui-btn--icon ${activeView === "search" ? "active" : ""}`}
           onClick={() => onSelectView("search")}
           title="Search (⌘K)"
           aria-label="Search"
@@ -38,7 +38,7 @@ export default function Sidebar({ activeView, onSelectView, onOpenImport }: Side
         </button>
         <button
           type="button"
-          className={`sidebar-item ${activeView === "conversations" ? "active" : ""}`}
+          className={`sidebar-item ui-btn ui-btn--ghost ui-btn--icon ${activeView === "conversations" ? "active" : ""}`}
           onClick={() => onSelectView("conversations")}
           title="Conversations"
           aria-label="Conversations"
@@ -50,7 +50,7 @@ export default function Sidebar({ activeView, onSelectView, onOpenImport }: Side
       <div className="sidebar-bottom">
         <button
           type="button"
-          className={`sidebar-item ${activeView === "import" ? "active" : ""}`}
+          className={`sidebar-item ui-btn ui-btn--ghost ui-btn--icon ${activeView === "import" ? "active" : ""}`}
           onClick={onOpenImport}
           title="Import"
           aria-label="Import"
@@ -60,7 +60,7 @@ export default function Sidebar({ activeView, onSelectView, onOpenImport }: Side
         </button>
         <button
           type="button"
-          className={`sidebar-item ${activeView === "settings" ? "active" : ""}`}
+          className={`sidebar-item ui-btn ui-btn--ghost ui-btn--icon ${activeView === "settings" ? "active" : ""}`}
           onClick={() => onSelectView("settings")}
           title="Settings"
           aria-label="Settings"
@@ -72,4 +72,3 @@ export default function Sidebar({ activeView, onSelectView, onOpenImport }: Side
     </aside>
   );
 }
-

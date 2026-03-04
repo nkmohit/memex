@@ -169,6 +169,9 @@ export interface DbStats {
   messageCount: number;
   indexedMessageCount: number;
   latestMessageTimestamp: number | null;
+  estimatedInputTokens: number;
+  estimatedOutputTokens: number;
+  estimatedTotalTokens: number;
 }
 
 export interface SourceStats {
@@ -215,6 +218,21 @@ export interface SearchMessagesResult {
   totalOccurrences: number;
 }
 
+export interface ActivityDayPoint {
+  day: string; // YYYY-MM-DD in local time
+  count: number;
+}
+
+export interface ActivityHeatmapPoint {
+  day: string; // YYYY-MM-DD in local time
+  totalCount: number;
+  chatgptCount: number;
+  claudeCount: number;
+  geminiCount: number;
+  grokCount: number;
+  otherCount: number;
+}
+
 export interface SearchOptions {
   source?: string;
   dateFrom?: number;
@@ -258,12 +276,29 @@ export function getStats(): Promise<DbStats> {
     const indexedRows = await database.select<{ count: number }[]>(
       "SELECT COUNT(*) AS count FROM messages_fts"
     );
+    const tokenRows = await database.select<
+      { inputTokens: number; outputTokens: number }[]
+    >(
+      `SELECT
+         COALESCE(SUM(
+           CASE WHEN sender = 'human' THEN CAST((LENGTH(content) + 3) / 4 AS INTEGER) ELSE 0 END
+         ), 0) AS inputTokens,
+         COALESCE(SUM(
+           CASE WHEN sender = 'assistant' THEN CAST((LENGTH(content) + 3) / 4 AS INTEGER) ELSE 0 END
+         ), 0) AS outputTokens
+       FROM messages`
+    );
+    const inputTokens = tokenRows[0]?.inputTokens ?? 0;
+    const outputTokens = tokenRows[0]?.outputTokens ?? 0;
 
     return {
       conversationCount: convRows[0]?.count ?? 0,
       messageCount: msgRows[0]?.count ?? 0,
       indexedMessageCount: indexedRows[0]?.count ?? 0,
       latestMessageTimestamp: latestRows[0]?.latest ?? null,
+      estimatedInputTokens: inputTokens,
+      estimatedOutputTokens: outputTokens,
+      estimatedTotalTokens: inputTokens + outputTokens,
     };
   });
 }
@@ -317,6 +352,46 @@ export function getActivityCountByDay(days: number): Promise<number[]> {
       result.push(countByDay.get(dayStr) ?? 0);
     }
     return result;
+  });
+}
+
+/**
+ * Returns sparse day-count points for all available message history.
+ * Each row is one local calendar day (YYYY-MM-DD) with count > 0.
+ */
+export function getActivityTimeline(): Promise<ActivityDayPoint[]> {
+  return withDbLock(async () => {
+    const database = await getDb();
+    const rows = await database.select<{ day: string; cnt: number }[]>(
+      `SELECT date(created_at / 1000, 'unixepoch') AS day, COUNT(*) AS cnt
+       FROM messages
+       WHERE created_at IS NOT NULL
+       GROUP BY day
+       ORDER BY day`
+    );
+    return rows.map((r) => ({ day: r.day, count: r.cnt }));
+  });
+}
+
+export function getActivityHeatmapTimeline(): Promise<ActivityHeatmapPoint[]> {
+  return withDbLock(async () => {
+    const database = await getDb();
+    const rows = await database.select<ActivityHeatmapPoint[]>(
+      `SELECT
+         date(m.created_at / 1000, 'unixepoch', 'localtime') AS day,
+         COUNT(*) AS totalCount,
+         SUM(CASE WHEN LOWER(c.source) = 'chatgpt' THEN 1 ELSE 0 END) AS chatgptCount,
+         SUM(CASE WHEN LOWER(c.source) = 'claude' THEN 1 ELSE 0 END) AS claudeCount,
+         SUM(CASE WHEN LOWER(c.source) = 'gemini' THEN 1 ELSE 0 END) AS geminiCount,
+         SUM(CASE WHEN LOWER(c.source) = 'grok' THEN 1 ELSE 0 END) AS grokCount,
+         SUM(CASE WHEN LOWER(c.source) NOT IN ('chatgpt', 'claude', 'gemini', 'grok') THEN 1 ELSE 0 END) AS otherCount
+       FROM messages m
+       JOIN conversations c ON c.id = m.conversation_id
+       WHERE m.created_at IS NOT NULL
+       GROUP BY day
+       ORDER BY day`
+    );
+    return rows;
   });
 }
 
@@ -696,7 +771,6 @@ export function clearAllData(): Promise<void> {
       if (attempt > 0) {
         await new Promise((r) => setTimeout(r, CLEAR_RETRY_DELAY_MS * attempt));
       }
-      let began = false;
       try {
         // Ensure this connection waits for locks (plugin may use a pool; pragma is per-connection)
         await database.execute("PRAGMA busy_timeout = 30000");
@@ -711,7 +785,6 @@ export function clearAllData(): Promise<void> {
         }
 
         await database.execute("BEGIN IMMEDIATE");
-        began = true;
         await database.execute("DELETE FROM messages_fts");
         await database.execute("DELETE FROM messages");
         await database.execute("DELETE FROM conversations");

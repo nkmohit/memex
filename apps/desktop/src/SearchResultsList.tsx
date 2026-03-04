@@ -120,7 +120,7 @@ export default function SearchResultsList({
                 </div>
               )}
               <div className="search-result-meta">
-                <span className="source-tag">{sourceLabel(row.source)}</span>
+                <span className="source-tag" data-source={row.source.toLowerCase()}>{sourceLabel(row.source)}</span>
                 <span>{formatDate(row.last_occurrence)}</span>
               </div>
             </button>
@@ -131,7 +131,7 @@ export default function SearchResultsList({
       {!loading && hasResults && totalMatches > results.length && (
         <button
           type="button"
-          className="search-load-more-btn"
+          className="search-load-more-btn ui-btn ui-btn--secondary"
           onClick={onLoadMore}
           disabled={loadingMore}
         >

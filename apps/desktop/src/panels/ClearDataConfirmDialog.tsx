@@ -40,7 +40,7 @@ export default function ClearDataConfirmDialog({
           <button
             ref={cancelBtnRef}
             type="button"
-            className="confirm-cancel-btn"
+            className="confirm-cancel-btn ui-btn ui-btn--secondary"
             onClick={onCancel}
             disabled={clearingData}
           >
@@ -48,7 +48,7 @@ export default function ClearDataConfirmDialog({
           </button>
           <button
             type="button"
-            className="confirm-danger-btn"
+            className="confirm-danger-btn ui-btn ui-btn--danger"
             onClick={onConfirm}
             disabled={clearingData}
           >
@@ -59,4 +59,3 @@ export default function ClearDataConfirmDialog({
     </div>
   );
 }
-

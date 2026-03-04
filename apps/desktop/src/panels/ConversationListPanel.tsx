@@ -1,4 +1,5 @@
 import type React from "react";
+import AppSelect from "../components/AppSelect";
 import { formatDate } from "../utils";
 import type { ConversationRow, SourceStats } from "../db";
 
@@ -38,19 +39,19 @@ export default function ConversationListPanel({
           <h1>Conversations</h1>
           <span className="conv-count">{conversations.length}</span>
         </div>
-        <select
+        <AppSelect
+          ariaLabel="Filter by source"
+          className="conv-source-select app-select"
           value={activeSource ?? ""}
-          onChange={(e) => onSelectSource(e.target.value || null)}
-          aria-label="Filter by source"
-          className="conv-source-select"
-        >
-          <option value="">All sources</option>
-          {availableSources.map((src) => (
-            <option key={src} value={src}>
-              {sourceLabel(src)} ({sourceConvCount(sourceStats, src)})
-            </option>
-          ))}
-        </select>
+          onChange={(value) => onSelectSource(value || null)}
+          options={[
+            { value: "", label: "All sources" },
+            ...availableSources.map((src) => ({
+              value: src,
+              label: `${sourceLabel(src)} (${sourceConvCount(sourceStats, src)})`,
+            })),
+          ]}
+        />
       </div>
 
       {loading ? (
@@ -75,11 +76,12 @@ export default function ConversationListPanel({
                 convItemRefs.current[c.id] = element;
               }}
               className={`conv-item ${selectedConvId === c.id ? "selected" : ""}`}
+              data-source={c.source.toLowerCase()}
               onClick={() => onSelectConversation(c.id)}
             >
               <span className="conv-title">{c.title || "Untitled"}</span>
               <span className="conv-meta">
-                <span className="source-tag">{sourceLabel(c.source)}</span>
+                <span className="source-tag" data-source={c.source.toLowerCase()}>{sourceLabel(c.source)}</span>
                 <span>{c.message_count} msgs</span>
                 <span>{formatDate(c.last_message_at)}</span>
               </span>
