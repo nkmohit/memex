@@ -5,19 +5,6 @@
 
 @import "tailwindcss";
 
-/* Local-first typography: uses bundled/local fonts when available, then degrades gracefully */
-@font-face {
-  font-family: "Fraunces Local";
-  src: local("Fraunces 72pt"), local("Fraunces");
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "IBM Plex Sans Local";
-  src: local("IBM Plex Sans");
-  font-display: swap;
-}
-
 /* -------------------------------------------------------------------
    Theme tokens
    ------------------------------------------------------------------- */
@@ -25,8 +12,8 @@
   /* -----------------------------------------------------------------
      Typography — prefer system fonts for a native feel
      ----------------------------------------------------------------- */
-  --font-heading: "Fraunces Local", "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
-  --font-body: "IBM Plex Sans Local", "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-heading: "JetBrains Mono", "Cascadia Mono", "SF Mono", "Consolas", "Menlo", monospace;
+  --font-body: "Aptos", "Segoe UI Variable", "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
@@ -2310,6 +2297,75 @@ body {
   overflow-y: auto;
 }
 
+/* Shared side-badge treatment for all major wrapped surfaces */
+.overview-hero,
+.overview-empty-state,
+.overview-index-banner,
+.overview-metric-card,
+.overview-pulse-main,
+.overview-pulse-side,
+.overview-recent-activity,
+.overview-note-card,
+.conv-panel,
+.viewer,
+.search-main,
+.search-detail-panel,
+.settings-main,
+.import-main {
+  position: relative;
+}
+
+.overview-hero::before,
+.overview-empty-state::before,
+.overview-index-banner::before,
+.overview-metric-card::before,
+.overview-pulse-main::before,
+.overview-pulse-side::before,
+.overview-recent-activity::before,
+.overview-note-card::before,
+.conv-panel::before,
+.viewer::before,
+.search-main::before,
+.search-detail-panel::before,
+.settings-main::before,
+.import-main::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--ov-accent-1), var(--ov-accent-2));
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+.dark .overview-hero::before,
+.dark .overview-empty-state::before,
+.dark .overview-index-banner::before,
+.dark .overview-metric-card::before,
+.dark .overview-pulse-main::before,
+.dark .overview-pulse-side::before,
+.dark .overview-recent-activity::before,
+.dark .overview-note-card::before,
+.dark .conv-panel::before,
+.dark .viewer::before,
+.dark .search-main::before,
+.dark .search-detail-panel::before,
+.dark .settings-main::before,
+.dark .import-main::before {
+  opacity: 0.9;
+}
+
+.overview-empty-state::before {
+  background: linear-gradient(to bottom, var(--ov-danger), color-mix(in srgb, var(--ov-danger), black 18%));
+}
+
+.overview-index-banner::before {
+  background: linear-gradient(to bottom, var(--ov-accent-2), var(--ov-accent-1));
+}
+
 .overview-stage {
   animation: overview-enter 620ms cubic-bezier(0.2, 0.65, 0.2, 1) both;
 }
@@ -2346,10 +2402,9 @@ body {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   border: 1px solid var(--ov-card-border);
-  border-left: 6px solid var(--ov-accent-1);
   border-radius: 8px;
   background: color-mix(in srgb, var(--ov-card-bg) 92%, transparent);
-  padding: 16px;
+  padding: 16px 16px 16px 20px;
 }
 
 .overview-kicker {
@@ -2441,14 +2496,19 @@ body {
   justify-content: space-between;
   gap: 12px;
   border: 1px solid var(--ov-card-border);
-  border-left: 6px solid var(--ov-danger);
   border-radius: 8px;
   background: color-mix(in srgb, var(--ov-card-bg) 94%, transparent);
-  padding: 12px 14px;
+  padding: 12px 14px 12px 18px;
 }
 
 .overview-index-banner {
-  border-left-color: var(--ov-accent-2);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ov-accent-2) 12%, transparent),
+      transparent 15%
+    ),
+    color-mix(in srgb, var(--ov-card-bg) 94%, transparent);
 }
 
 .overview-index-title {
@@ -2488,7 +2548,7 @@ body {
   border: 1px solid var(--ov-card-border);
   border-radius: 7px;
   background: color-mix(in srgb, var(--ov-card-bg) 96%, transparent);
-  padding: 12px;
+  padding: 12px 12px 12px 16px;
   min-height: 104px;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -2549,7 +2609,7 @@ body {
 .overview-pulse-main,
 .overview-pulse-side,
 .overview-recent-activity {
-  padding: 14px;
+  padding: 14px 14px 14px 18px;
 }
 
 .overview-section-head {
@@ -2781,7 +2841,7 @@ body {
 }
 
 .overview-note-card {
-  padding: 14px;
+  padding: 14px 14px 14px 18px;
 }
 
 .overview-note-card h3 {
