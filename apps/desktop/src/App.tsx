@@ -716,6 +716,11 @@ function App() {
       {activeView === "overview" && (
         <OverviewPage
           onOpenImport={() => setActiveView("import")}
+          onOpenSearch={() => {
+            setOpenedConversationFromSearch(false);
+            setActiveView("search");
+            setSearchFocusRequestId(Date.now());
+          }}
           onSelectConversation={handleOverviewSelectConversation}
           onRebuildIndex={handleRebuildIndex}
         />

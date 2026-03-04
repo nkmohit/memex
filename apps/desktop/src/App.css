@@ -266,20 +266,12 @@ body {
 }
 
 .ui-btn--primary {
-  --btn-bg: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--ov-accent-1) 85%, white 15%),
-      color-mix(in srgb, var(--ov-accent-1) 78%, black 22%)
-    );
-  --btn-border: color-mix(in srgb, var(--ov-accent-1) 82%, black 18%);
-  --btn-fg: #ffffff;
-  --btn-hover-bg: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--ov-accent-1) 90%, white 10%),
-      color-mix(in srgb, var(--ov-accent-1) 82%, black 18%)
-    );
-  --btn-hover-border: color-mix(in srgb, var(--ov-accent-1) 88%, black 12%);
-  --btn-shadow: 0 1px 0 rgb(255 255 255 / 0.14) inset;
+  --btn-bg: color-mix(in srgb, var(--ov-accent-1) 16%, var(--surface-2));
+  --btn-border: color-mix(in srgb, var(--ov-accent-1) 34%, var(--border-2));
+  --btn-fg: var(--text-1);
+  --btn-hover-bg: color-mix(in srgb, var(--ov-accent-1) 22%, var(--surface-2));
+  --btn-hover-border: color-mix(in srgb, var(--ov-accent-1) 44%, var(--border-2));
+  --btn-shadow: 0 1px 0 rgb(255 255 255 / 0.16) inset;
 }
 
 .ui-btn--secondary {
@@ -311,7 +303,7 @@ body {
 /* -------------------------------------------------------------------
    Unified desktop form controls (select/date)
    ------------------------------------------------------------------- */
-.app-select,
+.app-select-control,
 .app-date {
   min-height: 32px;
   border: 1px solid var(--border-1);
@@ -325,13 +317,79 @@ body {
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.15) inset;
 }
 
-.app-select {
-  appearance: none;
-  padding-right: 28px;
-  background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
-  background-position: calc(100% - 14px) calc(50% + 1px), calc(100% - 9px) calc(50% + 1px);
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
+.app-select-root {
+  position: relative;
+  min-width: 0;
+}
+
+.app-select-control {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.app-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-select-chevron {
+  color: var(--text-2);
+  transition: transform 0.15s ease;
+}
+
+.app-select-root[data-open="true"] .app-select-chevron {
+  transform: rotate(180deg);
+}
+
+.app-select-control--sm {
+  min-height: 30px;
+  font-size: 11px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.app-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  box-shadow: 0 10px 22px rgb(10 12 16 / 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.app-select-option {
+  border-radius: 5px;
+  padding: 7px 8px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.app-select-option.active {
+  background: var(--selection);
+}
+
+.app-select-option.selected {
+  background: color-mix(in srgb, var(--ov-accent-1) 14%, transparent);
+}
+
+.app-select-option.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .app-date::-webkit-calendar-picker-indicator {
@@ -339,14 +397,15 @@ body {
   cursor: pointer;
 }
 
-.app-select:focus,
+.app-select-control:focus,
 .app-date:focus {
   outline: none;
   border-color: var(--border-2);
   box-shadow: 0 0 0 2px rgb(47 129 247 / 0.22);
 }
 
-.dark .app-select,
+.dark .app-select-control,
+.dark .app-select-menu,
 .dark .app-date {
   background-color: color-mix(in srgb, var(--surface-2) 72%, transparent);
 }
@@ -624,6 +683,9 @@ body {
 .conv-source-select {
   margin-top: 4px;
   width: 100%;
+}
+
+.conv-source-select .app-select-control {
   padding: 7px 10px;
   border-radius: var(--radius-2);
   border: 1px solid transparent;
@@ -632,7 +694,7 @@ body {
   font-size: 12px;
 }
 
-.dark .conv-source-select {
+.dark .conv-source-select .app-select-control {
   background: rgb(255 255 255 / 0.07);
 }
 
@@ -1138,7 +1200,7 @@ body {
   color: var(--text-2);
 }
 
-.search-filters select,
+.search-filters .app-select-control,
 .search-filters input[type="date"] {
   border: 1px solid transparent;
   border-radius: var(--radius-2);
@@ -1149,7 +1211,7 @@ body {
   color: var(--text-1);
 }
 
-.dark .search-filters select,
+.dark .search-filters .app-select-control,
 .dark .search-filters input[type="date"] {
   background: rgb(255 255 255 / 0.07);
 }
@@ -2432,8 +2494,7 @@ body {
 .app-shell {
   position: relative;
   background:
-    radial-gradient(920px 560px at 10% -10%, rgb(15 76 255 / 0.18), transparent 60%),
-    radial-gradient(980px 620px at 95% 20%, rgb(11 180 110 / 0.14), transparent 62%),
+    radial-gradient(960px 560px at 50% -12%, rgb(148 163 184 / 0.08), transparent 62%),
     repeating-linear-gradient(
       0deg,
       transparent,
@@ -2612,9 +2673,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--ov-accent-1);
-  background: linear-gradient(165deg, var(--ov-accent-1), color-mix(in srgb, var(--ov-accent-1), black 18%));
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--ov-accent-1) 34%, var(--ov-card-border));
+  background: color-mix(in srgb, var(--ov-accent-1) 16%, var(--ov-card-bg));
+  color: var(--text-1);
   border-radius: 5px;
   padding: 8px 12px;
   font-size: 12px;
@@ -2625,8 +2686,7 @@ body {
 
 .overview-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgb(0 0 0 / 0.18);
-  filter: saturate(1.08);
+  box-shadow: 0 8px 16px rgb(0 0 0 / 0.12);
 }
 
 .overview-btn:focus-visible {
@@ -2807,6 +2867,10 @@ body {
 }
 
 .overview-pulse-select {
+  min-width: 104px;
+}
+
+.overview-pulse-select .app-select-control {
   border-color: var(--ov-card-border);
   font-size: 11px;
   padding: 5px 8px;
@@ -2815,11 +2879,11 @@ body {
 .overview-pulse-strip {
   border: 1px solid var(--ov-card-border);
   border-radius: 6px;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(0 0 0 / 0.03));
-  min-height: 114px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.18), rgb(0 0 0 / 0.03));
+  min-height: 126px;
   display: grid;
-  gap: 4px;
-  align-items: end;
+  gap: 3px;
+  align-items: stretch;
   padding: 12px;
   overflow-x: auto;
 }
@@ -2828,39 +2892,65 @@ body {
   background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(0 0 0 / 0.2));
 }
 
-.overview-pulse-bar-wrap {
-  min-width: 0;
-  display: flex;
-  align-items: end;
-  justify-content: center;
+.overview-heatmap-grid {
+  grid-template-rows: repeat(7, 12px);
+  grid-auto-flow: column;
+  grid-auto-columns: 12px;
 }
 
-.overview-pulse-bar {
-  width: 100%;
+.overview-heatmap-cell {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgb(15 23 42 / 0.08);
   border-radius: 2px;
-  background: linear-gradient(to top, var(--ov-accent-1), var(--ov-accent-2));
-  transition: transform 0.2s ease, filter 0.2s ease;
+  background: rgb(16 185 129 / 0.08);
+  cursor: help;
+  padding: 0;
 }
 
-.overview-pulse-bar-wrap:hover .overview-pulse-bar {
-  transform: translateY(-2px) scaleX(1.04);
-  filter: saturate(1.2);
+.overview-heatmap-cell.empty {
+  visibility: hidden;
 }
 
-.overview-pulse-legend {
-  margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--text-2);
+.overview-heatmap-cell.level-0 {
+  background: rgb(16 185 129 / 0.06);
 }
 
-.overview-pulse-scale {
-  width: 120px;
-  height: 6px;
-  border-radius: 999px;
-  border: 1px solid var(--ov-card-border);
-  background: linear-gradient(to right, rgb(15 76 255 / 0.18), var(--ov-accent-1), var(--ov-accent-2));
+.overview-heatmap-cell.level-1 {
+  background: rgb(22 163 74 / 0.22);
+}
+
+.overview-heatmap-cell.level-2 {
+  background: rgb(22 163 74 / 0.42);
+}
+
+.overview-heatmap-cell.level-3 {
+  background: rgb(22 163 74 / 0.64);
+}
+
+.overview-heatmap-cell.level-4 {
+  background: rgb(22 163 74 / 0.84);
+}
+
+.dark .overview-heatmap-cell {
+  border-color: rgb(226 232 240 / 0.14);
+  background: rgb(34 197 94 / 0.09);
+}
+
+.dark .overview-heatmap-cell.level-1 {
+  background: rgb(74 222 128 / 0.24);
+}
+
+.dark .overview-heatmap-cell.level-2 {
+  background: rgb(74 222 128 / 0.42);
+}
+
+.dark .overview-heatmap-cell.level-3 {
+  background: rgb(74 222 128 / 0.64);
+}
+
+.dark .overview-heatmap-cell.level-4 {
+  background: rgb(74 222 128 / 0.84);
 }
 
 .overview-source-list {
@@ -3059,7 +3149,6 @@ body {
   }
 
   .overview-btn,
-  .overview-pulse-bar,
   .overview-metric-card,
   .overview-table-row:not(.overview-table-head) {
     transition: none !important;
@@ -3218,9 +3307,9 @@ body {
   background: color-mix(in srgb, var(--ov-accent-1) 14%, var(--ov-card-bg)) !important;
 }
 
-.search-filters select,
+.search-filters .app-select-control,
 .search-filters input[type="date"],
-.conv-source-select {
+.conv-source-select .app-select-control {
   background: color-mix(in srgb, var(--ov-card-bg) 62%, transparent) !important;
   border-color: color-mix(in srgb, var(--ov-card-border) 78%, transparent) !important;
 }
@@ -3249,19 +3338,22 @@ body {
 .viewer-header-menu,
 .toast,
 .banner {
-  background: rgb(255 255 255 / 0.46) !important;
-  border-color: rgb(15 23 42 / 0.22) !important;
+  background: rgb(255 255 255 / 0.62) !important;
+  border-color: rgb(15 23 42 / 0.2) !important;
 }
 
 .onboarding-dropzone,
-.search-filters select,
 .search-filters input[type="date"],
-.conv-source-select,
 .viewer-search-input,
 .search-input,
-.app-select,
+.app-select-control,
 .app-date {
-  background: rgb(255 255 255 / 0.36) !important;
+  background: rgb(255 255 255 / 0.52) !important;
+  border-color: rgb(15 23 42 / 0.2) !important;
+}
+
+.app-select-menu {
+  background: rgb(255 255 255 / 0.72) !important;
   border-color: rgb(15 23 42 / 0.2) !important;
 }
 
@@ -3288,25 +3380,28 @@ body {
 .dark .viewer-header-menu,
 .dark .toast,
 .dark .banner {
-  background: rgb(16 20 28 / 0.56) !important;
+  background: rgb(16 20 28 / 0.68) !important;
   border-color: rgb(226 232 240 / 0.2) !important;
 }
 
 .dark .onboarding-dropzone,
-.dark .search-filters select,
 .dark .search-filters input[type="date"],
-.dark .conv-source-select,
 .dark .viewer-search-input,
 .dark .search-input,
-.dark .app-select,
+.dark .app-select-control,
 .dark .app-date {
-  background: rgb(16 20 28 / 0.42) !important;
+  background: rgb(16 20 28 / 0.54) !important;
   border-color: rgb(226 232 240 / 0.18) !important;
+}
+
+.dark .app-select-menu {
+  background: rgb(16 20 28 / 0.78) !important;
+  border-color: rgb(226 232 240 / 0.2) !important;
 }
 
 /* Sidebar explicit translucency (included by request) */
 .sidebar {
-  background: rgb(255 255 255 / 0.46) !important;
+  background: rgb(255 255 255 / 0.62) !important;
   border-color: rgb(15 23 42 / 0.24) !important;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), 0 6px 16px rgb(0 0 0 / 0.12) !important;
 }
@@ -3318,7 +3413,7 @@ body {
 }
 
 .dark .sidebar {
-  background: rgb(16 20 28 / 0.58) !important;
+  background: rgb(16 20 28 / 0.7) !important;
   border-color: rgb(226 232 240 / 0.2) !important;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05), 0 6px 16px rgb(0 0 0 / 0.35) !important;
 }

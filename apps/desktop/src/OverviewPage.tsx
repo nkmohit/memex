@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  ArrowUpRight,
   Clock3,
   Database,
   FilePlus2,
   Flame,
+  Search,
   Sparkles,
 } from "lucide-react";
 import {
-  getActivityTimeline,
+  getActivityHeatmapTimeline,
   getConversations,
   getSourceStats,
   getStats,
 } from "./db";
-import type { ActivityDayPoint, ConversationRow, DbStats, SourceStats } from "./db";
+import type { ActivityHeatmapPoint, ConversationRow, DbStats, SourceStats } from "./db";
+import AppSelect from "./components/AppSelect";
 import { formatDate, formatTimestamp } from "./utils";
 import { IMPORT_SOURCES } from "./importer";
 
@@ -38,22 +39,36 @@ function sourceLabel(source: string): string {
   return meta?.label ?? source.charAt(0).toUpperCase() + source.slice(1);
 }
 
+function dayToDate(day: string): Date {
+  const [y, m, d] = day.split("-").map((p) => Number(p));
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function dayFromDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 interface OverviewPageProps {
   onOpenImport: () => void;
+  onOpenSearch: () => void;
   onSelectConversation: (convId: string) => void;
   onRebuildIndex: () => void;
 }
 
 export default function OverviewPage({
   onOpenImport,
+  onOpenSearch,
   onSelectConversation,
   onRebuildIndex,
 }: OverviewPageProps) {
   const [stats, setStats] = useState<DbStats | null>(null);
   const [sourceStats, setSourceStats] = useState<SourceStats[]>([]);
   const [recent, setRecent] = useState<ConversationRow[]>([]);
-  const [activityTimeline, setActivityTimeline] = useState<ActivityDayPoint[]>([]);
-  const [pulseRange, setPulseRange] = useState<"last30days" | "last30active" | "alltime">("last30days");
+  const [activityTimeline, setActivityTimeline] = useState<ActivityHeatmapPoint[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,7 +81,7 @@ export default function OverviewPage({
           getStats(),
           getSourceStats(),
           getConversations(12),
-          getActivityTimeline(),
+          getActivityHeatmapTimeline(),
         ]);
         if (!cancelled) {
           setStats(s);
@@ -94,58 +109,113 @@ export default function OverviewPage({
   const totalConvs = stats?.conversationCount ?? 0;
   const totalMsgs = stats?.messageCount ?? 0;
   const indexedMsgs = stats?.indexedMessageCount ?? 0;
+  const indexedPct = totalMsgs > 0 ? Math.round((indexedMsgs / totalMsgs) * 100) : 100;
   const lastImport = stats?.latestMessageTimestamp
     ? formatTimestamp(stats.latestMessageTimestamp)
     : "No activity yet";
+  const inputTokens = stats?.estimatedInputTokens ?? 0;
+  const outputTokens = stats?.estimatedOutputTokens ?? 0;
+  const totalTokens = stats?.estimatedTotalTokens ?? 0;
 
   const isEmpty = totalConvs === 0 && totalMsgs === 0;
   const needsIndexRebuild = totalMsgs > 0 && indexedMsgs === 0;
-  const indexedPct = totalMsgs > 0 ? Math.round((indexedMsgs / totalMsgs) * 100) : 100;
 
-  function dateToKey(d: Date): string {
-    return d.toISOString().slice(0, 10);
-  }
+  const yearOptions = useMemo(() => {
+    const years = Array.from(new Set(activityTimeline.map((point) => point.day.slice(0, 4)))).sort((a, b) =>
+      b.localeCompare(a)
+    );
+    return [{ value: "all", label: "All time" }, ...years.map((year) => ({ value: year, label: year }))];
+  }, [activityTimeline]);
 
-  const activityByDay = useMemo(() => {
+  useEffect(() => {
+    if (selectedYear !== "all" && !yearOptions.some((option) => option.value === selectedYear)) {
+      setSelectedYear("all");
+    }
+  }, [selectedYear, yearOptions]);
+
+  const heatmapDays = useMemo(() => {
     if (activityTimeline.length === 0) return [];
 
-    const byDay = new Map(activityTimeline.map((p) => [p.day, p.count]));
     const sorted = [...activityTimeline].sort((a, b) => a.day.localeCompare(b.day));
-    const firstDay = sorted[0]!.day;
-    const lastDay = sorted[sorted.length - 1]!.day;
+    const byDay = new Map(sorted.map((point) => [point.day, point]));
 
-    if (pulseRange === "last30active") {
-      return sorted
-        .filter((p) => p.count > 0)
-        .slice(-30)
-        .map((p) => p.count);
-    }
+    const startDate =
+      selectedYear === "all" ? dayToDate(sorted[0]!.day) : new Date(Number(selectedYear), 0, 1);
 
-    if (pulseRange === "alltime") {
-      const full: number[] = [];
-      const start = new Date(`${firstDay}T00:00:00`);
-      const end = new Date(`${lastDay}T00:00:00`);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        full.push(byDay.get(dateToKey(d)) ?? 0);
-      }
-      return full;
-    }
+    let endDate =
+      selectedYear === "all" ? dayToDate(sorted[sorted.length - 1]!.day) : new Date(Number(selectedYear), 11, 31);
 
-    const fullLast30: number[] = [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    for (let i = 29; i >= 0; i -= 1) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      fullLast30.push(byDay.get(dateToKey(d)) ?? 0);
+    if (selectedYear !== "all" && Number(selectedYear) === now.getFullYear()) {
+      endDate = now;
     }
-    return fullLast30;
-  }, [activityTimeline, pulseRange]);
 
-  const maxActivity = Math.max(1, ...activityByDay);
-  const midActivity = Math.floor(maxActivity / 2);
-  const activeDays = activityByDay.filter((count) => count > 0).length;
-  const activityTotal = activityByDay.reduce((sum, count) => sum + count, 0);
+    const days: ActivityHeatmapPoint[] = [];
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dayKey = dayFromDate(d);
+      const point = byDay.get(dayKey);
+      days.push(
+        point ?? {
+          day: dayKey,
+          totalCount: 0,
+          chatgptCount: 0,
+          claudeCount: 0,
+          geminiCount: 0,
+          grokCount: 0,
+          otherCount: 0,
+        }
+      );
+    }
+
+    return days;
+  }, [activityTimeline, selectedYear]);
+
+  const maxActivity = Math.max(1, ...heatmapDays.map((point) => point.totalCount));
+  const activeDays = heatmapDays.filter((point) => point.totalCount > 0).length;
+  const activityTotal = heatmapDays.reduce((sum, point) => sum + point.totalCount, 0);
+
+  const heatmapCells = useMemo(() => {
+    if (heatmapDays.length === 0) return [] as Array<ActivityHeatmapPoint | null>;
+    const firstWeekday = dayToDate(heatmapDays[0]!.day).getDay();
+    const leading = Array.from({ length: firstWeekday }, () => null as ActivityHeatmapPoint | null);
+    const base = [...leading, ...heatmapDays];
+    const trailingCount = (7 - (base.length % 7)) % 7;
+    const trailing = Array.from({ length: trailingCount }, () => null as ActivityHeatmapPoint | null);
+    return [...base, ...trailing];
+  }, [heatmapDays]);
+
+  function intensityLevel(count: number): number {
+    if (count <= 0) return 0;
+    const ratio = count / maxActivity;
+    if (ratio < 0.25) return 1;
+    if (ratio < 0.5) return 2;
+    if (ratio < 0.75) return 3;
+    return 4;
+  }
+
+  function dayTooltip(point: ActivityHeatmapPoint): string {
+    const dateText = dayToDate(point.day).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+    const sourceBreakdown: Array<[string, number]> = [
+      ["ChatGPT", point.chatgptCount],
+      ["Claude", point.claudeCount],
+      ["Gemini", point.geminiCount],
+      ["Grok", point.grokCount],
+      ["Other", point.otherCount],
+    ];
+    const sourceLines = sourceBreakdown
+      .filter(([, count]) => count > 0)
+      .map(([label, count]) => `${label}: ${count}`);
+
+    const totalLine = `${point.totalCount.toLocaleString()} message${point.totalCount === 1 ? "" : "s"}`;
+    return sourceLines.length > 0
+      ? `${dateText}\n${totalLine}\n${sourceLines.join("\n")}`
+      : `${dateText}\nNo messages`;
+  }
 
   const sourceMessageTotal = sourceStats.reduce((sum, source) => sum + source.messageCount, 0);
   const recentRows = recent.slice(0, 8);
@@ -181,15 +251,8 @@ export default function OverviewPage({
             <button type="button" className="overview-btn ui-btn ui-btn--secondary" onClick={onOpenImport}>
               <FilePlus2 size={15} /> Import data
             </button>
-            <button
-              type="button"
-              className="overview-btn ui-btn ui-btn--primary"
-              onClick={() => {
-                if (recent[0]?.id) onSelectConversation(recent[0].id);
-              }}
-              disabled={!recent[0]?.id}
-            >
-              <ArrowUpRight size={15} /> Open latest thread
+            <button type="button" className="overview-btn ui-btn ui-btn--primary" onClick={onOpenSearch}>
+              <Search size={15} /> Search (Cmd K)
             </button>
           </div>
         </div>
@@ -229,12 +292,15 @@ export default function OverviewPage({
           <p className="overview-metric-label">Messages</p>
           <p className="overview-metric-value">{totalMsgs.toLocaleString()}</p>
           <p className="overview-metric-meta">Total entries in memory</p>
+          <p className="overview-metric-meta">{indexedPct}% indexed • {indexedMsgs.toLocaleString()} indexed messages</p>
         </article>
 
         <article className="overview-metric-card">
-          <p className="overview-metric-label">Search index coverage</p>
-          <p className="overview-metric-value">{indexedPct}%</p>
-          <p className="overview-metric-meta">{indexedMsgs.toLocaleString()} indexed messages</p>
+          <p className="overview-metric-label">Token count</p>
+          <p className="overview-metric-value">{totalTokens.toLocaleString()}</p>
+          <p className="overview-metric-meta">
+            In {inputTokens.toLocaleString()} • Out {outputTokens.toLocaleString()} (estimated)
+          </p>
         </article>
 
         <article className="overview-metric-card accent">
@@ -253,16 +319,14 @@ export default function OverviewPage({
               <Activity size={16} /> Memory pulse strip
             </h2>
             <div className="overview-pulse-controls">
-              <select
+              <AppSelect
+                ariaLabel="Pulse timeframe"
                 className="overview-pulse-select app-select"
-                value={pulseRange}
-                onChange={(e) => setPulseRange(e.target.value as "last30days" | "last30active" | "alltime")}
-                aria-label="Pulse timeframe"
-              >
-                <option value="last30days">Last 30 days</option>
-                <option value="last30active">Last 30 active days</option>
-                <option value="alltime">All time</option>
-              </select>
+                size="sm"
+                value={selectedYear}
+                onChange={setSelectedYear}
+                options={yearOptions}
+              />
               <p className="overview-section-meta">
                 {activityTotal.toLocaleString()} messages • {activeDays} active day{activeDays === 1 ? "" : "s"}
               </p>
@@ -270,29 +334,24 @@ export default function OverviewPage({
           </div>
 
           <div
-            className="overview-pulse-strip"
+            className="overview-pulse-strip overview-heatmap-grid"
             role="img"
-            aria-label={`Message activity intensity: ${pulseRange}`}
-            style={{
-              gridTemplateColumns: `repeat(${Math.max(activityByDay.length, 1)}, minmax(8px, 1fr))`,
-              minWidth: `${Math.max(activityByDay.length * 11, 320)}px`,
-            }}
+            aria-label={`Daily conversation activity heatmap: ${selectedYear === "all" ? "all time" : selectedYear}`}
           >
-            {activityByDay.map((count, i) => {
-              const ratio = count / maxActivity;
-              const height = Math.max(12, Math.round(12 + ratio * 66));
+            {heatmapCells.map((point, index) => {
+              if (!point) {
+                return <span key={`empty-${index}`} className="overview-heatmap-cell empty" aria-hidden />;
+              }
+              const level = intensityLevel(point.totalCount);
               return (
-                <div key={i} className="overview-pulse-bar-wrap" title={`Day ${i + 1}: ${count} message${count === 1 ? "" : "s"}`}>
-                  <div className="overview-pulse-bar" style={{ height: `${height}px`, opacity: 0.28 + ratio * 0.72 }} />
-                </div>
+                <span
+                  key={point.day}
+                  className={`overview-heatmap-cell level-${level}`}
+                  title={dayTooltip(point)}
+                  aria-label={`${point.day}: ${point.totalCount} message${point.totalCount === 1 ? "" : "s"}`}
+                />
               );
             })}
-          </div>
-
-          <div className="overview-pulse-legend" aria-hidden>
-            <span>{maxActivity.toLocaleString()}</span>
-            <span>{midActivity.toLocaleString()}</span>
-            <span>0</span>
           </div>
         </div>
 

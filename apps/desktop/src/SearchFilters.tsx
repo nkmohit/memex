@@ -1,4 +1,5 @@
 import type { SearchPageSnapshot } from "./SearchPage";
+import AppSelect from "./components/AppSelect";
 
 interface SearchFiltersProps {
   availableSources: string[];
@@ -42,21 +43,18 @@ export default function SearchFilters({
       </button>
 
       <div className="search-filters" id="search-filters" hidden={!filtersOpen}>
-        <label htmlFor="search-source">
+        <label>
           Source
-          <select
-            id="search-source"
+          <AppSelect
+            ariaLabel="Source filter"
             className="app-select"
             value={source}
-            onChange={(e) => onSourceChange(e.target.value)}
-          >
-            <option value="">All</option>
-            {availableSources.map((src) => (
-              <option key={src} value={src}>
-                {sourceLabel(src)}
-              </option>
-            ))}
-          </select>
+            onChange={onSourceChange}
+            options={[
+              { value: "", label: "All" },
+              ...availableSources.map((src) => ({ value: src, label: sourceLabel(src) })),
+            ]}
+          />
         </label>
 
         <label htmlFor="search-from">
@@ -81,20 +79,21 @@ export default function SearchFilters({
           />
         </label>
 
-        <label htmlFor="search-sort">
+        <label>
           Sort
-          <select
-            id="search-sort"
+          <AppSelect
+            ariaLabel="Sort results"
             className="app-select"
             value={sort}
-            onChange={(e) => onSortChange(e.target.value as SearchPageSnapshot["sort"])}
-          >
-            <option value="last_occurrence_desc">Last occurrence</option>
-            <option value="relevance">Relevance</option>
-            <option value="occurrence_count_desc">Occurrence count</option>
-            <option value="title_az">Title A-Z</option>
-            <option value="title_za">Title Z-A</option>
-          </select>
+            onChange={(value) => onSortChange(value as SearchPageSnapshot["sort"])}
+            options={[
+              { value: "last_occurrence_desc", label: "Last occurrence" },
+              { value: "relevance", label: "Relevance" },
+              { value: "occurrence_count_desc", label: "Occurrence count" },
+              { value: "title_az", label: "Title A-Z" },
+              { value: "title_za", label: "Title Z-A" },
+            ]}
+          />
         </label>
       </div>
     </>
