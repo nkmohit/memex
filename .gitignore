@@ -1,2 +1,4 @@
 packages/core/node_modules/*
 packages/core/dist/*
+
+docs/
