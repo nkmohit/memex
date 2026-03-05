@@ -33,6 +33,13 @@ interface OnboardingPageProps {
   onImport: (source: ImportSource) => void;
   importing: boolean;
   importingSource: ImportSource | null;
+  onCancelImport: () => void;
+  importProgress: {
+    conversationsDone: number;
+    conversationsTotal: number;
+    messagesDone: number;
+    messagesTotal?: number;
+  } | null;
   onSkip: () => void;
 }
 
@@ -40,6 +47,8 @@ export default function OnboardingPage({
   onImport,
   importing,
   importingSource,
+  onCancelImport,
+  importProgress,
   onSkip,
 }: OnboardingPageProps) {
   return (
@@ -80,14 +89,31 @@ export default function OnboardingPage({
               <div className="onboarding-card-footer">
                 <span className="onboarding-card-guide">Export guide →</span>
                 {src.available ? (
-                  <button
-                    type="button"
-                    className="onboarding-card-btn ui-btn ui-btn--primary ui-btn--sm"
-                    onClick={() => onImport(src.id)}
-                    disabled={importing}
-                  >
-                    {importing && importingSource === src.id ? "Importing…" : "Import"}
-                  </button>
+                  importing && importingSource === src.id ? (
+                    <div className="onboarding-import-actions">
+                      <span className="onboarding-import-progress">
+                        {importProgress
+                          ? `${importProgress.messagesDone.toLocaleString()} / ${(importProgress.messagesTotal ?? 0).toLocaleString()} msgs`
+                          : "Importing..."}
+                      </span>
+                      <button
+                        type="button"
+                        className="onboarding-card-btn ui-btn ui-btn--secondary ui-btn--sm"
+                        onClick={onCancelImport}
+                      >
+                        Cancel import
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="onboarding-card-btn ui-btn ui-btn--primary ui-btn--sm"
+                      onClick={() => onImport(src.id)}
+                      disabled={importing}
+                    >
+                      Import
+                    </button>
+                  )
                 ) : (
                   <span className="onboarding-card-soon">Coming soon</span>
                 )}

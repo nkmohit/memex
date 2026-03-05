@@ -9,12 +9,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  getActivityHeatmapTimeline,
-  getConversations,
-  getSourceStats,
-  getStats,
+  getCachedDashboardSnapshot,
+  getDashboardSnapshot,
+  type ActivityHeatmapPoint,
+  type ConversationRow,
+  type DashboardSnapshot,
+  type DbStats,
+  type SourceStats,
 } from "./db";
-import type { ActivityHeatmapPoint, ConversationRow, DbStats, SourceStats } from "./db";
 import AppSelect from "./components/AppSelect";
 import { formatDate, formatTimestamp } from "./utils";
 import { IMPORT_SOURCES } from "./importer";
@@ -51,11 +53,44 @@ function dayFromDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function getFiscalEndYear(date: Date): number {
+  const month = date.getMonth();
+  const year = date.getFullYear();
+  return month >= 2 ? year + 1 : year;
+}
+
+function fiscalWindowBounds(endYear: number): { start: Date; end: Date } {
+  return {
+    start: new Date(endYear - 1, 2, 1),
+    end: new Date(endYear, 2, 0),
+  };
+}
+
 interface OverviewPageProps {
   onOpenImport: () => void;
   onOpenSearch: () => void;
   onSelectConversation: (convId: string) => void;
   onRebuildIndex: () => void;
+}
+
+function OverviewSkeleton() {
+  return (
+    <>
+      <section className="overview-hero overview-stage stage-1" aria-hidden>
+        <div className="overview-skeleton-line w-30" />
+        <div className="overview-skeleton-line w-50" />
+      </section>
+      <section className="overview-metric-band overview-stage stage-2" aria-hidden>
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <article key={idx} className="overview-metric-card overview-card-skeleton" />
+        ))}
+      </section>
+      <section className="overview-memory-pulse overview-stage stage-3" aria-hidden>
+        <div className="overview-pulse-main overview-card-skeleton tall" />
+        <aside className="overview-pulse-side overview-card-skeleton tall" />
+      </section>
+    </>
+  );
 }
 
 export default function OverviewPage({
@@ -64,11 +99,8 @@ export default function OverviewPage({
   onSelectConversation,
   onRebuildIndex,
 }: OverviewPageProps) {
-  const [stats, setStats] = useState<DbStats | null>(null);
-  const [sourceStats, setSourceStats] = useState<SourceStats[]>([]);
-  const [recent, setRecent] = useState<ConversationRow[]>([]);
-  const [activityTimeline, setActivityTimeline] = useState<ActivityHeatmapPoint[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,21 +108,16 @@ export default function OverviewPage({
 
     async function load() {
       setLoading(true);
-      try {
-        const [s, ss, convs, activity] = await Promise.all([
-          getStats(),
-          getSourceStats(),
-          getConversations(12),
-          getActivityHeatmapTimeline(),
-        ]);
-        if (!cancelled) {
-          setStats(s);
-          setSourceStats(ss);
-          setRecent(convs);
-          setActivityTimeline(activity);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+      const cached = await getCachedDashboardSnapshot();
+      if (!cancelled && cached) {
+        setSnapshot(cached);
+        setLoading(false);
+      }
+
+      const fresh = await getDashboardSnapshot();
+      if (!cancelled) {
+        setSnapshot(fresh);
+        setLoading(false);
       }
     }
 
@@ -100,6 +127,11 @@ export default function OverviewPage({
       cancelled = true;
     };
   }, []);
+
+  const stats: DbStats | null = snapshot?.stats ?? null;
+  const sourceStats: SourceStats[] = snapshot?.sourceStats ?? [];
+  const recent: ConversationRow[] = snapshot?.recentConversations ?? [];
+  const activityTimeline: ActivityHeatmapPoint[] = snapshot?.activityTimeline ?? [];
 
   const topSource = useMemo(() => {
     if (sourceStats.length === 0) return null;
@@ -121,38 +153,40 @@ export default function OverviewPage({
   const needsIndexRebuild = totalMsgs > 0 && indexedMsgs === 0;
 
   const yearOptions = useMemo(() => {
-    const years = Array.from(new Set(activityTimeline.map((point) => point.day.slice(0, 4)))).sort((a, b) =>
-      b.localeCompare(a)
-    );
-    return [{ value: "all", label: "All time" }, ...years.map((year) => ({ value: year, label: year }))];
+    const years = Array.from(
+      new Set(
+        activityTimeline.map((point) => {
+          return String(getFiscalEndYear(dayToDate(point.day)));
+        })
+      )
+    )
+      .sort((a, b) => b.localeCompare(a))
+      .map((year) => ({ value: year, label: year }));
+
+    if (years.length === 0) {
+      const fallback = String(getFiscalEndYear(new Date()));
+      return [{ value: fallback, label: fallback }];
+    }
+
+    return years;
   }, [activityTimeline]);
 
   useEffect(() => {
-    if (selectedYear !== "all" && !yearOptions.some((option) => option.value === selectedYear)) {
-      setSelectedYear("all");
+    if (!selectedYear) {
+      setSelectedYear(Number(yearOptions[0]?.value));
+      return;
     }
+    const stillValid = yearOptions.some((opt) => Number(opt.value) === selectedYear);
+    if (!stillValid) setSelectedYear(Number(yearOptions[0]?.value));
   }, [selectedYear, yearOptions]);
 
   const heatmapDays = useMemo(() => {
-    if (activityTimeline.length === 0) return [];
-
-    const sorted = [...activityTimeline].sort((a, b) => a.day.localeCompare(b.day));
-    const byDay = new Map(sorted.map((point) => [point.day, point]));
-
-    const startDate =
-      selectedYear === "all" ? dayToDate(sorted[0]!.day) : new Date(Number(selectedYear), 0, 1);
-
-    let endDate =
-      selectedYear === "all" ? dayToDate(sorted[sorted.length - 1]!.day) : new Date(Number(selectedYear), 11, 31);
-
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    if (selectedYear !== "all" && Number(selectedYear) === now.getFullYear()) {
-      endDate = now;
-    }
+    if (!selectedYear) return [];
+    const { start, end } = fiscalWindowBounds(selectedYear);
+    const byDay = new Map(activityTimeline.map((point) => [point.day, point]));
 
     const days: ActivityHeatmapPoint[] = [];
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dayKey = dayFromDate(d);
       const point = byDay.get(dayKey);
       days.push(
@@ -185,6 +219,25 @@ export default function OverviewPage({
     return [...base, ...trailing];
   }, [heatmapDays]);
 
+  const weekCount = Math.max(1, Math.ceil(heatmapCells.length / 7));
+
+  const monthMarkers = useMemo(() => {
+    const markers: Array<{ column: number; label: string }> = [];
+    for (let column = 0; column < weekCount; column++) {
+      const weekSlice = heatmapCells.slice(column * 7, column * 7 + 7).filter(Boolean) as ActivityHeatmapPoint[];
+      const first = weekSlice[0];
+      if (!first) continue;
+      const date = dayToDate(first.day);
+      if (date.getDate() <= 7) {
+        markers.push({
+          column,
+          label: date.toLocaleDateString(undefined, { month: "short" }),
+        });
+      }
+    }
+    return markers;
+  }, [heatmapCells, weekCount]);
+
   function intensityLevel(count: number): number {
     if (count <= 0) return 0;
     const ratio = count / maxActivity;
@@ -211,7 +264,7 @@ export default function OverviewPage({
       .filter(([, count]) => count > 0)
       .map(([label, count]) => `${label}: ${count}`);
 
-    const totalLine = `${point.totalCount.toLocaleString()} message${point.totalCount === 1 ? "" : "s"}`;
+    const totalLine = `${point.totalCount.toLocaleString("en-US")} message${point.totalCount === 1 ? "" : "s"}`;
     return sourceLines.length > 0
       ? `${dateText}\n${totalLine}\n${sourceLines.join("\n")}`
       : `${dateText}\nNo messages`;
@@ -220,240 +273,259 @@ export default function OverviewPage({
   const sourceMessageTotal = sourceStats.reduce((sum, source) => sum + source.messageCount, 0);
   const recentRows = recent.slice(0, 8);
 
-  if (loading) {
-    return (
-      <main className="overview-main" id="main-content">
-        <h1 className="overview-title">Command Center</h1>
-        <p className="empty-text">Loading dashboard...</p>
-      </main>
-    );
-  }
-
   return (
     <main className="overview-main" id="main-content">
-      <section className="overview-hero overview-stage stage-1" aria-labelledby="overview-heading">
-        <div>
-          <p className="overview-kicker">Memex desktop intelligence</p>
-          <h1 className="overview-title" id="overview-heading">
-            Command Center
-          </h1>
-          <p className="overview-subtitle">
-            Local-first memory analytics for your imported AI conversations.
-          </p>
-        </div>
-
-        <div className="overview-hero-controls">
-          <div className="overview-sync-chip" role="status" aria-live="polite">
-            <Clock3 size={14} />
-            <span>Latest activity: {lastImport}</span>
-          </div>
-          <div className="overview-hero-actions">
-            <button type="button" className="overview-btn ui-btn ui-btn--secondary" onClick={onOpenImport}>
-              <FilePlus2 size={15} /> Import data
-            </button>
-            <button type="button" className="overview-btn ui-btn ui-btn--primary" onClick={onOpenSearch}>
-              <Search size={15} /> Search (Cmd K)
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {isEmpty && (
-        <div className="overview-empty-state overview-stage stage-1">
-          <p className="overview-empty-text">No data yet. Import a conversation archive to activate the dashboard.</p>
-          <button type="button" className="overview-btn ui-btn ui-btn--primary" onClick={onOpenImport}>
-            Start import
-          </button>
-        </div>
-      )}
-
-      {needsIndexRebuild && (
-        <div className="overview-index-banner overview-stage stage-1" role="status">
-          <div>
-            <div className="overview-index-title">Search index is missing</div>
-            <div className="overview-index-sub">
-              Rebuild now to restore full-text results and highlighting.
-            </div>
-          </div>
-          <button type="button" className="overview-index-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={onRebuildIndex}>
-            Rebuild index
-          </button>
-        </div>
-      )}
-
-      <section className="overview-metric-band overview-stage stage-2" aria-label="Key metrics">
-        <article className="overview-metric-card">
-          <p className="overview-metric-label">Conversations</p>
-          <p className="overview-metric-value">{totalConvs.toLocaleString()}</p>
-          <p className="overview-metric-meta">Imported threads</p>
-        </article>
-
-        <article className="overview-metric-card">
-          <p className="overview-metric-label">Messages</p>
-          <p className="overview-metric-value">{totalMsgs.toLocaleString()}</p>
-          <p className="overview-metric-meta">Total entries in memory</p>
-          <p className="overview-metric-meta">{indexedPct}% indexed • {indexedMsgs.toLocaleString()} indexed messages</p>
-        </article>
-
-        <article className="overview-metric-card">
-          <p className="overview-metric-label">Token count</p>
-          <p className="overview-metric-value">{totalTokens.toLocaleString()}</p>
-          <p className="overview-metric-meta">
-            In {inputTokens.toLocaleString()} • Out {outputTokens.toLocaleString()} (estimated)
-          </p>
-        </article>
-
-        <article className="overview-metric-card accent">
-          <p className="overview-metric-label">Most active source</p>
-          <p className="overview-metric-value">{topSource ? sourceLabel(topSource.source) : "—"}</p>
-          <p className="overview-metric-meta">
-            {topSource ? `${topSource.messageCount.toLocaleString()} messages` : "No source data yet"}
-          </p>
-        </article>
-      </section>
-
-      <section className="overview-memory-pulse overview-stage stage-3" aria-label="Memory pulse strip">
-        <div className="overview-pulse-main">
-          <div className="overview-section-head">
-            <h2 className="overview-section-title">
-              <Activity size={16} /> Memory pulse strip
-            </h2>
-            <div className="overview-pulse-controls">
-              <AppSelect
-                ariaLabel="Pulse timeframe"
-                className="overview-pulse-select app-select"
-                size="sm"
-                value={selectedYear}
-                onChange={setSelectedYear}
-                options={yearOptions}
-              />
-              <p className="overview-section-meta">
-                {activityTotal.toLocaleString()} messages • {activeDays} active day{activeDays === 1 ? "" : "s"}
+      {!snapshot && loading ? (
+        <OverviewSkeleton />
+      ) : (
+        <>
+          <section className="overview-hero overview-stage stage-1" aria-labelledby="overview-heading">
+            <div>
+              <p className="overview-kicker">Memex</p>
+              <h1 className="overview-title" id="overview-heading">
+                Command Center
+              </h1>
+              <p className="overview-subtitle">
+                Local-first memory analytics for your imported AI conversations.
               </p>
             </div>
-          </div>
 
-          <div
-            className="overview-pulse-strip overview-heatmap-grid"
-            role="img"
-            aria-label={`Daily conversation activity heatmap: ${selectedYear === "all" ? "all time" : selectedYear}`}
-          >
-            {heatmapCells.map((point, index) => {
-              if (!point) {
-                return <span key={`empty-${index}`} className="overview-heatmap-cell empty" aria-hidden />;
-              }
-              const level = intensityLevel(point.totalCount);
-              return (
-                <span
-                  key={point.day}
-                  className={`overview-heatmap-cell level-${level}`}
-                  title={dayTooltip(point)}
-                  aria-label={`${point.day}: ${point.totalCount} message${point.totalCount === 1 ? "" : "s"}`}
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        <aside className="overview-pulse-side" aria-label="Source momentum">
-          <div className="overview-section-head tight">
-            <h3 className="overview-section-title small">
-              <Flame size={15} /> Source momentum
-            </h3>
-            <p className="overview-section-meta">Share of message volume by source</p>
-          </div>
-
-          {sourceStats.length === 0 ? (
-            <p className="overview-muted">No source data yet.</p>
-          ) : (
-            <ul className="overview-source-list">
-              {sourceStats
-                .slice()
-                .sort((a, b) => b.messageCount - a.messageCount)
-                .map((source) => {
-                  const pct = sourceMessageTotal > 0 ? (source.messageCount / sourceMessageTotal) * 100 : 0;
-                  return (
-                    <li key={source.source} className="overview-source-item">
-                      <div className="overview-source-label">
-                        <SourceIcon source={source.source} />
-                        <span>{sourceLabel(source.source)}</span>
-                      </div>
-                      <div className="overview-source-meter" aria-hidden>
-                        <div style={{ width: `${Math.max(6, pct)}%` }} />
-                      </div>
-                      <span className="overview-source-value">{Math.round(pct)}%</span>
-                    </li>
-                  );
-                })}
-            </ul>
-          )}
-        </aside>
-      </section>
-
-      <section className="overview-recent-activity overview-stage stage-4" aria-label="Recent activity table">
-        <div className="overview-section-head">
-          <h2 className="overview-section-title">
-            <Database size={16} /> Recent activity
-          </h2>
-          <p className="overview-section-meta">Latest imported conversations available for instant recall</p>
-        </div>
-
-        {recentRows.length === 0 ? (
-          <p className="overview-muted">No conversations yet. Import data to populate this feed.</p>
-        ) : (
-          <div className="overview-table" role="table" aria-label="Recent conversations">
-            <div className="overview-table-row overview-table-head" role="row">
-              <span role="columnheader">Source</span>
-              <span role="columnheader">Thread title</span>
-              <span role="columnheader">Messages</span>
-              <span role="columnheader">Updated</span>
+            <div className="overview-hero-controls">
+              <div className="overview-sync-chip" role="status" aria-live="polite">
+                <Clock3 size={14} />
+                <span>Latest activity: {lastImport}</span>
+              </div>
+              <div className="overview-hero-actions">
+                <button type="button" className="overview-btn ui-btn ui-btn--secondary" onClick={onOpenImport}>
+                  <FilePlus2 size={15} /> Import data
+                </button>
+                <button type="button" className="overview-btn ui-btn ui-btn--primary" onClick={onOpenSearch}>
+                  <Search size={15} /> Search (Cmd K)
+                </button>
+              </div>
             </div>
-            {recentRows.map((conversation) => (
-              <button
-                key={conversation.id}
-                type="button"
-                className="overview-table-row"
-                role="row"
-                onClick={() => onSelectConversation(conversation.id)}
-                title={conversation.title || "Untitled"}
-              >
-                <span className="overview-table-source" role="cell">
-                  <SourceIcon source={conversation.source} />
-                  {sourceLabel(conversation.source)}
-                </span>
-                <span className="overview-table-title" role="cell">
-                  {conversation.title || "Untitled"}
-                </span>
-                <span className="overview-table-count" role="cell">
-                  {conversation.message_count.toLocaleString()}
-                </span>
-                <span className="overview-table-time" role="cell">
-                  {formatDate(conversation.last_message_at)}
-                </span>
+          </section>
+
+          {isEmpty && (
+            <div className="overview-empty-state overview-stage stage-1">
+              <p className="overview-empty-text">No data yet. Import a conversation archive to activate the dashboard.</p>
+              <button type="button" className="overview-btn ui-btn ui-btn--primary" onClick={onOpenImport}>
+                Start import
               </button>
-            ))}
-          </div>
-        )}
-      </section>
+            </div>
+          )}
 
-      <section className="overview-secondary-rail overview-stage stage-4" aria-label="Insights and status">
-        <article className="overview-note-card">
-          <h3>
-            <Sparkles size={15} /> Insights
-          </h3>
-          <p>
-            AI insight cards will surface recurring topics, high-value threads, and relationship trails across
-            sources.
-          </p>
-        </article>
+          {needsIndexRebuild && (
+            <div className="overview-index-banner overview-stage stage-1" role="status">
+              <div>
+                <div className="overview-index-title">Search index is missing</div>
+                <div className="overview-index-sub">
+                  Rebuild now to restore full-text results and highlighting.
+                </div>
+              </div>
+              <button type="button" className="overview-index-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={onRebuildIndex}>
+                Rebuild index
+              </button>
+            </div>
+          )}
 
-        <article className="overview-note-card">
-          <h3>
-            <Clock3 size={15} /> Data status
-          </h3>
-          <p>All data is stored locally on this device. Last recorded activity: {lastImport}.</p>
-        </article>
-      </section>
+          <section className="overview-metric-band overview-stage stage-2" aria-label="Key metrics">
+            <article className="overview-metric-card primary">
+              <p className="overview-metric-label">Messages</p>
+              <p className="overview-metric-value">{totalMsgs.toLocaleString("en-US")}</p>
+              <p className="overview-metric-meta">{indexedPct}% indexed • {indexedMsgs.toLocaleString("en-US")} indexed messages</p>
+            </article>
+
+            <article className="overview-metric-card">
+              <p className="overview-metric-label">Conversations</p>
+              <p className="overview-metric-value">{totalConvs.toLocaleString("en-US")}</p>
+              <p className="overview-metric-meta">Imported threads</p>
+            </article>
+
+            <article className="overview-metric-card">
+              <p className="overview-metric-label">Token count</p>
+              <p className="overview-metric-value">{totalTokens.toLocaleString("en-US")}</p>
+              <p className="overview-metric-meta">
+                In {inputTokens.toLocaleString("en-US")} • Out {outputTokens.toLocaleString("en-US")} (estimated)
+              </p>
+            </article>
+
+            <article className="overview-metric-card accent">
+              <p className="overview-metric-label">Most active source</p>
+              <p className="overview-metric-value">{topSource ? sourceLabel(topSource.source) : "—"}</p>
+              <p className="overview-metric-meta">
+                {topSource ? `${topSource.messageCount.toLocaleString("en-US")} messages` : "No source data yet"}
+              </p>
+            </article>
+          </section>
+
+          <section className="overview-memory-pulse overview-stage stage-3" aria-label="Memory pulse strip">
+            <div className="overview-pulse-main">
+              <div className="overview-section-head">
+                <h2 className="overview-section-title">
+                  <Activity size={16} /> Memory pulse strip
+                </h2>
+                <div className="overview-pulse-controls">
+                  <AppSelect
+                    ariaLabel="Pulse timeframe"
+                    className="overview-pulse-select app-select"
+                    size="sm"
+                    value={String(selectedYear ?? yearOptions[0]?.value ?? "")}
+                    onChange={(value) => setSelectedYear(Number(value))}
+                    options={yearOptions}
+                  />
+                  <p className="overview-section-meta">
+                    {activityTotal.toLocaleString("en-US")} messages • {activeDays} active day{activeDays === 1 ? "" : "s"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="overview-heatmap-months" style={{ gridTemplateColumns: `repeat(${weekCount}, 12px)` }}>
+                {monthMarkers.map((marker, idx) => (
+                  <span key={`${marker.label}-${idx}`} style={{ gridColumnStart: marker.column + 1 }}>
+                    {marker.label}
+                  </span>
+                ))}
+              </div>
+
+              <div className="overview-heatmap-with-days">
+                <div className="overview-heatmap-day-labels" aria-hidden>
+                  <span>Sun</span>
+                  <span>Mon</span>
+                  <span>Tue</span>
+                  <span>Wed</span>
+                  <span>Thu</span>
+                  <span>Fri</span>
+                  <span>Sat</span>
+                </div>
+                <div
+                  className="overview-pulse-strip overview-heatmap-grid"
+                  role="img"
+                  aria-label={`Daily conversation activity heatmap for fiscal year ending ${selectedYear ?? ""}`}
+                >
+                  {heatmapCells.map((point, index) => {
+                    if (!point) {
+                      return <span key={`empty-${index}`} className="overview-heatmap-cell empty" aria-hidden />;
+                    }
+                    const level = intensityLevel(point.totalCount);
+                    return (
+                      <span
+                        key={point.day}
+                        className={`overview-heatmap-cell level-${level}`}
+                        title={dayTooltip(point)}
+                        aria-label={`${point.day}: ${point.totalCount} message${point.totalCount === 1 ? "" : "s"}`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {activityTotal === 0 && (
+                <p className="overview-muted">No activity for this selected year.</p>
+              )}
+            </div>
+
+            <aside className="overview-pulse-side" aria-label="Source momentum">
+              <div className="overview-section-head tight">
+                <h3 className="overview-section-title small">
+                  <Flame size={15} /> Source momentum
+                </h3>
+                <p className="overview-section-meta">Share of message volume by source</p>
+              </div>
+
+              {sourceStats.length === 0 ? (
+                <p className="overview-muted">No source data yet.</p>
+              ) : (
+                <ul className="overview-source-list">
+                  {sourceStats
+                    .slice()
+                    .sort((a, b) => b.messageCount - a.messageCount)
+                    .map((source) => {
+                      const pct = sourceMessageTotal > 0 ? (source.messageCount / sourceMessageTotal) * 100 : 0;
+                      return (
+                        <li key={source.source} className="overview-source-item">
+                          <div className="overview-source-label">
+                            <SourceIcon source={source.source} />
+                            <span>{sourceLabel(source.source)}</span>
+                          </div>
+                          <div className="overview-source-meter" aria-hidden>
+                            <div style={{ width: `${Math.max(6, pct)}%` }} />
+                          </div>
+                          <span className="overview-source-value">{Math.round(pct)}%</span>
+                        </li>
+                      );
+                    })}
+                </ul>
+              )}
+            </aside>
+          </section>
+
+          <section className="overview-recent-activity overview-stage stage-4" aria-label="Recent activity table">
+            <div className="overview-section-head">
+              <h2 className="overview-section-title">
+                <Database size={16} /> Recent activity
+              </h2>
+              <p className="overview-section-meta">Latest imported conversations available for instant recall</p>
+            </div>
+
+            {recentRows.length === 0 ? (
+              <p className="overview-muted">No conversations yet. Import data to populate this feed.</p>
+            ) : (
+              <div className="overview-table" role="table" aria-label="Recent conversations">
+                <div className="overview-table-row overview-table-head" role="row">
+                  <span role="columnheader">Source</span>
+                  <span role="columnheader">Thread title</span>
+                  <span role="columnheader">Messages</span>
+                  <span role="columnheader">Updated</span>
+                </div>
+                {recentRows.map((conversation) => (
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    className="overview-table-row"
+                    role="row"
+                    onClick={() => onSelectConversation(conversation.id)}
+                    title={conversation.title || "Untitled"}
+                  >
+                    <span className="overview-table-source" role="cell">
+                      <SourceIcon source={conversation.source} />
+                      {sourceLabel(conversation.source)}
+                    </span>
+                    <span className="overview-table-title" role="cell">
+                      {conversation.title || "Untitled"}
+                    </span>
+                    <span className="overview-table-count" role="cell">
+                      {conversation.message_count.toLocaleString("en-US")}
+                    </span>
+                    <span className="overview-table-time" role="cell">
+                      {formatDate(conversation.last_message_at)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="overview-secondary-rail overview-stage stage-4" aria-label="Insights and status">
+            <article className="overview-note-card">
+              <h3>
+                <Sparkles size={15} /> Insights
+              </h3>
+              <p>
+                AI insight cards will surface recurring topics, high-value threads, and relationship trails across
+                sources.
+              </p>
+            </article>
+
+            <article className="overview-note-card">
+              <h3>
+                <Clock3 size={15} /> Data status
+              </h3>
+              <p>All data is stored locally on this device. Last recorded activity: {lastImport}.</p>
+            </article>
+          </section>
+        </>
+      )}
     </main>
   );
 }

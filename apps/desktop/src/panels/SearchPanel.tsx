@@ -92,6 +92,7 @@ function SearchViewer({
                     value={messageSearchQuery}
                     onChange={(e) => onMessageSearchQueryChange(e.target.value)}
                   />
+                  <div className="viewer-search-status">
                   {messageSearchQuery.trim() && matchCount > 0 && (
                     <div className="viewer-search-nav">
                       <span className="viewer-search-count">
@@ -120,6 +121,7 @@ function SearchViewer({
                   {messageSearchQuery.trim() && matchCount === 0 && (
                     <span className="viewer-search-no-results">No results</span>
                   )}
+                </div>
                 </div>
               ) : (
                 <button

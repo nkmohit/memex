@@ -739,9 +739,10 @@ body {
 }
 
 .conv-item.selected {
-  background: var(--selection);
+  background: color-mix(in srgb, var(--selection) 82%, var(--accent) 18%);
   border-left: 3px solid var(--accent);
   padding-left: 11px;
+  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.05);
 }
 
 .conv-item.selected[data-source="chatgpt"] {
@@ -898,7 +899,8 @@ body {
 .viewer-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding-left: 12px;
 }
 
 .viewer-header-menu-wrap {
@@ -962,7 +964,7 @@ body {
 .viewer-search {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .viewer-search-input {
@@ -987,6 +989,12 @@ body {
   gap: 4px;
 }
 
+.viewer-search-status {
+  min-width: 112px;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
 .viewer-search-count {
   font-size: 12px;
   color: var(--color-muted-foreground);
@@ -1004,6 +1012,7 @@ body {
 .viewer-search-no-results {
   font-size: 12px;
   color: var(--color-muted-foreground);
+  white-space: nowrap;
 }
 
 .msg-list {
@@ -1027,8 +1036,9 @@ body {
 }
 
 .msg.human {
-  background: var(--accent);
-  color: var(--accent-contrast);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+  color: var(--text-1);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border-1));
   align-self: flex-end;
   border-bottom-right-radius: 4px;
 }
@@ -1219,9 +1229,9 @@ body {
 .search-meta {
   font-size: 12px;
   color: var(--color-muted-foreground);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
 }
 
 .search-results {
@@ -1504,8 +1514,19 @@ body {
   cursor: not-allowed;
 }
 
+.onboarding-import-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-import-progress {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
 .onboarding-card-soon {
-  color: var(--text-3);
+  color: color-mix(in srgb, var(--text-3) 76%, var(--ov-card-bg));
 }
 
 .onboarding-privacy {
@@ -2155,9 +2176,21 @@ body {
   flex-shrink: 0;
 }
 
+.import-source-importing {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.import-source-progress {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
 .import-source-btn {
   padding: 8px 16px;
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border-1));
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-contrast);
@@ -2165,16 +2198,22 @@ body {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.15s;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.12);
+  transition: opacity 0.15s, transform 0.15s;
 }
 
 .import-source-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  opacity: 0.95;
+  transform: translateY(-1px);
 }
 
 .import-source-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.import-coming-soon {
+  color: color-mix(in srgb, var(--text-3) 80%, var(--ov-card-bg));
 }
 
 /* -------------------------------------------------------------------
@@ -2626,9 +2665,9 @@ body {
 
 .overview-kicker {
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-2);
   margin-bottom: 4px;
 }
@@ -2769,6 +2808,54 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
+.overview-card-skeleton {
+  background: color-mix(in srgb, var(--ov-card-bg) 92%, transparent);
+  border: 1px solid var(--ov-card-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.overview-card-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.26) 45%,
+    transparent 100%
+  );
+  animation: overview-skeleton-wave 1.25s linear infinite;
+}
+
+.overview-card-skeleton.tall {
+  min-height: 184px;
+}
+
+.overview-skeleton-line {
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ov-card-border) 62%, transparent);
+}
+
+.overview-skeleton-line.w-30 {
+  width: 30%;
+}
+
+.overview-skeleton-line.w-50 {
+  width: 50%;
+  margin-top: 10px;
+}
+
+@keyframes overview-skeleton-wave {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
 .overview-metric-card:hover {
   transform: translateY(-2px);
   border-color: var(--ov-accent-1);
@@ -2782,6 +2869,11 @@ body {
       transparent 42%
     ),
     color-mix(in srgb, var(--ov-card-bg) 95%, transparent);
+}
+
+.overview-metric-card.primary {
+  border-color: color-mix(in srgb, var(--ov-accent-1) 44%, var(--ov-card-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-accent-1) 18%, transparent);
 }
 
 .overview-metric-label {
@@ -2879,7 +2971,7 @@ body {
 .overview-pulse-strip {
   border: 1px solid var(--ov-card-border);
   border-radius: 6px;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.18), rgb(0 0 0 / 0.03));
+  background: color-mix(in srgb, var(--ov-card-bg) 90%, transparent);
   min-height: 126px;
   display: grid;
   gap: 3px;
@@ -2889,7 +2981,34 @@ body {
 }
 
 .dark .overview-pulse-strip {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(0 0 0 / 0.2));
+  background: color-mix(in srgb, var(--ov-card-bg) 86%, transparent);
+}
+
+.overview-heatmap-months {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 6px 56px;
+}
+
+.overview-heatmap-months span {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.overview-heatmap-with-days {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.overview-heatmap-day-labels {
+  display: grid;
+  grid-template-rows: repeat(7, 12px);
+  gap: 3px;
+  min-width: 48px;
+  font-size: 10px;
+  color: var(--text-3);
+  line-height: 12px;
 }
 
 .overview-heatmap-grid {
@@ -3010,7 +3129,7 @@ body {
 
 .overview-source-meter > div {
   height: 100%;
-  background: linear-gradient(90deg, var(--ov-accent-1), var(--ov-accent-2));
+  background: var(--ov-accent-1);
 }
 
 .overview-source-value {
