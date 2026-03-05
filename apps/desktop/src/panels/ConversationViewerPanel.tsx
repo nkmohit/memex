@@ -156,44 +156,57 @@ export default function ConversationViewerPanel({
               </div>
               {viewerSearchOpen ? (
                 <div className="viewer-search">
-                  <input
-                    ref={viewerSearchInputRef}
-                    type="search"
-                    className="viewer-search-input"
-                    placeholder="Search in conversation..."
-                    value={messageSearchQuery}
-                    onChange={(e) => onMessageSearchQueryChange(e.target.value)}
-                  />
-                  <div className="viewer-search-status">
-                  {messageSearchQuery.trim() && matchCount > 0 && (
-                    <div className="viewer-search-nav">
-                      <span className="viewer-search-count">
-                        {currentMatchIndex + 1} of {matchCount}
-                      </span>
-                      <button
-                        type="button"
-                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
-                        onClick={onPrevMatch}
-                        title="Previous match"
-                        aria-label="Previous match"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
-                        onClick={onNextMatch}
-                        title="Next match"
-                        aria-label="Next match"
-                      >
-                        ↓
-                      </button>
+                  <div className="viewer-search-shell">
+                    <input
+                      ref={viewerSearchInputRef}
+                      type="search"
+                      className="viewer-search-input"
+                      placeholder="Search in conversation..."
+                      value={messageSearchQuery}
+                      onChange={(e) => onMessageSearchQueryChange(e.target.value)}
+                    />
+                    <div className="viewer-search-status">
+                      {messageSearchQuery.trim() && matchCount > 0 && (
+                        <div className="viewer-search-nav">
+                          <span className="viewer-search-count">
+                            {currentMatchIndex + 1} of {matchCount}
+                          </span>
+                          <button
+                            type="button"
+                            className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
+                            onClick={onPrevMatch}
+                            title="Previous match"
+                            aria-label="Previous match"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
+                            onClick={onNextMatch}
+                            title="Next match"
+                            aria-label="Next match"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      )}
+                      {messageSearchQuery.trim() && matchCount === 0 && (
+                        <span className="viewer-search-no-results">No results</span>
+                      )}
                     </div>
-                  )}
-                  {messageSearchQuery.trim() && matchCount === 0 && (
-                    <span className="viewer-search-no-results">No results</span>
-                  )}
-                </div>
+                    {messageSearchQuery.trim() && (
+                      <button
+                        type="button"
+                        className="viewer-search-clear"
+                        onClick={() => onMessageSearchQueryChange("")}
+                        aria-label="Clear in-conversation search"
+                        title="Clear search"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <button

@@ -41,8 +41,10 @@ export default function AppSelect({
 }: AppSelectProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
   const listId = useId();
   const [open, setOpen] = useState(false);
+  const [menuAlign, setMenuAlign] = useState<"left" | "right">("left");
 
   const selectedIndex = useMemo(
     () => options.findIndex((option) => option.value === value),
@@ -68,6 +70,21 @@ export default function AppSelect({
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const menuRect = menuRef.current?.getBoundingClientRect();
+    if (!menuRect) return;
+    if (menuRect.right > window.innerWidth - 8) {
+      setMenuAlign("right");
+      return;
+    }
+    if (menuRect.left < 8) {
+      setMenuAlign("left");
+      return;
+    }
+    setMenuAlign("left");
+  }, [open, options.length]);
 
   function openMenu() {
     if (disabled) return;
@@ -164,6 +181,7 @@ export default function AppSelect({
       ref={rootRef}
       className={`app-select-root${size === "sm" ? " app-select-root--sm" : ""}${className ? ` ${className}` : ""}`}
       data-open={open ? "true" : "false"}
+      data-align={menuAlign}
     >
       <button
         ref={buttonRef}
@@ -182,7 +200,13 @@ export default function AppSelect({
       </button>
 
       {open && (
-        <ul id={listId} role="listbox" aria-label={ariaLabel} className="app-select-menu">
+        <ul
+          ref={menuRef}
+          id={listId}
+          role="listbox"
+          aria-label={ariaLabel}
+          className="app-select-menu"
+        >
           {options.map((option, index) => {
             const isSelected = option.value === value;
             const isActive = index === activeIndex;

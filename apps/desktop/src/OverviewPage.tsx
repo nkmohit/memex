@@ -66,6 +66,12 @@ function fiscalWindowBounds(endYear: number): { start: Date; end: Date } {
   };
 }
 
+interface HeatmapHoverState {
+  point: ActivityHeatmapPoint;
+  x: number;
+  y: number;
+}
+
 interface OverviewPageProps {
   onOpenImport: () => void;
   onOpenSearch: () => void;
@@ -101,6 +107,7 @@ export default function OverviewPage({
 }: OverviewPageProps) {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [hoveredHeatmap, setHoveredHeatmap] = useState<HeatmapHoverState | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -223,20 +230,25 @@ export default function OverviewPage({
 
   const monthMarkers = useMemo(() => {
     const markers: Array<{ column: number; label: string }> = [];
-    for (let column = 0; column < weekCount; column++) {
-      const weekSlice = heatmapCells.slice(column * 7, column * 7 + 7).filter(Boolean) as ActivityHeatmapPoint[];
-      const first = weekSlice[0];
-      if (!first) continue;
-      const date = dayToDate(first.day);
-      if (date.getDate() <= 7) {
-        markers.push({
-          column,
-          label: date.toLocaleDateString(undefined, { month: "short" }),
-        });
-      }
+    const seenColumns = new Set<number>();
+    const firstDay = heatmapDays[0];
+    if (!firstDay) return markers;
+
+    const firstWeekday = dayToDate(firstDay.day).getDay();
+    for (let dayIndex = 0; dayIndex < heatmapDays.length; dayIndex += 1) {
+      const point = heatmapDays[dayIndex];
+      const date = dayToDate(point.day);
+      if (date.getDate() !== 1 && dayIndex !== 0) continue;
+      const column = Math.floor((firstWeekday + dayIndex) / 7);
+      if (seenColumns.has(column)) continue;
+      seenColumns.add(column);
+      markers.push({
+        column,
+        label: date.toLocaleDateString(undefined, { month: "short" }),
+      });
     }
     return markers;
-  }, [heatmapCells, weekCount]);
+  }, [heatmapDays]);
 
   function intensityLevel(count: number): number {
     if (count <= 0) return 0;
@@ -268,6 +280,17 @@ export default function OverviewPage({
     return sourceLines.length > 0
       ? `${dateText}\n${totalLine}\n${sourceLines.join("\n")}`
       : `${dateText}\nNo messages`;
+  }
+
+  function heatmapTooltipDetails(point: ActivityHeatmapPoint): Array<[string, number]> {
+    const rows: Array<[string, number]> = [
+      ["ChatGPT", point.chatgptCount],
+      ["Claude", point.claudeCount],
+      ["Gemini", point.geminiCount],
+      ["Grok", point.grokCount],
+      ["Other", point.otherCount],
+    ];
+    return rows.filter(([, count]) => count > 0);
   }
 
   const sourceMessageTotal = sourceStats.reduce((sum, source) => sum + source.messageCount, 0);
@@ -398,25 +421,62 @@ export default function OverviewPage({
                   <span>Fri</span>
                   <span>Sat</span>
                 </div>
-                <div
-                  className="overview-pulse-strip overview-heatmap-grid"
-                  role="img"
-                  aria-label={`Daily conversation activity heatmap for fiscal year ending ${selectedYear ?? ""}`}
-                >
-                  {heatmapCells.map((point, index) => {
-                    if (!point) {
-                      return <span key={`empty-${index}`} className="overview-heatmap-cell empty" aria-hidden />;
-                    }
-                    const level = intensityLevel(point.totalCount);
-                    return (
-                      <span
-                        key={point.day}
-                        className={`overview-heatmap-cell level-${level}`}
-                        title={dayTooltip(point)}
-                        aria-label={`${point.day}: ${point.totalCount} message${point.totalCount === 1 ? "" : "s"}`}
-                      />
-                    );
-                  })}
+                <div className="overview-heatmap-canvas">
+                  <div
+                    className="overview-pulse-strip overview-heatmap-grid"
+                    role="img"
+                    aria-label={`Daily conversation activity heatmap for fiscal year ending ${selectedYear ?? ""}`}
+                  >
+                    {heatmapCells.map((point, index) => {
+                      if (!point) {
+                        return <span key={`empty-${index}`} className="overview-heatmap-cell empty" aria-hidden />;
+                      }
+                      const level = intensityLevel(point.totalCount);
+                      return (
+                        <span
+                          key={point.day}
+                          className={`overview-heatmap-cell level-${level}`}
+                          title={dayTooltip(point)}
+                          aria-label={`${point.day}: ${point.totalCount} message${point.totalCount === 1 ? "" : "s"}`}
+                          onMouseEnter={(event) => {
+                            const target = event.currentTarget.getBoundingClientRect();
+                            const container = event.currentTarget.closest(".overview-heatmap-canvas")?.getBoundingClientRect();
+                            if (!container) return;
+                            setHoveredHeatmap({
+                              point,
+                              x: target.left - container.left + target.width / 2,
+                              y: target.top - container.top - 8,
+                            });
+                          }}
+                          onMouseLeave={() => setHoveredHeatmap(null)}
+                        />
+                      );
+                    })}
+                  </div>
+                  {hoveredHeatmap && (
+                    <div
+                      className="overview-heatmap-tooltip"
+                      style={{ left: hoveredHeatmap.x, top: hoveredHeatmap.y, transform: "translate(-50%, -100%)" }}
+                    >
+                      <div className="overview-heatmap-tooltip-date">
+                        {dayToDate(hoveredHeatmap.point.day).toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </div>
+                      <div className="overview-heatmap-tooltip-total">
+                        {hoveredHeatmap.point.totalCount.toLocaleString("en-US")} messages
+                      </div>
+                      <div className="overview-heatmap-tooltip-breakdown">
+                        {heatmapTooltipDetails(hoveredHeatmap.point).map(([label, count]) => (
+                          <span key={label}>
+                            {label}: {count}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

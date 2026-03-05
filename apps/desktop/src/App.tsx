@@ -694,6 +694,10 @@ function App() {
     setMessageSearchQuery(searchPageQuery);
     setMessageSearchMatchIndex(0);
     await handleConversationClick(convId, null);
+    window.setTimeout(() => {
+      viewerSearchInputRef.current?.focus();
+      viewerSearchInputRef.current?.select();
+    }, 0);
   }
 
   function handleOverviewSelectConversation(convId: string) {
