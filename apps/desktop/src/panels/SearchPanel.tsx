@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type React from "react";
 import type { ConversationRow, MessageRow } from "../db";
 import SearchPage, { type SearchPageSnapshot } from "../SearchPage";
@@ -9,6 +10,7 @@ type SearchViewerProps = {
   messagesLoading: boolean;
   viewerSearchOpen: boolean;
   onOpenViewerSearch: () => void;
+  onCloseViewerSearch: () => void;
   messageSearchQuery: string;
   onMessageSearchQueryChange: (q: string) => void;
   viewerSearchInputRef: React.RefObject<HTMLInputElement | null>;
@@ -32,6 +34,7 @@ function SearchViewer({
   messagesLoading,
   viewerSearchOpen,
   onOpenViewerSearch,
+  onCloseViewerSearch,
   messageSearchQuery,
   onMessageSearchQueryChange,
   viewerSearchInputRef,
@@ -48,6 +51,15 @@ function SearchViewer({
   highlightText,
   sourceLabel,
 }: SearchViewerProps) {
+  useEffect(() => {
+    if (!viewerSearchOpen || !selectedConversation) return;
+    const id = window.setTimeout(() => {
+      viewerSearchInputRef.current?.focus();
+      viewerSearchInputRef.current?.select();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [viewerSearchOpen, selectedConversation?.id, viewerSearchInputRef]);
+
   return (
     <main className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
       {!selectedConversation ? (
@@ -87,8 +99,8 @@ function SearchViewer({
                   <div className="viewer-search-shell">
                     <input
                       ref={viewerSearchInputRef}
-                      type="search"
-                      className="viewer-search-input"
+                      type="text"
+                    className="viewer-search-input"
                       placeholder="Search in conversation..."
                       value={messageSearchQuery}
                       onChange={(e) => onMessageSearchQueryChange(e.target.value)}
@@ -101,7 +113,7 @@ function SearchViewer({
                           </span>
                           <button
                             type="button"
-                            className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
+                            className="viewer-search-nav-btn"
                             onClick={onPrevMatch}
                             title="Previous match"
                             aria-label="Previous match"
@@ -110,7 +122,7 @@ function SearchViewer({
                           </button>
                           <button
                             type="button"
-                            className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
+                            className="viewer-search-nav-btn"
                             onClick={onNextMatch}
                             title="Next match"
                             aria-label="Next match"
@@ -123,17 +135,15 @@ function SearchViewer({
                         <span className="viewer-search-no-results">No results</span>
                       )}
                     </div>
-                    {messageSearchQuery.trim() && (
-                      <button
-                        type="button"
-                        className="viewer-search-clear"
-                        onClick={() => onMessageSearchQueryChange("")}
-                        aria-label="Clear in-conversation search"
-                        title="Clear search"
-                      >
-                        ×
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="viewer-search-close"
+                      onClick={onCloseViewerSearch}
+                      aria-label="Close in-conversation search"
+                      title="Close search"
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -152,7 +162,7 @@ function SearchViewer({
 
               <button
                 type="button"
-                className="viewer-close-panel-btn ui-btn ui-btn--ghost ui-btn--icon"
+                className="viewer-close-panel-btn"
                 onClick={onClose}
                 title="Close panel"
                 aria-label="Close panel"
@@ -226,6 +236,7 @@ type SearchPanelProps = {
     messagesLoading: boolean;
     viewerSearchOpen: boolean;
     onOpenViewerSearch: () => void;
+    onCloseViewerSearch: () => void;
     messageSearchQuery: string;
     onMessageSearchQueryChange: (q: string) => void;
     viewerSearchInputRef: React.RefObject<HTMLInputElement | null>;
@@ -282,6 +293,7 @@ export default function SearchPanel({
           messagesLoading={viewer.messagesLoading}
           viewerSearchOpen={viewer.viewerSearchOpen}
           onOpenViewerSearch={viewer.onOpenViewerSearch}
+          onCloseViewerSearch={viewer.onCloseViewerSearch}
           messageSearchQuery={viewer.messageSearchQuery}
           onMessageSearchQueryChange={viewer.onMessageSearchQueryChange}
           viewerSearchInputRef={viewer.viewerSearchInputRef}

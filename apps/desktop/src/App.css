@@ -914,8 +914,13 @@ body {
 .viewer-header-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
   padding-left: 12px;
+  padding-right: 52px;
+  position: relative;
+  min-width: 0;
+  flex: 1;
 }
 
 .viewer-header-menu-wrap {
@@ -980,7 +985,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
+  min-width: 0;
 }
 
 .viewer-search-input {
@@ -989,7 +994,7 @@ body {
   border-radius: var(--radius-2);
   font-size: 13px;
   min-width: 260px;
-  padding-right: 104px;
+  padding-right: 108px;
   background: var(--surface-2);
   color: var(--text-1);
 }
@@ -1000,6 +1005,11 @@ body {
   box-shadow: 0 0 0 3px var(--ring);
 }
 
+.viewer-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .viewer-search-nav {
   display: flex;
   align-items: center;
@@ -1008,7 +1018,7 @@ body {
 
 .viewer-search-status {
   position: absolute;
-  right: 34px;
+  right: 30px;
   top: 50%;
   transform: translateY(-50%);
   min-width: 86px;
@@ -1022,12 +1032,14 @@ body {
 }
 
 .viewer-search-nav-btn {
-  padding: 2px 6px;
+  padding: 1px 4px;
   border: none;
-  border-radius: var(--radius-sm);
-  background: var(--color-muted);
-  color: var(--color-foreground);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-2);
   cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .viewer-search-no-results {
@@ -1042,19 +1054,19 @@ body {
   align-items: center;
 }
 
-.viewer-search-clear {
+.viewer-search-close {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 20px;
+  line-height: 1;
   width: 20px;
   height: 20px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--border-2) 70%, transparent);
-  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
-  color: var(--text-2);
-  font-size: 14px;
-  line-height: 1;
+  padding: 0;
   cursor: pointer;
 }
 
@@ -1349,6 +1361,10 @@ body {
   color: var(--text-2);
   font-size: 11px;
   font-weight: 600;
+  max-width: 58%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .search-result-snippet mark {
@@ -2519,8 +2535,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: none;
   border-radius: 0;
@@ -2528,6 +2548,8 @@ body {
   color: var(--color-muted-foreground);
   cursor: pointer;
   transition: color 0.15s;
+  font-size: 32px;
+  line-height: 1;
 }
 
 .viewer-close-panel-btn:hover {

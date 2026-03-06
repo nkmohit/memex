@@ -53,19 +53,6 @@ function dayFromDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function getFiscalEndYear(date: Date): number {
-  const month = date.getMonth();
-  const year = date.getFullYear();
-  return month >= 2 ? year + 1 : year;
-}
-
-function fiscalWindowBounds(endYear: number): { start: Date; end: Date } {
-  return {
-    start: new Date(endYear - 1, 2, 1),
-    end: new Date(endYear, 2, 0),
-  };
-}
-
 interface HeatmapHoverState {
   point: ActivityHeatmapPoint;
   x: number;
@@ -106,7 +93,7 @@ export default function OverviewPage({
   onRebuildIndex,
 }: OverviewPageProps) {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string>("latest");
   const [hoveredHeatmap, setHoveredHeatmap] = useState<HeatmapHoverState | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -160,36 +147,41 @@ export default function OverviewPage({
   const needsIndexRebuild = totalMsgs > 0 && indexedMsgs === 0;
 
   const yearOptions = useMemo(() => {
-    const years = Array.from(
-      new Set(
-        activityTimeline.map((point) => {
-          return String(getFiscalEndYear(dayToDate(point.day)));
-        })
-      )
-    )
+    const years = Array.from(new Set(activityTimeline.map((point) => point.day.slice(0, 4))))
       .sort((a, b) => b.localeCompare(a))
       .map((year) => ({ value: year, label: year }));
 
-    if (years.length === 0) {
-      const fallback = String(getFiscalEndYear(new Date()));
-      return [{ value: fallback, label: fallback }];
+    const currentYear = String(new Date().getFullYear());
+    if (!years.some((year) => year.value === currentYear)) {
+      years.unshift({ value: currentYear, label: currentYear });
     }
 
-    return years;
+    return [{ value: "latest", label: "Latest" }, ...years];
   }, [activityTimeline]);
 
   useEffect(() => {
-    if (!selectedYear) {
-      setSelectedYear(Number(yearOptions[0]?.value));
-      return;
+    if (!yearOptions.some((opt) => opt.value === selectedYear)) {
+      setSelectedYear("latest");
     }
-    const stillValid = yearOptions.some((opt) => Number(opt.value) === selectedYear);
-    if (!stillValid) setSelectedYear(Number(yearOptions[0]?.value));
   }, [selectedYear, yearOptions]);
 
   const heatmapDays = useMemo(() => {
-    if (!selectedYear) return [];
-    const { start, end } = fiscalWindowBounds(selectedYear);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    let start: Date;
+    let end: Date;
+    if (selectedYear === "latest") {
+      end = now;
+      start = new Date(now);
+      start.setDate(start.getDate() - 364);
+    } else {
+      const yearNum = Number(selectedYear);
+      if (!Number.isFinite(yearNum)) return [];
+      start = new Date(yearNum, 0, 1);
+      end = new Date(yearNum, 11, 31);
+    }
+
     const byDay = new Map(activityTimeline.map((point) => [point.day, point]));
 
     const days: ActivityHeatmapPoint[] = [];
@@ -393,8 +385,8 @@ export default function OverviewPage({
                     ariaLabel="Pulse timeframe"
                     className="overview-pulse-select app-select"
                     size="sm"
-                    value={String(selectedYear ?? yearOptions[0]?.value ?? "")}
-                    onChange={(value) => setSelectedYear(Number(value))}
+                    value={selectedYear}
+                    onChange={setSelectedYear}
                     options={yearOptions}
                   />
                   <p className="overview-section-meta">
@@ -425,7 +417,7 @@ export default function OverviewPage({
                   <div
                     className="overview-pulse-strip overview-heatmap-grid"
                     role="img"
-                    aria-label={`Daily conversation activity heatmap for fiscal year ending ${selectedYear ?? ""}`}
+                    aria-label={`Daily conversation activity heatmap: ${selectedYear === "latest" ? "latest 12 months" : selectedYear}`}
                   >
                     {heatmapCells.map((point, index) => {
                       if (!point) {

@@ -868,6 +868,7 @@ function App() {
             messagesLoading,
             viewerSearchOpen,
             onOpenViewerSearch: () => setViewerSearchOpen(true),
+            onCloseViewerSearch: () => setViewerSearchOpen(false),
             messageSearchQuery,
             onMessageSearchQueryChange: setMessageSearchQuery,
             viewerSearchInputRef,
@@ -915,6 +916,7 @@ function App() {
             viewerMenuRef={viewerMenuRef}
             viewerSearchOpen={viewerSearchOpen}
             onOpenViewerSearch={() => setViewerSearchOpen(true)}
+            onCloseViewerSearch={() => setViewerSearchOpen(false)}
             messageSearchQuery={messageSearchQuery}
             onMessageSearchQueryChange={setMessageSearchQuery}
             viewerSearchInputRef={viewerSearchInputRef}
