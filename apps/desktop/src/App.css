@@ -3061,7 +3061,7 @@ body {
   gap: 3px;
   align-items: stretch;
   padding: 12px;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .dark .overview-pulse-strip {
@@ -3071,7 +3071,8 @@ body {
 .overview-heatmap-months {
   display: grid;
   gap: 3px;
-  margin: 0 0 6px 58px;
+  margin: 0 0 6px;
+  padding: 0 12px;
 }
 
 .overview-heatmap-months span {
@@ -3083,7 +3084,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  position: relative;
+  min-width: 0;
 }
 
 .overview-heatmap-day-labels {
@@ -3094,6 +3095,17 @@ body {
   font-size: 10px;
   color: var(--text-3);
   line-height: 12px;
+}
+
+.overview-heatmap-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
+  padding-bottom: 4px;
+}
+
+.overview-heatmap-track {
+  width: fit-content;
 }
 
 .overview-heatmap-canvas {

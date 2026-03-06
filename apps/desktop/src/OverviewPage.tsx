@@ -219,6 +219,7 @@ export default function OverviewPage({
   }, [heatmapDays]);
 
   const weekCount = Math.max(1, Math.ceil(heatmapCells.length / 7));
+  const heatmapTrackMinWidth = Math.max(240, weekCount * 15 + 24);
 
   const monthMarkers = useMemo(() => {
     const markers: Array<{ column: number; label: string }> = [];
@@ -395,14 +396,6 @@ export default function OverviewPage({
                 </div>
               </div>
 
-              <div className="overview-heatmap-months" style={{ gridTemplateColumns: `repeat(${weekCount}, 12px)` }}>
-                {monthMarkers.map((marker, idx) => (
-                  <span key={`${marker.label}-${idx}`} style={{ gridColumnStart: marker.column + 1 }}>
-                    {marker.label}
-                  </span>
-                ))}
-              </div>
-
               <div className="overview-heatmap-with-days">
                 <div className="overview-heatmap-day-labels" aria-hidden>
                   <span>Sun</span>
@@ -413,62 +406,73 @@ export default function OverviewPage({
                   <span>Fri</span>
                   <span>Sat</span>
                 </div>
-                <div className="overview-heatmap-canvas">
-                  <div
-                    className="overview-pulse-strip overview-heatmap-grid"
-                    role="img"
-                    aria-label={`Daily conversation activity heatmap: ${selectedYear === "latest" ? "latest 12 months" : selectedYear}`}
-                  >
-                    {heatmapCells.map((point, index) => {
-                      if (!point) {
-                        return <span key={`empty-${index}`} className="overview-heatmap-cell empty" aria-hidden />;
-                      }
-                      const level = intensityLevel(point.totalCount);
-                      return (
-                        <span
-                          key={point.day}
-                          className={`overview-heatmap-cell level-${level}`}
-                          title={dayTooltip(point)}
-                          aria-label={`${point.day}: ${point.totalCount} message${point.totalCount === 1 ? "" : "s"}`}
-                          onMouseEnter={(event) => {
-                            const target = event.currentTarget.getBoundingClientRect();
-                            const container = event.currentTarget.closest(".overview-heatmap-canvas")?.getBoundingClientRect();
-                            if (!container) return;
-                            setHoveredHeatmap({
-                              point,
-                              x: target.left - container.left + target.width / 2,
-                              y: target.top - container.top - 8,
-                            });
-                          }}
-                          onMouseLeave={() => setHoveredHeatmap(null)}
-                        />
-                      );
-                    })}
-                  </div>
-                  {hoveredHeatmap && (
-                    <div
-                      className="overview-heatmap-tooltip"
-                      style={{ left: hoveredHeatmap.x, top: hoveredHeatmap.y, transform: "translate(-50%, -100%)" }}
-                    >
-                      <div className="overview-heatmap-tooltip-date">
-                        {dayToDate(hoveredHeatmap.point.day).toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
+                <div className="overview-heatmap-scroll">
+                  <div className="overview-heatmap-track" style={{ minWidth: `${heatmapTrackMinWidth}px` }}>
+                    <div className="overview-heatmap-months" style={{ gridTemplateColumns: `repeat(${weekCount}, 12px)` }}>
+                      {monthMarkers.map((marker, idx) => (
+                        <span key={`${marker.label}-${idx}`} style={{ gridColumnStart: marker.column + 1 }}>
+                          {marker.label}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="overview-heatmap-canvas">
+                      <div
+                        className="overview-pulse-strip overview-heatmap-grid"
+                        role="img"
+                        aria-label={`Daily conversation activity heatmap: ${selectedYear === "latest" ? "latest 12 months" : selectedYear}`}
+                      >
+                        {heatmapCells.map((point, index) => {
+                          if (!point) {
+                            return <span key={`empty-${index}`} className="overview-heatmap-cell empty" aria-hidden />;
+                          }
+                          const level = intensityLevel(point.totalCount);
+                          return (
+                            <span
+                              key={point.day}
+                              className={`overview-heatmap-cell level-${level}`}
+                              title={dayTooltip(point)}
+                              aria-label={`${point.day}: ${point.totalCount} message${point.totalCount === 1 ? "" : "s"}`}
+                              onMouseEnter={(event) => {
+                                const target = event.currentTarget.getBoundingClientRect();
+                                const container = event.currentTarget.closest(".overview-heatmap-canvas")?.getBoundingClientRect();
+                                if (!container) return;
+                                setHoveredHeatmap({
+                                  point,
+                                  x: target.left - container.left + target.width / 2,
+                                  y: target.top - container.top - 8,
+                                });
+                              }}
+                              onMouseLeave={() => setHoveredHeatmap(null)}
+                            />
+                          );
                         })}
                       </div>
-                      <div className="overview-heatmap-tooltip-total">
-                        {hoveredHeatmap.point.totalCount.toLocaleString("en-US")} messages
-                      </div>
-                      <div className="overview-heatmap-tooltip-breakdown">
-                        {heatmapTooltipDetails(hoveredHeatmap.point).map(([label, count]) => (
-                          <span key={label}>
-                            {label}: {count}
-                          </span>
-                        ))}
-                      </div>
+                      {hoveredHeatmap && (
+                        <div
+                          className="overview-heatmap-tooltip"
+                          style={{ left: hoveredHeatmap.x, top: hoveredHeatmap.y, transform: "translate(-50%, -100%)" }}
+                        >
+                          <div className="overview-heatmap-tooltip-date">
+                            {dayToDate(hoveredHeatmap.point.day).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                          <div className="overview-heatmap-tooltip-total">
+                            {hoveredHeatmap.point.totalCount.toLocaleString("en-US")} messages
+                          </div>
+                          <div className="overview-heatmap-tooltip-breakdown">
+                            {heatmapTooltipDetails(hoveredHeatmap.point).map(([label, count]) => (
+                              <span key={label}>
+                                {label}: {count}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
