@@ -310,16 +310,8 @@ export default function SearchPage({
     return () => document.removeEventListener("keydown", handleKeyboardNav);
   }, [hasQuery, loading, onOpenConversation, onSelectResult, query, results, selectedIndex]);
 
-  const searchContext = source
-    ? `Searching in ${sourceLabel(source)}`
-    : "Searching in all sources";
-  const dateContext = dateFrom && dateTo
-    ? `Date range: ${dateFrom} to ${dateTo}`
-    : dateFrom
-      ? `Date range: from ${dateFrom}`
-      : dateTo
-        ? `Date range: up to ${dateTo}`
-        : null;
+  const searchContext = source ? `Source: ${sourceLabel(source)}` : "Source: all";
+  const dateContext = dateFrom && dateTo ? `Date: ${dateFrom} to ${dateTo}` : dateFrom ? `Date: from ${dateFrom}` : dateTo ? `Date: up to ${dateTo}` : "Date: all";
 
   useEffect(() => {
     onSnapshotChange({
@@ -425,33 +417,15 @@ export default function SearchPage({
           {queryTooShort ? (
             <span className="search-loading">Type at least {MIN_QUERY_LENGTH} characters to search.</span>
           ) : loading && results.length === 0 ? (
-            <span className="search-loading">{hasQuery ? "Searching" : "Loading"}... · {searchContext}{dateContext ? ` · ${dateContext}` : ""}</span>
+            <span className="search-loading">{hasQuery ? "Searching" : "Loading"}...</span>
           ) : !hasQuery ? (
-            <>
-              <span>
-                {loading && <span className="search-loading-indicator">⟳ </span>}
-                {`Showing ${results.length} of ${totalMatches} conversations`}
-              </span>
-              <span>
-                {`All conversations sorted by last message`}
-                {` · ${searchContext}`}
-                {dateContext ? ` · ${dateContext}` : ""}
-                {latencyMs !== null ? ` · ${latencyMs} ms` : ""}
-              </span>
-            </>
+            <span title={`${searchContext} · ${dateContext}`}>
+              {`${totalMatches} conversations${latencyMs !== null ? ` • ${latencyMs} ms` : ""}`}
+            </span>
           ) : (
-            <>
-              <span>
-                {loading && <span className="search-loading-indicator">⟳ </span>}
-                {`Showing top ${results.length} of ${totalMatches} conversations`}
-              </span>
-              <span>
-                {`${totalOccurrences} occurrence${totalOccurrences !== 1 ? "s" : ""} in ${totalMatches} conversation${totalMatches !== 1 ? "s" : ""}`}
-                {` · ${searchContext}`}
-                {dateContext ? ` · ${dateContext}` : ""}
-                {latencyMs !== null ? ` · ${latencyMs} ms` : ""}
-              </span>
-            </>
+            <span title={`${searchContext} · ${dateContext} · ${totalOccurrences} occurrence${totalOccurrences !== 1 ? "s" : ""}`}>
+              {`${totalMatches} results${latencyMs !== null ? ` • ${latencyMs} ms` : ""}`}
+            </span>
           )}
         </div>
 

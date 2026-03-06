@@ -4,10 +4,6 @@ import type { ThemeMode } from "../hooks/useThemeMode";
 type SettingsPanelProps = {
   theme: ThemeMode;
   onSetTheme: (mode: ThemeMode) => void;
-  clearResult: string | null;
-  clearError: string | null;
-  onDismissClearResult: () => void;
-  onDismissClearError: () => void;
   clearingData: boolean;
   importing: boolean;
   loading: boolean;
@@ -18,10 +14,6 @@ type SettingsPanelProps = {
 export default function SettingsPanel({
   theme,
   onSetTheme,
-  clearResult,
-  clearError,
-  onDismissClearResult,
-  onDismissClearError,
   clearingData,
   importing,
   loading,

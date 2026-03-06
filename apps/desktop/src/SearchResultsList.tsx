@@ -1,4 +1,4 @@
-import { useRef, type MutableRefObject } from "react";
+import type { MutableRefObject } from "react";
 import type { SearchResultRow } from "./db";
 import { formatDate } from "./utils";
 
@@ -67,7 +67,7 @@ export default function SearchResultsList({
         </div>
       ) : showEmptyState ? (
         <div className="search-empty-state" role="status" aria-live="polite">
-          <p className="search-empty-title">No matches found.</p>
+          <p className="search-empty-title">No search results for this query/filter.</p>
           <p>Try:</p>
           <ul className="search-empty-tips">
             <li>Shorter keywords</li>

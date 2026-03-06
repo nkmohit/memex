@@ -2,14 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import {
   ConversationRow,
+  DashboardSnapshot,
   DbStats,
   MessageRow,
   SourceStats,
   clearAllData,
+  getCachedDashboardSnapshot,
   getConversations,
   getMessages,
   getSourceStats,
   getStats,
+  markDataChanged,
   rebuildSearchIndex,
 } from "./db";
 import { IMPORT_SOURCES, ImportSource, importConversations } from "./importer";
@@ -29,6 +32,21 @@ import SettingsPanel from "./panels/SettingsPanel";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { usePersistedSearchState } from "./hooks/usePersistedSearchState";
 import { useThemeMode } from "./hooks/useThemeMode";
+
+type AppDataState =
+  | "bootstrapping"
+  | "ready-empty"
+  | "ready-has-data"
+  | "importing"
+  | "clearing"
+  | "error";
+
+type ImportWriteProgress = {
+  conversationsDone: number;
+  conversationsTotal: number;
+  messagesDone: number;
+  messagesTotal?: number;
+};
 
 function App() {
   const { theme, setThemeAndPersist } = useThemeMode();
@@ -106,6 +124,14 @@ function App() {
   // ---- import state ----
   const [importing, setImporting] = useState(false);
   const [importingSource, setImportingSource] = useState<ImportSource | null>(null);
+  const importAbortRef = useRef<AbortController | null>(null);
+  const [importProgress, setImportProgress] = useState<ImportWriteProgress | null>(null);
+  const importProgressRef = useRef<ImportWriteProgress>({
+    conversationsDone: 0,
+    conversationsTotal: 0,
+    messagesDone: 0,
+    messagesTotal: 0,
+  });
   const [skipOnboarding, setSkipOnboarding] = useState(false);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [clearingData, setClearingData] = useState(false);
@@ -113,8 +139,6 @@ function App() {
   const [, setImportMenuOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
-  const [clearResult, setClearResult] = useState<string | null>(null);
-  const [clearError, setClearError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -374,6 +398,13 @@ function App() {
       setLoading(true);
       setLoadError(null);
       try {
+        const cached: DashboardSnapshot | null = await getCachedDashboardSnapshot();
+        if (cached && !source) {
+          setStats(cached.stats);
+          setSourceStats(cached.sourceStats);
+          setConversations(cached.recentConversations);
+        }
+
         // Run queries sequentially to avoid concurrent DB access that can
         // trigger "database is locked" in SQLite.
         const statsData = await getStats();
@@ -510,12 +541,36 @@ function App() {
     setImportMenuOpen(false);
     setImporting(true);
     setImportingSource(source);
+    setImportProgress(null);
+    importProgressRef.current = {
+      conversationsDone: 0,
+      conversationsTotal: 0,
+      messagesDone: 0,
+      messagesTotal: 0,
+    };
     setImportError(null);
     setImportResult(null);
+    const controller = new AbortController();
+    importAbortRef.current = controller;
 
     try {
-      const result = await importConversations(source);
+      const result = await importConversations(source, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (progress.phase === "write") {
+            const nextProgress = {
+              conversationsDone: progress.conversationsDone,
+              conversationsTotal: progress.conversationsTotal,
+              messagesDone: progress.messagesDone,
+              messagesTotal: progress.messagesTotal,
+            };
+            importProgressRef.current = nextProgress;
+            setImportProgress(nextProgress);
+          }
+        },
+      });
       if (result) {
+        await markDataChanged();
         const message = `Import completed: ${result.conversationCount} conversations and ${result.messageCount} messages from ${sourceLabel(source)}.`;
         setImportResult(message);
         pushToast(message, "success");
@@ -525,12 +580,35 @@ function App() {
     } catch (err) {
       console.error("Import failed:", err);
       const message = err instanceof Error ? err.message : "Import failed";
-      setImportError(message);
-      pushToast(message, "error");
+      if (controller.signal.aborted) {
+        const conversationsDone = importProgressRef.current.conversationsDone;
+        const messagesDone = importProgressRef.current.messagesDone;
+        const cancelledMessage = `Import cancelled after ${conversationsDone} conversations and ${messagesDone.toLocaleString()} messages.`;
+        await markDataChanged();
+        setImportResult(cancelledMessage);
+        pushToast(cancelledMessage, "info");
+        setImportRefreshKey((k) => k + 1);
+        await loadData(activeSource);
+      } else {
+        setImportError(message);
+        pushToast(message, "error");
+      }
     } finally {
       setImporting(false);
       setImportingSource(null);
+      setImportProgress(null);
+      importProgressRef.current = {
+        conversationsDone: 0,
+        conversationsTotal: 0,
+        messagesDone: 0,
+        messagesTotal: 0,
+      };
+      importAbortRef.current = null;
     }
+  }
+
+  function handleCancelImport() {
+    importAbortRef.current?.abort();
   }
 
   async function handleRebuildIndex() {
@@ -558,8 +636,6 @@ function App() {
 
     setClearConfirmOpen(false);
     setClearingData(true);
-    setClearResult(null);
-    setClearError(null);
 
     try {
       // Actually delete data from DB first — only reset UI state after success.
@@ -568,16 +644,13 @@ function App() {
       clearPersistedSearchState();
       setSelectedConvId(null);
       setMessages([]);
-      const message = "All imported data was removed.";
-      setClearResult(message);
-      pushToast(message, "success");
+      pushToast("All imported data was removed.", "success");
       setSkipOnboarding(false);
       setOnboardingVisible(true);
       await loadData(activeSource);
     } catch (err) {
       console.error("Clear data failed:", err);
       const message = err instanceof Error ? err.message : "Clear data failed";
-      setClearError(message);
       pushToast(message, "error");
     } finally {
       setClearingData(false);
@@ -597,10 +670,6 @@ function App() {
   function sourceLabel(source: string): string {
     const meta = IMPORT_SOURCES.find((s) => s.id === source);
     return meta?.label ?? source.charAt(0).toUpperCase() + source.slice(1);
-  }
-
-  function sourceConvCount(source: string): number {
-    return sourceStats.find((s) => s.source === source)?.conversationCount ?? 0;
   }
 
   async function handleSearchResultSelect(
@@ -625,6 +694,10 @@ function App() {
     setMessageSearchQuery(searchPageQuery);
     setMessageSearchMatchIndex(0);
     await handleConversationClick(convId, null);
+    window.setTimeout(() => {
+      viewerSearchInputRef.current?.focus();
+      viewerSearchInputRef.current?.select();
+    }, 0);
   }
 
   function handleOverviewSelectConversation(convId: string) {
@@ -655,6 +728,17 @@ function App() {
             : "conversations-layout";
   const isEmpty = !loading && stats?.conversationCount === 0;
   const showOnboarding = onboardingVisible && !skipOnboarding;
+  const appDataState: AppDataState = loadError
+    ? "error"
+    : clearingData
+      ? "clearing"
+      : importing
+        ? "importing"
+        : loading
+          ? "bootstrapping"
+          : isEmpty
+            ? "ready-empty"
+            : "ready-has-data";
 
   useEffect(() => {
     if (!loading && isEmpty && !skipOnboarding) {
@@ -670,6 +754,8 @@ function App() {
           onImport={(source) => void handleImportSource(source)}
           importing={importing}
           importingSource={importingSource}
+          onCancelImport={handleCancelImport}
+          importProgress={importProgress}
           onSkip={() => {
             setSkipOnboarding(true);
             setOnboardingVisible(false);
@@ -699,7 +785,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell ${shellLayoutClass}`}>
+    <div className={`app-shell ${shellLayoutClass}`} data-app-state={appDataState}>
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
@@ -731,6 +817,8 @@ function App() {
           onImport={(source) => void handleImportSource(source)}
           importing={importing}
           importingSource={importingSource}
+          onCancelImport={handleCancelImport}
+          importProgress={importProgress}
           importError={importError}
           importResult={importResult}
           onDismissImportError={() => setImportError(null)}
@@ -743,10 +831,6 @@ function App() {
         <SettingsPanel
           theme={theme}
           onSetTheme={setThemeAndPersist}
-          clearResult={clearResult}
-          clearError={clearError}
-          onDismissClearResult={() => setClearResult(null)}
-          onDismissClearError={() => setClearError(null)}
           clearingData={clearingData}
           importing={importing}
           loading={loading}
@@ -784,6 +868,7 @@ function App() {
             messagesLoading,
             viewerSearchOpen,
             onOpenViewerSearch: () => setViewerSearchOpen(true),
+            onCloseViewerSearch: () => setViewerSearchOpen(false),
             messageSearchQuery,
             onMessageSearchQueryChange: setMessageSearchQuery,
             viewerSearchInputRef,
@@ -831,6 +916,7 @@ function App() {
             viewerMenuRef={viewerMenuRef}
             viewerSearchOpen={viewerSearchOpen}
             onOpenViewerSearch={() => setViewerSearchOpen(true)}
+            onCloseViewerSearch={() => setViewerSearchOpen(false)}
             messageSearchQuery={messageSearchQuery}
             onMessageSearchQueryChange={setMessageSearchQuery}
             viewerSearchInputRef={viewerSearchInputRef}

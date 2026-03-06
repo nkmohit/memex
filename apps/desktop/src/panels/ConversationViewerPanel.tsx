@@ -19,6 +19,7 @@ type ConversationViewerPanelProps = {
 
   viewerSearchOpen: boolean;
   onOpenViewerSearch: () => void;
+  onCloseViewerSearch: () => void;
   messageSearchQuery: string;
   onMessageSearchQueryChange: (query: string) => void;
   viewerSearchInputRef: React.RefObject<HTMLInputElement | null>;
@@ -51,6 +52,7 @@ export default function ConversationViewerPanel({
   viewerMenuRef,
   viewerSearchOpen,
   onOpenViewerSearch,
+  onCloseViewerSearch,
   messageSearchQuery,
   onMessageSearchQueryChange,
   viewerSearchInputRef,
@@ -156,42 +158,55 @@ export default function ConversationViewerPanel({
               </div>
               {viewerSearchOpen ? (
                 <div className="viewer-search">
-                  <input
-                    ref={viewerSearchInputRef}
-                    type="search"
+                  <div className="viewer-search-shell">
+                    <input
+                      ref={viewerSearchInputRef}
+                      type="text"
                     className="viewer-search-input"
-                    placeholder="Search in conversation..."
-                    value={messageSearchQuery}
-                    onChange={(e) => onMessageSearchQueryChange(e.target.value)}
-                  />
-                  {messageSearchQuery.trim() && matchCount > 0 && (
-                    <div className="viewer-search-nav">
-                      <span className="viewer-search-count">
-                        {currentMatchIndex + 1} of {matchCount}
-                      </span>
-                      <button
-                        type="button"
-                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
-                        onClick={onPrevMatch}
-                        title="Previous match"
-                        aria-label="Previous match"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="viewer-search-nav-btn ui-btn ui-btn--secondary ui-btn--sm"
-                        onClick={onNextMatch}
-                        title="Next match"
-                        aria-label="Next match"
-                      >
-                        ↓
-                      </button>
+                      placeholder="Search in conversation..."
+                      value={messageSearchQuery}
+                      onChange={(e) => onMessageSearchQueryChange(e.target.value)}
+                    />
+                    <div className="viewer-search-status">
+                      {messageSearchQuery.trim() && matchCount > 0 && (
+                        <div className="viewer-search-nav">
+                          <span className="viewer-search-count">
+                            {currentMatchIndex + 1} of {matchCount}
+                          </span>
+                          <button
+                            type="button"
+                            className="viewer-search-nav-btn"
+                            onClick={onPrevMatch}
+                            title="Previous match"
+                            aria-label="Previous match"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="viewer-search-nav-btn"
+                            onClick={onNextMatch}
+                            title="Next match"
+                            aria-label="Next match"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      )}
+                      {messageSearchQuery.trim() && matchCount === 0 && (
+                        <span className="viewer-search-no-results">No results</span>
+                      )}
                     </div>
-                  )}
-                  {messageSearchQuery.trim() && matchCount === 0 && (
-                    <span className="viewer-search-no-results">No results</span>
-                  )}
+                    <button
+                      type="button"
+                      className="viewer-search-close"
+                      onClick={onCloseViewerSearch}
+                      aria-label="Close in-conversation search"
+                      title="Close search"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button

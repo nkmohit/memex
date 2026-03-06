@@ -29,6 +29,13 @@ interface ImportPageProps {
   onImport: (source: ImportSource) => void;
   importing: boolean;
   importingSource: ImportSource | null;
+  onCancelImport: () => void;
+  importProgress: {
+    conversationsDone: number;
+    conversationsTotal: number;
+    messagesDone: number;
+    messagesTotal?: number;
+  } | null;
   importError: string | null;
   importResult: string | null;
   onDismissImportError?: () => void;
@@ -40,6 +47,8 @@ export default function ImportPage({
   onImport,
   importing,
   importingSource,
+  onCancelImport,
+  importProgress,
   importError,
   importResult,
   onDismissImportError,
@@ -120,6 +129,41 @@ export default function ImportPage({
         </div>
       )}
 
+      {(importError || importResult) && (
+        <div className="import-banners">
+          {importError && (
+            <div className="banner error import-error-banner dismissible" role="alert">
+              <span>{importError}</span>
+              {onDismissImportError && (
+                <button
+                  type="button"
+                  className="import-banner-dismiss ui-btn ui-btn--ghost ui-btn--sm"
+                  onClick={onDismissImportError}
+                  aria-label="Dismiss import error"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+          {importResult && (
+            <div className="banner success import-result-banner dismissible" role="status" aria-live="polite">
+              <span>{importResult}</span>
+              {onDismissImportResult && (
+                <button
+                  type="button"
+                  className="import-banner-dismiss ui-btn ui-btn--ghost ui-btn--sm"
+                  onClick={onDismissImportResult}
+                  aria-label="Dismiss import result"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <section className="import-summary">
         <h2 className="import-section-title">Your data</h2>
         <div className="import-summary-grid">
@@ -168,14 +212,31 @@ export default function ImportPage({
                   </div>
                   <div className="import-source-action">
                     {src.available ? (
-                      <button
-                        type="button"
-                        className="import-source-btn ui-btn ui-btn--primary"
-                        onClick={() => onImport(src.id)}
-                        disabled={importing}
-                      >
-                        {importing && importingSource === src.id ? "Importing…" : "Import"}
-                      </button>
+                      importing && importingSource === src.id ? (
+                        <div className="import-source-importing">
+                          <span className="import-source-progress">
+                            {importProgress
+                              ? `${importProgress.messagesDone.toLocaleString()} / ${(importProgress.messagesTotal ?? 0).toLocaleString()} msgs`
+                              : "Importing..."}
+                          </span>
+                          <button
+                            type="button"
+                            className="import-source-btn ui-btn ui-btn--secondary"
+                            onClick={onCancelImport}
+                          >
+                            Cancel import
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="import-source-btn ui-btn ui-btn--primary"
+                          onClick={() => onImport(src.id)}
+                          disabled={importing}
+                        >
+                          Import
+                        </button>
+                      )
                     ) : (
                       <span className="import-coming-soon">Coming soon</span>
                     )}

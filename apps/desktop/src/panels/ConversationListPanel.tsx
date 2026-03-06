@@ -65,7 +65,9 @@ export default function ConversationListPanel({
         </div>
       ) : conversations.length === 0 ? (
         <div className="empty-text" aria-live="polite">
-          No conversations yet. Import to get started.
+          {activeSource
+            ? `No conversations in ${sourceLabel(activeSource)} yet.`
+            : "No conversations yet. Import to get started."}
         </div>
       ) : (
         <div className="conv-list">

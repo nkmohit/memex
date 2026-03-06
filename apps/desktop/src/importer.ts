@@ -30,6 +30,20 @@ export interface ImportResult {
   source: ImportSource;
   conversationCount: number;
   messageCount: number;
+  cancelled?: boolean;
+}
+
+export interface ImportProgress {
+  phase: "parse" | "write";
+  conversationsDone: number;
+  conversationsTotal: number;
+  messagesDone: number;
+  messagesTotal?: number;
+}
+
+export interface ImportOptions {
+  signal?: AbortSignal;
+  onProgress?: (progress: ImportProgress) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -37,13 +51,14 @@ export interface ImportResult {
 // ---------------------------------------------------------------------------
 
 export async function importConversations(
-  source: ImportSource
+  source: ImportSource,
+  opts: ImportOptions = {}
 ): Promise<ImportResult | null> {
   switch (source) {
     case "claude":
-      return importClaude();
+      return importClaude(opts);
     case "chatgpt":
-      return importChatGPT();
+      return importChatGPT(opts);
     case "grok":
       return importGrok();
     default:
@@ -55,7 +70,7 @@ export async function importConversations(
 // Claude importer
 // ---------------------------------------------------------------------------
 
-async function importClaude(): Promise<ImportResult | null> {
+async function importClaude(opts: ImportOptions): Promise<ImportResult | null> {
   const filePath = await open({
     title: "Select Claude Export JSON",
     filters: [{ name: "JSON", extensions: ["json"] }],
@@ -75,12 +90,22 @@ async function importClaude(): Promise<ImportResult | null> {
   }
 
   const parsed = parseClaudeConversations(rawData);
+  opts.onProgress?.({
+    phase: "parse",
+    conversationsDone: parsed.length,
+    conversationsTotal: parsed.length,
+    messagesDone: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+    messagesTotal: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+  });
 
   if (parsed.length === 0) {
     throw new Error("No conversations found in the export file");
   }
 
-  const result = await insertConversations(parsed);
+  const result = await insertConversations(parsed, {
+    signal: opts.signal,
+    onProgress: opts.onProgress,
+  });
 
   console.log(
     `Claude import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
@@ -96,7 +121,7 @@ async function importClaude(): Promise<ImportResult | null> {
 // OpenAI / ChatGPT importer (template)
 // ---------------------------------------------------------------------------
 
-async function importChatGPT(): Promise<ImportResult | null> {
+async function importChatGPT(opts: ImportOptions): Promise<ImportResult | null> {
   const filePath = await open({
     title: "Select OpenAI / ChatGPT Export JSON",
     filters: [{ name: "JSON", extensions: ["json"] }],
@@ -116,12 +141,22 @@ async function importChatGPT(): Promise<ImportResult | null> {
   }
 
   const parsed = parseChatGPTConversations(rawData);
+  opts.onProgress?.({
+    phase: "parse",
+    conversationsDone: parsed.length,
+    conversationsTotal: parsed.length,
+    messagesDone: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+    messagesTotal: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+  });
 
   if (parsed.length === 0) {
     throw new Error("No conversations found in the export file");
   }
 
-  const result = await insertConversations(parsed);
+  const result = await insertConversations(parsed, {
+    signal: opts.signal,
+    onProgress: opts.onProgress,
+  });
 
   console.log(
     `OpenAI / ChatGPT import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
