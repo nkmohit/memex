@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import type { MessageRow } from "./db";
 import { formatTimestamp } from "./utils";
-import { IMPORT_SOURCES } from "./importer";
+import { sourceLabel } from "./lib/sourceDisplay";
 import { MoreHorizontal, X } from "lucide-react";
 
 interface ConversationDetailPanelProps {
@@ -11,11 +11,6 @@ interface ConversationDetailPanelProps {
   loading: boolean;
   onCopyThread: () => void;
   onClose?: () => void;
-}
-
-function sourceLabel(source: string): string {
-  const meta = IMPORT_SOURCES.find((s) => s.id === source);
-  return meta?.label ?? source.charAt(0).toUpperCase() + source.slice(1);
 }
 
 export default function ConversationDetailPanel({

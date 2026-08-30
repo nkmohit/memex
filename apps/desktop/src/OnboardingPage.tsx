@@ -1,20 +1,6 @@
-import { ClaudeIcon, ChatGPTIcon, GeminiIcon, GrokIcon, MemexLogoIcon } from "./icons";
+import { MemexLogoIcon } from "./icons";
 import { IMPORT_SOURCES, type ImportSource } from "./importer";
-
-function SourceIcon({ source }: { source: string }) {
-  switch (source.toLowerCase()) {
-    case "claude":
-      return <ClaudeIcon size={20} />;
-    case "chatgpt":
-      return <ChatGPTIcon size={20} />;
-    case "gemini":
-      return <GeminiIcon size={20} />;
-    case "grok":
-      return <GrokIcon size={20} />;
-    default:
-      return null;
-  }
-}
+import { BrandSourceIcon as SourceIcon } from "./lib/sourceDisplay";
 
 const DROP_COPY: Record<ImportSource, { title: string; hint: string }> = {
   chatgpt: { title: "Drop conversations.json", hint: "or click to browse" },

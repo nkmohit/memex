@@ -1,24 +1,9 @@
 import { useEffect, useState } from "react";
-import { ClaudeIcon, ChatGPTIcon, GeminiIcon, GrokIcon } from "./icons";
 import { getSourceStats, getStats } from "./db";
 import type { DbStats, SourceStats } from "./db";
 import { formatDate } from "./utils";
 import { IMPORT_SOURCES, type ImportSource } from "./importer";
-
-function SourceIcon({ source }: { source: string }) {
-  switch (source.toLowerCase()) {
-    case "claude":
-      return <ClaudeIcon size={20} />;
-    case "chatgpt":
-      return <ChatGPTIcon size={20} />;
-    case "gemini":
-      return <GeminiIcon size={20} />;
-    case "grok":
-      return <GrokIcon size={20} />;
-    default:
-      return null;
-  }
-}
+import { BrandSourceIcon as SourceIcon } from "./lib/sourceDisplay";
 
 interface ImportPageProps {
   onImport: (source: ImportSource) => void;

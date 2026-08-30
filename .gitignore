@@ -12,3 +12,4 @@ docs/
 dist/
 node_modules/
 target/
+coverage/

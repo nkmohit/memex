@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { ClaudeIcon, ChatGPTIcon, GeminiIcon, GrokIcon } from "../icons";
 import { IMPORT_SOURCES } from "../importer";
 
 export function sourceLabel(source: string): string {
@@ -18,5 +19,20 @@ export function SourceIcon({ source }: { source: string }) {
       return <span className="overview-source-dot source-grok" aria-hidden />;
     default:
       return <span className="overview-source-dot" aria-hidden />;
+  }
+}
+
+export function BrandSourceIcon({ source, size = 20 }: { source: string; size?: number }) {
+  switch (source.toLowerCase()) {
+    case "claude":
+      return <ClaudeIcon size={size} />;
+    case "chatgpt":
+      return <ChatGPTIcon size={size} />;
+    case "gemini":
+      return <GeminiIcon size={size} />;
+    case "grok":
+      return <GrokIcon size={size} />;
+    default:
+      return null;
   }
 }
