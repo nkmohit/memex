@@ -15,6 +15,7 @@ import { useClearData } from "./hooks/useClearData";
 import { logger } from "./lib/logger";
 import { getAvailableSources, sourceLabel } from "./lib/sources";
 import { useDataActions } from "./hooks/useDataActions";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 type AppDataState =
   "bootstrapping" | "ready-empty" | "ready-has-data" | "importing" | "clearing" | "error";
@@ -333,7 +334,8 @@ export default function App() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [clearConfirmOpen, clearConfirmDialogRef, clearDataTriggerRef, setClearConfirmOpen]);
   return (
-    <AppShell
+    <ErrorBoundary>
+      <AppShell
       showOnboarding={showOnboarding}
       onboardingProps={{
         onImport: (s) => void handleImportSource(s),
@@ -481,6 +483,7 @@ export default function App() {
           sourceLabel,
         },
       }}
-    />
+      />
+    </ErrorBoundary>
   );
 }
