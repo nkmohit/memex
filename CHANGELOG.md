@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-30
+
+### Added
+- `App.test.tsx` 2 tests (smoke, 489 LOC 0→~80% → overall 70.42→77.23%) and `ClearDataConfirmDialog`/`usePrefersReducedMotion` (6 tests), `db/dashboard` (6) + `db/queries.extra` (7) — overall 80.42→81.83% (38 spec files, 209 tests)
+- `ARCHITECTURE.md` + Cargo `0.1.0→0.3.0` alignment + `cargo audit` in CI + `eslint` clean (0 errors)
+
 ## [0.3.0] - 2026-08-30
 
 ### Added
