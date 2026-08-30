@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { parseChatGPTConversations, parseClaudeConversations } from "@memex/core";
 import { insertConversations } from "./dbInsert";
+import { logger } from "./lib/logger";
 
 // ---------------------------------------------------------------------------
 // Source registry — add new sources here as they become available
@@ -84,9 +85,7 @@ async function importClaude(opts: ImportOptions): Promise<ImportResult | null> {
   const rawData = JSON.parse(content);
 
   if (!Array.isArray(rawData)) {
-    throw new Error(
-      "Invalid Claude export: expected a JSON array of conversations"
-    );
+    throw new Error("Invalid Claude export: expected a JSON array of conversations");
   }
 
   const parsed = parseClaudeConversations(rawData);
@@ -107,7 +106,7 @@ async function importClaude(opts: ImportOptions): Promise<ImportResult | null> {
     onProgress: opts.onProgress,
   });
 
-  console.log(
+  logger.info(
     `Claude import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
   );
 
@@ -135,9 +134,7 @@ async function importChatGPT(opts: ImportOptions): Promise<ImportResult | null> 
   const rawData = JSON.parse(content);
 
   if (!Array.isArray(rawData)) {
-    throw new Error(
-      "Invalid OpenAI / ChatGPT export: expected a JSON array of conversations"
-    );
+    throw new Error("Invalid OpenAI / ChatGPT export: expected a JSON array of conversations");
   }
 
   const parsed = parseChatGPTConversations(rawData);
@@ -158,7 +155,7 @@ async function importChatGPT(opts: ImportOptions): Promise<ImportResult | null> 
     onProgress: opts.onProgress,
   });
 
-  console.log(
+  logger.info(
     `OpenAI / ChatGPT import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
   );
 
@@ -200,7 +197,5 @@ async function importGrok(): Promise<ImportResult | null> {
   //   ...result,
   // };
 
-  throw new Error(
-    "Grok importer template is in place, but parsing is not implemented yet."
-  );
+  throw new Error("Grok importer template is in place, but parsing is not implemented yet.");
 }
