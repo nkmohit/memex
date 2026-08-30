@@ -3,6 +3,7 @@ import { escapeLikePattern, normalizeQuery } from "./helpers";
 import type { SearchMessagesResult, SearchOptions, SearchResultRow } from "./types";
 import { clampLimit, clampOffset, sanitizeSource } from "../lib/validation";
 import { cosineSimilarity, embed } from "../lib/vector";
+import { logger } from "../lib/logger";
 
 async function runFtsSearch(
   database: Awaited<ReturnType<typeof getDb>>,
@@ -111,7 +112,8 @@ export function searchMessages(
   // Semantic / hybrid path — vector search offline, deterministic
   const mode = opts.mode ?? "fts";
   if (mode === "semantic" || mode === "hybrid") {
-    return withDbLock(async () => {
+    return logger.withSpan("searchMessages", () =>
+      withDbLock(async () => {
       const database = await getDb();
       const safeLimit = clampLimit(opts.limit, 20, 100);
       const safeOffset = clampOffset(opts.offset);
@@ -299,10 +301,12 @@ export function searchMessages(
           : rows.reduce((s, r) => s + r.occurrence_count, 0) || totalMatches;
 
       return { rows, totalMatches, totalOccurrences };
-    });
+      })
+    );
   }
 
-  return withDbLock(async () => {
+  return logger.withSpan("searchMessages", () =>
+    withDbLock(async () => {
     const database = await getDb();
 
     const safeLimit = clampLimit(opts.limit, 20, 100);
@@ -467,5 +471,6 @@ export function searchMessages(
       totalMatches: countRows[0]?.total ?? 0,
       totalOccurrences: totalOccurrencesRows[0]?.total ?? 0,
     };
-  });
+    })
+  );
 }

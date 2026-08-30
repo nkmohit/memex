@@ -1,6 +1,6 @@
 import { getSourceStats, getStats } from "../db/queries";
 import type { DbStats, SourceStats } from "../db/types";
-import { logger } from "./logger";
+import { computeP95, getSpanLatencies, logger } from "./logger";
 
 // App version — keep in sync with apps/desktop/package.json
 export const APP_VERSION = "0.6.0";
@@ -14,12 +14,19 @@ export interface IndexHealth {
   indexedMessages: number;
 }
 
+export interface PerfStats {
+  searchP95Ms: number | null;
+  searchCount: number;
+  searchLatencies: number[];
+}
+
 export interface Diagnostics {
   db: DbStats;
   indexHealth: IndexHealth;
   sourceStats: SourceStats[];
   version: string;
   generatedAt: number;
+  perf: PerfStats;
 }
 
 export function computeIndexHealth(stats: DbStats): IndexHealth {
@@ -42,16 +49,27 @@ export async function isSearchIndexHealthy(): Promise<boolean> {
   return !health.missing;
 }
 
+export function getPerfStats(): PerfStats {
+  const latencies = getSpanLatencies("searchMessages");
+  return {
+    searchP95Ms: computeP95(latencies),
+    searchCount: latencies.length,
+    searchLatencies: latencies,
+  };
+}
+
 export async function getDiagnostics(): Promise<Diagnostics> {
   logger.debug("diagnostics: collecting");
   const [db, sourceStats] = await Promise.all([getStats(), getSourceStats()]);
   const indexHealth = computeIndexHealth(db);
+  const perf = getPerfStats();
   const diagnostics: Diagnostics = {
     db,
     indexHealth,
     sourceStats,
     version: APP_VERSION,
     generatedAt: Date.now(),
+    perf,
   };
   logger.debug("diagnostics: collected", diagnostics);
   return diagnostics;

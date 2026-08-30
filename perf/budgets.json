@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "description": "Perf budgets for Memex — enforced in CI via size-limit",
+  "budgets": [
+    {
+      "path": "apps/desktop/dist",
+      "maxSizeKB": 300,
+      "comment": "Tauri frontend bundle (vite) must stay <300kB gzipped"
+    },
+    {
+      "path": "apps/desktop/dist/assets",
+      "maxSizeKB": 250,
+      "comment": "JS/CSS assets budget"
+    }
+  ],
+  "ci": {
+    "enforced": true,
+    "tool": "size-limit",
+    "onExceed": "fail"
+  }
+}
