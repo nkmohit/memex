@@ -1,0 +1,40 @@
+{
+  "name": "Memex Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "installYarnUsingApt": false
+    },
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "stable",
+      "profile": "default"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "tauri-apps.tauri-vscode",
+        "rust-lang.rust-analyzer",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+  "postCreateCommand": "npm ci --prefix apps/desktop && npm ci --prefix packages/core && npm run build --prefix packages/core",
+  "forwardPorts": [1420, 1421],
+  "portsAttributes": {
+    "1420": { "label": "Vite / Tauri frontend", "onAutoForward": "notify" },
+    "1421": { "label": "Vite HMR", "onAutoForward": "silent" }
+  },
+  "remoteEnv": {
+    "TAURI_DEV_HOST": ""
+  },
+  "mounts": [],
+  "onCreateCommand": "rustc --version && node --version && npm --version"
+}

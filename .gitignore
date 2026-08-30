@@ -2,3 +2,13 @@ packages/core/node_modules/*
 packages/core/dist/*
 
 docs/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build
+dist/
+node_modules/
+target/

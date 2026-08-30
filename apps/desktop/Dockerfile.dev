@@ -1,0 +1,41 @@
+# Dev container for Tauri desktop (Node 20 + Rust stable + system deps)
+FROM node:20-bookworm
+
+# System deps for Tauri (webkit, gtk, etc.) — see https://v2.tauri.app/start/prerequisites/
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libwebkit2gtk-4.1-dev \
+    build-essential \
+    curl wget file \
+    libxdo-dev \
+    libssl-dev \
+    libayatana-appindicator3-dev \
+    librsvg2-dev \
+    patchelf \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /workspace
+
+# Copy dependency manifests first for layer caching
+COPY package.json package-lock.json* ./
+COPY apps/desktop/package.json ./apps/desktop/package.json
+COPY apps/desktop/package-lock.json ./apps/desktop/package-lock.json
+COPY packages/core/package.json ./packages/core/package.json
+COPY packages/core/package-lock.json ./packages/core/package-lock.json
+COPY apps/desktop/src-tauri/Cargo.toml ./apps/desktop/src-tauri/Cargo.toml
+COPY apps/desktop/src-tauri/Cargo.lock ./apps/desktop/src-tauri/Cargo.lock
+
+RUN npm ci --prefix apps/desktop || npm install --prefix apps/desktop
+RUN npm ci --prefix packages/core || npm install --prefix packages/core
+
+COPY . .
+
+RUN npm run build --prefix packages/core
+
+EXPOSE 1420 1421
+
+CMD ["npm", "run", "tauri:dev", "--prefix", "apps/desktop"]
