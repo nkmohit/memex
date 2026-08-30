@@ -23,6 +23,10 @@ vi.mock("./components/OverviewMemoryPulse", () => ({
   ),
 }));
 
+vi.mock("./lib/summarize", () => ({
+  summarizeText: vi.fn(async () => ["Insight 1", "Insight 2", "Insight 3"]),
+}));
+
 function makeSnapshot(overrides: Partial<DashboardSnapshot> = {}): DashboardSnapshot {
   return {
     stats: {
@@ -126,5 +130,15 @@ describe("OverviewPage", () => {
     await waitFor(() => expect(screen.getByText("Command Center")).toBeInTheDocument());
     // eventually fresh overwrites — just ensure no crash
     await waitFor(() => expect(screen.getByTestId("memory-pulse")).toBeInTheDocument());
+  });
+
+  it("shows Insights bullets via offline summarize (mocked LLM)", async () => {
+    const snap = makeSnapshot();
+    mockGetCached.mockResolvedValue(null);
+    mockGetDashboard.mockResolvedValue(snap);
+    render(<OverviewPage onOpenImport={vi.fn()} onOpenSearch={vi.fn()} onSelectConversation={vi.fn()} onRebuildIndex={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText("Command Center")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Insight 1")).toBeInTheDocument());
+    expect(screen.getByText("Insight 2")).toBeInTheDocument();
   });
 });

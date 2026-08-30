@@ -11,6 +11,7 @@ import {
 import { formatDate, formatTimestamp } from "./utils";
 import OverviewMemoryPulse from "./components/OverviewMemoryPulse";
 import { SourceIcon, sourceLabel } from "./lib/sourceDisplay";
+import { summarizeText } from "./lib/summarize";
 
 interface OverviewPageProps {
   onOpenImport: () => void;
@@ -99,6 +100,29 @@ export default function OverviewPage({
   const isEmpty = totalConvs === 0 && totalMsgs === 0;
   const needsIndexRebuild = totalMsgs > 0 && indexedMsgs === 0;
   const recentRows = recent.slice(0, 8);
+
+  const [insights, setInsights] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    if (!snapshot || isEmpty) {
+      setInsights(null);
+      return;
+    }
+    let cancelled = false;
+    const recentTitles = recent.slice(0, 8).map((r) => r.title || "Untitled").join(". ");
+    const text = [
+      `You have ${totalConvs} conversations and ${totalMsgs} messages across ${sourceStats.length} sources.`,
+      `Most active source is ${topSource ? sourceLabel(topSource.source) : "none"} with ${topSource?.messageCount ?? 0} messages.`,
+      `Recent threads: ${recentTitles}.`,
+      `Indexed ${indexedPct}% of messages. Token estimate ${totalTokens}.`,
+    ].join(" ");
+    void summarizeText(text).then((bullets) => {
+      if (!cancelled) setInsights(bullets);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshot, isEmpty, totalConvs, totalMsgs, sourceStats.length, topSource, recent, indexedPct, totalTokens]);
 
   return (
     <main className="overview-main" id="main-content">
@@ -268,14 +292,24 @@ export default function OverviewPage({
             className="overview-secondary-rail overview-stage stage-4"
             aria-label="Insights and status"
           >
-            <article className="overview-note-card">
+            <article className="overview-note-card" aria-live="polite">
               <h3>
                 <Sparkles size={15} /> Insights
               </h3>
-              <p>
-                AI insight cards will surface recurring topics, high-value threads, and relationship
-                trails across sources.
-              </p>
+              {insights ? (
+                <ul className="overview-insights-list">
+                  {insights.map((b, i) => (
+                    <li key={i} className="overview-insight-bullet">
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>
+                  AI insight cards will surface recurring topics, high-value threads, and relationship
+                  trails across sources.
+                </p>
+              )}
             </article>
             <article className="overview-note-card">
               <h3>
