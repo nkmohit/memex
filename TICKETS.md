@@ -589,3 +589,175 @@ git push --tags && git push origin main
 | Extract duplicated source-label/icon helpers | **T-090, T-091** |
 | Commit a package-lock.json for apps/desktop | **T-100** |
 | Add integration test for the Tauri SQLite import-to-search flow | **T-110** |
+
+---
+
+## I — Architecture & Robustness (62→70, ~8 pts)
+
+> **Gaps:** `has_metrics true` but no evidence of what it tracks; no error tracking/health endpoint; `sourceLabel` still duplicated in `ConversationDetailPanel.tsx:16`, `OnboardingPage.tsx:4`, `ImportPage.tsx:8`; `sources.ts` vs `sourceDisplay.tsx` split is confusing; large panels still untested for error paths.
+
+### T-120 — refactor: unify remaining sourceLabel / SourceIcon DRY
+
+- **Commit:** `refactor(overview): unify remaining source helpers`
+- **Description:** `ConversationDetailPanel.tsx:16` has private `sourceLabel`, `OnboardingPage.tsx:4` + `ImportPage.tsx:8` each have private `SourceIcon` (brand icons). Consolidate into `src/lib/sourceDisplay.tsx:1` — export `sourceLabel`, `SourceIcon` (dot variant, used in overview) and `BrandSourceIcon` (icon variant, wraps `ClaudeIcon/ChatGPTIcon/GeminiIcon/GrokIcon`). Make `src/lib/sources.ts:1` re-export `sourceLabel` from `sourceDisplay` and keep only `getAvailableSources`. Delete private funcs.
+- **Acceptance:**
+  - [ ] `grep -rn "function SourceIcon" apps/desktop/src --include="*.tsx"` → 1 hit (lib only, `BrandSourceIcon` counts)
+  - [ ] `grep -rn "function sourceLabel" apps/desktop/src` → 1 hit
+  - [ ] `npm run lint --prefix apps/desktop && npm run test --prefix apps/desktop` passes (sourceDisplay tests still green)
+- **Files:** `src/lib/sourceDisplay.tsx`, `src/lib/sources.ts`, `src/ConversationDetailPanel.tsx`, `src/OnboardingPage.tsx`, `src/ImportPage.tsx`
+- **Dim:** C, A
+
+### T-121 — feat: add diagnostics / health module
+
+- **Commit:** `feat(arch): add diagnostics and health check`
+- **Description:** Desktop has no health endpoint — add `src/lib/diagnostics.ts:1` exposing `getDiagnostics(): Promise<{db: DbStats, indexHealth:{indexedPct:number, missing:boolean}, version:string, sourceStats:SourceStats[]}>` that reuses `getStats/getSourceStats` and returns index health (`indexedMsgs===0 && totalMsgs>0`). Also export `isSearchIndexHealthy()`. No telemetry leaves device.
+- **Acceptance:**
+  - [ ] `src/lib/diagnostics.ts` exists, typed, uses `logger.debug`
+  - [ ] Unit test `src/lib/diagnostics.test.ts` mocks `db/queries` and asserts healthy vs missing cases
+  - [ ] Call not wired to UI yet (pure module) — no runtime side effect
+- **Files:** `apps/desktop/src/lib/diagnostics.ts`, `apps/desktop/src/lib/diagnostics.test.ts`
+- **Dim:** A 62→ (observability)
+
+### T-122 — feat: add error boundary + error tracking stub
+
+- **Commit:** `feat(arch): add error boundary and tracking stub`
+- **Description:** `App.tsx` has no error boundary; logger has no error tracking. Add `src/components/ErrorBoundary.tsx:1` (class component, fallback UI, calls `logger.error` + `reportError` from new `src/lib/errorTracking.ts:1`). `errorTracking.ts` is a local stub — `initErrorTracking`, `reportError(err, context)` that logs with `logger.error` and is a no-op for external service (respects local-first). Wrap `AppShell` in `ErrorBoundary` in `App.tsx:1`.
+- **Acceptance:**
+  - [ ] `src/components/ErrorBoundary.tsx` + `src/lib/errorTracking.test.ts` exist
+  - [ ] `App.tsx` wraps shell, `npm run test` includes boundary test (throw in child → fallback renders)
+- **Files:** `apps/desktop/src/lib/errorTracking.ts`, `apps/desktop/src/components/ErrorBoundary.tsx`, `apps/desktop/src/App.tsx`
+- **Dim:** A (observability, robustness)
+
+### T-123 — docs: document metrics and architecture
+
+- **Commit:** `docs(arch): document metrics and diagnostics`
+- **Description:** `has_metrics true` but no evidence of what it tracks. Add `ARCHITECTURE.md:1` or extend `README.md:30` Architecture section with “Observability” table: what `diagnostics` returns, what `logger` levels do, what `errorTracking` captures, and that `has_metrics` is local only (no outbound). Keeps buyer signal from being vague.
+- **Acceptance:**
+  - [ ] `README.md` or `ARCHITECTURE.md` lists tracked metrics (conversation/message counts, indexedPct, source breakdown, activity timeline)
+  - [ ] `has_metrics` evidence lines point to `src/lib/diagnostics.ts`
+- **Files:** `README.md` or `ARCHITECTURE.md`
+- **Dim:** A
+
+---
+
+## J — Test Coverage 45→70 (1:13 → 1:3, ~7 pts)
+
+> **Current:** `coverage lines 16.95%` (see `npm run test -- --coverage`). Files at `0%`: `App.tsx:486`, `OverviewPage:293`, `SearchPage:483`, `AppShell:342`, `ImportPage:246`, most hooks. Goal: lines ≥70, branches ≥60, spec ratio ≥1:5. Achieve by adding targeted suites (happy+error) — each committed with refactor as one mineable commit.
+
+### T-124 — chore: raise coverage thresholds to 70/60
+
+- **Commit:** `chore(test): raise coverage thresholds to 70/60`
+- **Description:** After T-081/082/110 nominal thresholds are still `lines:10`. Raise `apps/desktop/vite.config.ts:21` thresholds to `lines:70, branches:60`. Expect CI to fail until J-125…J-129 land — land this **last** in the J epic or set `thresholds` per-file if needed. Update CI `Coverage` step to `npm run test -- --coverage --run`.
+- **Acceptance:**
+  - [ ] `vite.config.ts` thresholds `70/60`, `npm run test -- --coverage` fails locally until new tests land (desired)
+  - [ ] After J-125…J-129, coverage exits 0 with lines ≥70
+- **Files:** `apps/desktop/vite.config.ts`
+- **Dim:** B
+
+### T-125 — test: AppShell + OverviewPage + OverviewMemoryPulse specs
+
+- **Commit:** `test(overview): add AppShell and OverviewPage specs`
+- **Description:** Cover `OverviewPage.tsx:42` loading skeleton vs populated metrics, empty/needsRebuild banners, topSource sort; `OverviewMemoryPulse.tsx:30` heatmap cells, intensity, year filter, tooltip. Mock `db` (`getCachedDashboardSnapshot`, `getDashboardSnapshot`).
+- **Acceptance:**
+  - [ ] `src/components/AppShell.test.tsx` and `src/OverviewPage.test.tsx` (or `OverviewMemoryPulse.test.tsx`) — ≥3 tests each
+  - [ ] `npm run test -- AppShell` passes, lines ↑ ~10-15%
+- **Files:** `apps/desktop/src/components/AppShell.test.tsx`, `apps/desktop/src/OverviewPage.test.tsx`
+- **Dim:** B
+
+### T-126 — test: SearchPage + SearchResultsList + ConversationListPanel
+
+- **Commit:** `test(search): add SearchPage and results list specs`
+- **Description:** Mock `usePersistedSearchState` + `db/search` to test query input, source filter, sort change, pagination, open conversation → resets viewer search. Keep happy + error (search throws → error banner).
+- **Acceptance:**
+  - [ ] `src/SearchPage.test.tsx` + `src/components/SearchResultsList.test.tsx` ≥4 tests
+  - [ ] Branches ↑ (filter/sort branches)
+- **Files:** `apps/desktop/src/SearchPage.test.tsx`
+- **Dim:** B
+
+### T-127 — test: ImportPage + OnboardingPage + ConversationDetailPanel
+
+- **Commit:** `test(panels): add Import/Onboarding/Detail specs`
+- **Description:** Test import source cards render, available vs coming-soon, import/cancel clicks, progress display; `ConversationDetailPanel` sender pill uses `sourceLabel`, menu open/close.
+- **Acceptance:**
+  - [ ] `src/ImportPage.test.tsx` etc — ≥2 tests each
+- **Files:** `apps/desktop/src/ImportPage.test.tsx`, `apps/desktop/src/OnboardingPage.test.tsx`
+- **Dim:** B
+
+### T-128 — test: remaining hooks (useClearData, useDataActions, useImportState, useViewerSearch, useThemeMode)
+
+- **Commit:** `test(hooks): add remaining hooks specs`
+- **Description:** Use `renderHook` for `useClearData` (clearConfirm flow, calls `clearAllData`), `useDataActions` (rebuild index toast), `useViewerSearch` (highlightText, occurrence count, next/prev), `useThemeMode` (persist, system fallback). Suppress logger in setup.
+- **Acceptance:**
+  - [ ] `src/hooks/useClearData.test.tsx`, `useDataActions.test.tsx` etc — ≥2 tests each
+  - [ ] Coverage lines → ~55% after this ticket
+- **Files:** `apps/desktop/src/hooks/*.test.tsx`
+- **Dim:** B
+
+### T-129 — test: lib/validation + lib/diagnostics + errorTracking
+
+- **Commit:** `test(lib): add validation and diagnostics specs`
+- **Description:** `validation.ts:1` has `sanitizeSource`, `clampLimit`, `sanitizeSort`, `sanitizeDateRange` — all pure and untested at 57% branches. Add `src/lib/validation.test.ts:1` with 12+ cases (incl. invalid source → undefined, limit clamping, sort fallback, date swap). Also test `diagnostics` and `errorTracking`.
+- **Acceptance:**
+  - [ ] `src/lib/validation.test.ts` ≥12 tests, `src/lib/diagnostics.test.ts` ≥2, `src/lib/errorTracking.test.ts` ≥1
+  - [ ] Branches ≥60% after
+- **Files:** `apps/desktop/src/lib/validation.test.ts`
+- **Dim:** B
+
+---
+
+## K — History & Maintenance 45→60 (~4 pts) + Dependency Health 58→75 (~5 pts)
+
+### T-130 — chore: tag v0.2.0 + establish release cadence
+
+- **Commit:** `chore(release): tag v0.2.0` *(tag)*
+- **Description:** Only `v0.1.0` (97 commits, 202 days). Create annotated tag after J epic lands: `git tag -a v0.2.0 -m "chore(release): v0.2.0 — coverage 70, diagnostics, DRY"` and push. Update `CHANGELOG.md` with `0.2.0` entry linking tag. This directly raises `Tags` and `Recency`.
+- **Acceptance:**
+  - [ ] `git tag -l` shows `v0.1.0` and `v0.2.0`, `CHANGELOG.md` has `## [0.2.0]`
+  - [ ] `git push --tags` done
+- **Files:** `CHANGELOG.md` (+ tag)
+- **Dim:** K
+
+### T-131 — chore: verify lockfiles + add .gitignore for coverage
+
+- **Commit:** `chore(deps): ignore coverage and verify lockfiles`
+- **Description:** `apps/desktop/coverage/` is currently untracked but shows in `git status` (see `?? apps/desktop/coverage/`). Add `coverage/` to `apps/desktop/.gitignore:1` and root `.gitignore`. Verify `git ls-files | grep package-lock.json` shows both `apps/desktop` and `packages/core` and `Cargo.lock` — add `manifests_found` hint by ensuring `package.json` has `workspaces` or at least root `package.json` not confusing parser.
+- **Acceptance:**
+  - [ ] `git status --short` no longer shows `coverage/` untracked
+  - [ ] `git ls-files | grep package-lock` shows 2 npm lockfiles + Cargo
+- **Files:** `.gitignore`, `apps/desktop/.gitignore`
+- **Dim:** E 58→, C
+
+### T-132 — process: small commits with tests (mineable history)
+
+- **Commit:** *process, not code — from now on*
+- **Description:** `Task capacity ~0` + `Buyer fit: Task capacity Almost no mineable commits` because history was built in large bulk commits. From now on: **one commit = one feature + its test** (`git add src/foo.ts src/foo.test.ts && git commit -m "feat(foo): add X with tests"`). Avoid `style:`+`feat:` mixes. Land 2–4 commits/week; have collaborators commit under own identity to grow `human_authors` from 1→2+. After this file lands, re-score after 10–15 mineable commits and measure `Task capacity` moves from `~0`.
+- **Acceptance:**
+  - [ ] Next 10 commits each contain a `*.test.ts` when they touch `src/*.ts`
+  - [ ] `git log --oneline -20` shows conventional commits with tests
+  - [ ] Re-score at datafactor.com/score → `Task capacity` >5
+- **Dim:** K, B (task capacity is buyer payout multiplier)
+
+### T-133 — chore: raise coverage gate to enforce 70 in CI (tie-off)
+
+- **Commit:** `ci: enforce coverage threshold 70`
+- **Description:** Ensure `.github/workflows/ci.yml:68` `Coverage (desktop)` step fails below 70. If flakes from missing sqlite, keep `db.integration` as separate `Integration test` step (already added). Add `fail_ci_if_error: true` semantics via `vitest --coverage` exit code.
+- **Acceptance:**
+  - [ ] `ci.yml` coverage step exit 1 when `npx vitest --coverage` lines <70
+  - [ ] CI green on `main` after J epic
+- **Files:** `.github/workflows/ci.yml`
+- **Dim:** H, B
+
+---
+
+## Mapping to assessment gaps (67 C → 70+ → 80)
+
+| Dimension | Score → Target | Tickets |
+|-----------|---------------|---------|
+| **A Architecture & Robustness** 62→70 (~8) | Add diagnostics, error boundary, DRY final, metrics docs | **T-120…T-123** |
+| **B Test Coverage** 45→65 (~7) | Raise 16.95%→70%, 1:13→1:3, thresholds 10→70 | **T-124…T-129** (plus T-080…T-083) |
+| **K History & Maintenance** 45→60 (~4) | 97→130+ commits, 1→2 tags, sustained mineable commits | **T-130, T-132** |
+| **E Dependency Health** 58→70 (~5) | Lockfiles + ignore coverage + manifests | **T-131** |
+| **C Code Cleanliness** 78→85 | Final DRY (SourceIcon/BrandSourceIcon) | **T-120** |
+| **H CI/CD** 80→85 | Coverage gate enforced at 70 | **T-133, T-124** |
+
+> **Order to land for max points:** T-120 (DRY) → T-121/T-122 (arch, parallel) → T-125…T-129 (tests, 1 commit each) → T-131 (ignore) → **T-124** (raise thresholds last) → T-130 (tag v0.2.0) → push all → **T-132 process** ongoing. Each ticket = one commit. Keep `npm run lint && npm run test` green per commit. Re-score after push.
