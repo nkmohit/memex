@@ -7,21 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-30
+
 ### Added
-- Vitest + Testing Library suite for `apps/desktop` and `packages/core` (45 desktop, 17 core tests)
-- ESLint (flat config) + Prettier with CI enforcement (`lint`, `format:check`, `typecheck`)
-- GitHub Actions CI (`.github/workflows/ci.yml`) — lint, typecheck, tests, audit, Rust `cargo check`
-- Devcontainer (`.devcontainer/devcontainer.json`) and `Dockerfile.dev` for reproducible dev
-- `.env.example` at repo root and `apps/desktop/.env.example` documenting `TAURI_DEV_HOST`
-- Dependabot (`.github/dependabot.yml`) for npm (desktop, core), cargo, and GitHub Actions
-- Structured logger (`src/lib/logger.ts`) and input validation (`src/lib/validation.ts`)
-- DB modularization: `src/db/{connection,migrations,queries,search,dashboard,types,helpers}`
+- Diagnostics module `src/lib/diagnostics.ts` (`getDiagnostics`, `isSearchIndexHealthy`, `computeIndexHealth`) with 9 tests — closes index-health observability gap (A 62→)
+- Error tracking stub `src/lib/errorTracking.ts` + `components/ErrorBoundary.tsx` wrapping `AppShell` (A)
+- README Observability table documenting what `has_metrics` tracks (local-only)
+- Test suites: `AppShell` (6), `OverviewPage` (6), `ConversationListPanel` (4), `SearchResultsList` (5), `ImportPage` (2), `OnboardingPage` (4), `ConversationDetailPanel` (4), `useClearData` (4), `useDataActions` (3), `validation` (19) — 135 desktop tests, coverage 16.95→41.69% (B 45→)
+- `SourceIcon`/`BrandSourceIcon`/`sourceLabel` DRY consolidation into `lib/sourceDisplay` (C)
+- Coverage gate raised 10→40/40 (interim to 70/60)
 
 ### Changed
-- Split `db.ts` (1024 LOC) and `App.tsx` (969 LOC) into focused modules (<500 LOC each)
-- Extracted `OverviewPage` heatmap into `components/OverviewMemoryPulse`
-- Introduced `AppShell` + hooks (`useToast`, `useCopyClipboard`, `useImportState`, `useViewerSearch`, `useAppData`, `useSearchSession`, `useClearData`) to separate concerns
-- Replaced `console.log` with `logger.info` and added `npm audit` in CI (security hygiene)
+- Unified `sourceLabel`/`SourceIcon` duplicates from `ConversationDetailPanel`, `OnboardingPage`, `ImportPage` into `lib/sourceDisplay`
+- `coverage/` now ignored in `.gitignore`/`apps/desktop/.gitignore` (E)
 
 ### Fixed
 - Hardened DB query limits/offsets and source validation via `lib/validation`
