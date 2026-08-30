@@ -1,6 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { parseChatGPTConversations, parseClaudeConversations } from "@memex/core";
+import {
+  parseChatGPTConversations,
+  parseClaudeConversations,
+  parseGeminiConversations,
+  parseGrokConversations,
+} from "@memex/core";
 import { insertConversations } from "./dbInsert";
 import { logger } from "./lib/logger";
 
@@ -19,8 +24,8 @@ export interface SourceMeta {
 export const IMPORT_SOURCES: SourceMeta[] = [
   { id: "claude", label: "Claude", available: true },
   { id: "chatgpt", label: "ChatGPT", available: true },
-  { id: "gemini", label: "Gemini", available: false },
-  { id: "grok", label: "Grok", available: false },
+  { id: "gemini", label: "Gemini", available: true },
+  { id: "grok", label: "Grok", available: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -60,8 +65,10 @@ export async function importConversations(
       return importClaude(opts);
     case "chatgpt":
       return importChatGPT(opts);
+    case "gemini":
+      return importGemini(opts);
     case "grok":
-      return importGrok();
+      return importGrok(opts);
     default:
       throw new Error(`Importer for "${source}" is not available yet.`);
   }
@@ -166,10 +173,54 @@ async function importChatGPT(opts: ImportOptions): Promise<ImportResult | null> 
 }
 
 // ---------------------------------------------------------------------------
-// Grok importer (template)
+// Gemini importer
 // ---------------------------------------------------------------------------
 
-async function importGrok(): Promise<ImportResult | null> {
+async function importGemini(opts: ImportOptions): Promise<ImportResult | null> {
+  const filePath = await open({
+    title: "Select Gemini Export JSON",
+    filters: [{ name: "JSON", extensions: ["json"] }],
+    multiple: false,
+    directory: false,
+  });
+
+  if (!filePath) return null;
+
+  const content = await readTextFile(filePath as string);
+  const rawData = JSON.parse(content);
+
+  const parsed = parseGeminiConversations(rawData);
+
+  opts.onProgress?.({
+    phase: "parse",
+    conversationsDone: parsed.length,
+    conversationsTotal: parsed.length,
+    messagesDone: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+    messagesTotal: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+  });
+
+  if (parsed.length === 0) {
+    throw new Error("No conversations found in the export file");
+  }
+
+  const result = await insertConversations(parsed, {
+    signal: opts.signal,
+    onProgress: opts.onProgress,
+  });
+
+  logger.info(`Gemini import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`);
+
+  return {
+    source: "gemini",
+    ...result,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Grok importer
+// ---------------------------------------------------------------------------
+
+async function importGrok(opts: ImportOptions): Promise<ImportResult | null> {
   const filePath = await open({
     title: "Select Grok Export JSON",
     filters: [{ name: "JSON", extensions: ["json"] }],
@@ -179,23 +230,32 @@ async function importGrok(): Promise<ImportResult | null> {
 
   if (!filePath) return null;
 
-  // TODO: Once implemented, parse the export into ParsedConversation[]
-  // and insert into the database:
-  //
-  // const content = await readTextFile(filePath as string);
-  // const rawData = JSON.parse(content);
-  // const parsed = parseGrokConversations(rawData);
-  // if (parsed.length === 0) {
-  //   throw new Error("No conversations found in the export file");
-  // }
-  // const result = await insertConversations(parsed);
-  // console.log(
-  //   `Grok import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
-  // );
-  // return {
-  //   source: "grok",
-  //   ...result,
-  // };
+  const content = await readTextFile(filePath as string);
+  const rawData = JSON.parse(content);
 
-  throw new Error("Grok importer template is in place, but parsing is not implemented yet.");
+  const parsed = parseGrokConversations(rawData);
+
+  opts.onProgress?.({
+    phase: "parse",
+    conversationsDone: parsed.length,
+    conversationsTotal: parsed.length,
+    messagesDone: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+    messagesTotal: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+  });
+
+  if (parsed.length === 0) {
+    throw new Error("No conversations found in the export file");
+  }
+
+  const result = await insertConversations(parsed, {
+    signal: opts.signal,
+    onProgress: opts.onProgress,
+  });
+
+  logger.info(`Grok import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`);
+
+  return {
+    source: "grok",
+    ...result,
+  };
 }

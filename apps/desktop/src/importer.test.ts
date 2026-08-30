@@ -29,11 +29,11 @@ describe("IMPORT_SOURCES registry", () => {
     expect(chatgpt?.available).toBe(true);
   });
 
-  it("marks gemini and grok as not yet available", () => {
+  it("marks gemini and grok as available (now implemented)", () => {
     const gemini = IMPORT_SOURCES.find((s) => s.id === "gemini");
     const grok = IMPORT_SOURCES.find((s) => s.id === "grok");
-    expect(gemini?.available).toBe(false);
-    expect(grok?.available).toBe(false);
+    expect(gemini?.available).toBe(true);
+    expect(grok?.available).toBe(true);
   });
 
   it("all sources have non-empty label", () => {
@@ -48,26 +48,46 @@ describe("importConversations", () => {
     vi.clearAllMocks();
   });
 
-  it("throws for unavailable gemini importer", async () => {
-    await expect(importConversations("gemini" as any)).rejects.toThrow(/not available yet/i);
+  it("successfully imports valid Gemini export", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    const fixture = [
+      {
+        conversation_id: "g1",
+        title: "Gemini Test",
+        create_time: "2026-01-01T00:00:00Z",
+        messages: [
+          { id: "m1", role: "user", content: "Hello Gemini" },
+          { id: "m2", role: "model", content: "Hi!" },
+        ],
+      },
+    ];
+    (open as any).mockResolvedValueOnce("/tmp/gemini.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify(fixture));
+    const result = await importConversations("gemini");
+    expect(result?.source).toBe("gemini");
+    expect(result?.conversationCount).toBe(1);
   });
 
-  it("throws for grok template (not implemented)", async () => {
-    // grok case opens dialog then throws; if dialog returns null it returns null, otherwise throws
-    // With our mock returning null, grok should return null (user cancelled). Let's check behavior:
-    // In importer.ts grok does open then checks !filePath return null before throwing.
-    // So with open mocked to null, it should return null, not throw.
-    // But if file is selected, it would throw.
+  it("successfully imports valid Grok export", async () => {
     const { open } = await import("@tauri-apps/plugin-dialog");
-    (open as any).mockResolvedValueOnce(null);
-    const result = await importConversations("grok");
-    expect(result).toBeNull();
-  });
-
-  it("throws for grok when file is selected but parsing not implemented", async () => {
-    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    const fixture = [
+      {
+        conversation_id: "k1",
+        title: "Grok Test",
+        create_time: 1704067200,
+        messages: [
+          { message_id: "m1", sender: "user", text: "Hello Grok" },
+          { message_id: "m2", sender: "assistant", text: "Hi!" },
+        ],
+      },
+    ];
     (open as any).mockResolvedValueOnce("/tmp/grok.json");
-    await expect(importConversations("grok")).rejects.toThrow(/not implemented yet/i);
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify(fixture));
+    const result = await importConversations("grok");
+    expect(result?.source).toBe("grok");
+    expect(result?.conversationCount).toBe(1);
   });
 
   it("returns null when user cancels Claude file dialog", async () => {
