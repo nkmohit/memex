@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { IMPORT_SOURCES, importConversations } from "./importer";
+import { clearPlugins, registerImporter } from "./plugins/registry";
 
 // Mock Tauri dialog/fs and dbInsert
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -181,4 +182,31 @@ describe("importConversations", () => {
   it("throws for unknown source", async () => {
     await expect(importConversations("unknown" as any)).rejects.toThrow(/not available/i);
   });
+
+  it("imports via custom plugin source (registry)", async () => {
+    clearPlugins();
+    registerImporter({ id: "notion", label: "Notion", available: true }, (raw) => {
+      const data = raw as { id: string; title: string }[];
+      return data.map((d) => ({
+        id: d.id,
+        externalId: d.id,
+        source: "notion",
+        title: d.title,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        messageCount: 1,
+        messages: [{ id: `m-${d.id}`, conversationId: d.id, sender: "human" as const, content: "hello", createdAt: Date.now() }],
+      }));
+    });
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    (open as any).mockResolvedValueOnce("/tmp/notion.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify([{ id: "n1", title: "Notion Doc" }]));
+    const result = await importConversations("notion" as any);
+    expect(result?.source).toBe("notion");
+    expect(result?.conversationCount).toBe(1);
+    expect(result?.messageCount).toBe(2);
+  });
+
+  afterEach(() => clearPlugins());
 });

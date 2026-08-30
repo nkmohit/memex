@@ -8,6 +8,7 @@ import {
 } from "@memex/core";
 import { insertConversations } from "./dbInsert";
 import { logger } from "./lib/logger";
+import { getPluginParser, type ParserFn } from "./plugins/registry";
 
 // ---------------------------------------------------------------------------
 // Source registry — add new sources here as they become available
@@ -33,7 +34,7 @@ export const IMPORT_SOURCES: SourceMeta[] = [
 // ---------------------------------------------------------------------------
 
 export interface ImportResult {
-  source: ImportSource;
+  source: ImportSource | string;
   conversationCount: number;
   messageCount: number;
   cancelled?: boolean;
@@ -57,7 +58,7 @@ export interface ImportOptions {
 // ---------------------------------------------------------------------------
 
 export async function importConversations(
-  source: ImportSource,
+  source: ImportSource | string,
   opts: ImportOptions = {}
 ): Promise<ImportResult | null> {
   switch (source) {
@@ -69,9 +70,40 @@ export async function importConversations(
       return importGemini(opts);
     case "grok":
       return importGrok(opts);
-    default:
+    default: {
+      const pluginParser = getPluginParser(source);
+      if (pluginParser) return importPlugin(source, pluginParser, opts);
       throw new Error(`Importer for "${source}" is not available yet.`);
+    }
   }
+}
+
+async function importPlugin(
+  sourceId: string,
+  parser: ParserFn,
+  opts: ImportOptions
+): Promise<ImportResult | null> {
+  const filePath = await open({
+    title: `Select ${sourceId} Export JSON`,
+    filters: [{ name: "JSON", extensions: ["json"] }],
+    multiple: false,
+    directory: false,
+  });
+  if (!filePath) return null;
+  const content = await readTextFile(filePath as string);
+  const rawData = JSON.parse(content);
+  const parsed = parser(rawData as unknown) as unknown as ReturnType<typeof parseClaudeConversations>;
+  opts.onProgress?.({
+    phase: "parse",
+    conversationsDone: parsed.length,
+    conversationsTotal: parsed.length,
+    messagesDone: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+    messagesTotal: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
+  });
+  if (parsed.length === 0) throw new Error("No conversations found in the export file");
+  const result = await insertConversations(parsed, { signal: opts.signal, onProgress: opts.onProgress });
+  logger.info(`Plugin ${sourceId} import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`);
+  return { source: sourceId as ImportSource, ...result };
 }
 
 // ---------------------------------------------------------------------------
