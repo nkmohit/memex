@@ -36,14 +36,29 @@ It is a **recall engine** — a searchable memory layer over your past AI conver
 - **Core parsers**: `packages/core` (pure, tested Claude/ChatGPT importers)
 - **Logging**: `lib/logger.ts` (structured, `TAURI_DEBUG` gated)
 - **Validation**: `lib/validation.ts` at DB boundaries
+- **Diagnostics**: `lib/diagnostics.ts` — health check (`getDiagnostics`, `isSearchIndexHealthy`, `computeIndexHealth`)
+- **Error tracking**: `lib/errorTracking.ts` (local stub via `logger.error`, no outbound) + `components/ErrorBoundary.tsx`
 
 All data is stored locally in `memex.db`.
+
+### Observability (what `has_metrics` tracks — local only, no telemetry)
+
+| Signal | Source | Description |
+|--------|--------|-------------|
+| Conversation / message counts | `db/queries.ts:getStats` via `diagnostics.ts` | Total conversations, total/indexed messages, latest timestamp, estimated tokens |
+| Index health | `lib/diagnostics.ts:computeIndexHealth` | `indexedPct` (0–100) and `missing` flag (`total>0 && indexed==0`) — drives rebuild banner in `OverviewPage` |
+| Source breakdown | `db/queries.ts:getSourceStats` | Per-source conversation/message counts + `lastActivityTimestamp` (shown in `ImportPage`, `OverviewMemoryPulse`) |
+| Activity timeline | `db/queries.ts:getActivityHeatmapTimeline` | Daily counts for heatmap (`OverviewMemoryPulse`) |
+| Errors | `lib/errorTracking.ts:reportError` + `ErrorBoundary` | Caught React errors logged with `logger.error` (componentStack). No outbound; future Sentry opt-in only |
+
+> All metrics are computed locally from SQLite and `localStorage`. Nothing leaves the device. `has_metrics` in the quality score refers to these local diagnostics.
 
 ### Code map
 
 - `apps/desktop/src/db/` — modular DB layer (<500 LOC per file)
 - `apps/desktop/src/hooks/` — `useToast`, `useCopyClipboard`, `useImportState`, `useViewerSearch`, `useAppData`, etc.
-- `apps/desktop/src/components/AppShell.tsx` — shell layout + routing
+- `apps/desktop/src/components/AppShell.tsx` — shell layout + routing (wrapped in `ErrorBoundary`)
+- `apps/desktop/src/lib/diagnostics.ts` + `lib/errorTracking.ts` — observability
 - `packages/core/src/importers/` — tested pure parsers
 
 ## Database schema (simplified)
