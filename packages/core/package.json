@@ -6,9 +6,16 @@
   "types": "dist/index.d.ts",
   "private": true,
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json}\""
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.1.1",
+    "jsdom": "^26.0.0"
   }
 }
