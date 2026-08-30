@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { registerImporter, getPluginSources, getPluginParser, isPluginSource, clearPlugins, getAllSources, unregisterImporter } from "./registry";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { registerImporter, getPluginSources, getPluginParser, isPluginSource, clearPlugins, getAllSources, unregisterImporter, loadPlugins } from "./registry";
 
 describe("plugins/registry", () => {
   beforeEach(() => clearPlugins());
@@ -77,5 +77,32 @@ describe("plugins/registry", () => {
     const res = parser([{ id: "c1" }]);
     expect(res).toHaveLength(1);
     expect(res[0].id).toBe("c1");
+  });
+
+  it("loadPlugins no-op when Tauri unavailable", async () => {
+    // In test env, plugin-fs is mocked without readDir → returns 0
+    const n = await loadPlugins();
+    expect(typeof n).toBe("number");
+    expect(n).toBeGreaterThanOrEqual(0);
+  });
+
+  it("loadPlugins handles readDir missing gracefully", async () => {
+    vi.doMock("@tauri-apps/plugin-fs", () => ({}));
+    // need to reset modules to pick up mock — but loadPlugins does dynamic import caching
+    // We test the fallback path via existing mock in setup.ts (no readDir)
+    const n = await loadPlugins();
+    expect(n).toBe(0);
+  });
+
+  it("validates meta requires id and label", () => {
+    expect(() => registerImporter({ id: "", label: "X", available: true } as unknown as { id: string; label: string; available: boolean }, () => [])).toThrow(/must have id and label/);
+    expect(() => registerImporter({ id: "ok", label: "", available: true } as unknown as { id: string; label: string; available: boolean }, () => [])).toThrow(/must have id and label/);
+  });
+
+  it("clearPlugins empties and loadPlugins returns number", async () => {
+    registerImporter({ id: "tmp1", label: "Tmp1", available: true }, () => []);
+    clearPlugins();
+    expect(getPluginSources()).toHaveLength(0);
+    expect(await loadPlugins()).toBe(0);
   });
 });
