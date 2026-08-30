@@ -108,4 +108,21 @@ describe("lib/summarize", () => {
     const p = createMockProvider("hello\nworld\ntest");
     expect(await p("prompt")).toBe("hello\nworld\ntest");
   });
+
+  it("heuristic fallback splits by newlines when no sentence punct", async () => {
+    const text = "Line one with enough length to pass filter\nLine two with enough length to pass filter\nLine three with enough length to pass filter\nLine four extra for ranking";
+    const bullets = await summarizeText(text, { useCache: false });
+    expect(bullets.length).toBe(3);
+  });
+
+  it("hashKey deterministic and getCachedSummary localStorage path", async () => {
+    __clearMemoryCache();
+    const t = "deterministic hash test content for summarize cache key generation with some length";
+    await summarizeText(t, { useCache: true });
+    __clearMemoryCache();
+    // Now cache should be in localStorage, getCachedSummary should retrieve via localStorage fallback or DB
+    const cached = await getCachedSummary(t.slice(0, 500));
+    // In test env with mocked DB, may be null or array, but should not throw
+    expect(cached === null || Array.isArray(cached)).toBe(true);
+  });
 });

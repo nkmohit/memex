@@ -75,7 +75,7 @@ describe("dbInsert", () => {
 
   it("retries on SQLITE_BUSY then succeeds", async () => {
     let call = 0;
-    mockExecute.mockImplementation(async (sql: string) => {
+    mockExecute.mockImplementation(async (_sql: string) => {
       call += 1;
       // Fail first BEGIN IMMEDIATE with busy
       if (call === 2) throw new Error("SQLITE_BUSY: database is locked");

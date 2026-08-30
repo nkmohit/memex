@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { sourceLabel, SourceIcon } from "./sourceDisplay";
+import { sourceLabel, SourceIcon, BrandSourceIcon } from "./sourceDisplay";
 
 describe("sourceLabel", () => {
   it("returns Claude for claude", () => {
@@ -45,5 +45,29 @@ describe("SourceIcon", () => {
     const { container } = render(<SourceIcon source="unknown" />);
     expect(container.firstChild).toHaveClass("overview-source-dot");
     expect(container.firstChild).not.toHaveClass("source-claude");
+  });
+
+  it("renders gemini and grok", () => {
+    const { container: c1 } = render(<SourceIcon source="gemini" />);
+    expect(c1.firstChild).toHaveClass("source-gemini");
+    const { container: c2 } = render(<SourceIcon source="grok" />);
+    expect(c2.firstChild).toHaveClass("source-grok");
+    const { container: c3 } = render(<SourceIcon source="GEMINI" />);
+    expect(c3.firstChild).toHaveClass("source-gemini");
+  });
+});
+
+describe("BrandSourceIcon", () => {
+  it("renders claude/chatgpt/gemini/grok and null for unknown", () => {
+    const { container: c1 } = render(<BrandSourceIcon source="claude" size={24} />);
+    expect(c1.firstChild).toBeTruthy();
+    const { container: c2 } = render(<BrandSourceIcon source="chatgpt" />);
+    expect(c2.firstChild).toBeTruthy();
+    const { container: c3 } = render(<BrandSourceIcon source="gemini" />);
+    expect(c3.firstChild).toBeTruthy();
+    const { container: c4 } = render(<BrandSourceIcon source="grok" />);
+    expect(c4.firstChild).toBeTruthy();
+    const { container: c5 } = render(<BrandSourceIcon source="unknown" />);
+    expect(c5.firstChild).toBeNull();
   });
 });
