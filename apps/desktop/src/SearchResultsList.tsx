@@ -1,5 +1,6 @@
-import type { MutableRefObject } from "react";
+import type { CSSProperties, MutableRefObject } from "react";
 import type { SearchResultRow } from "./db";
+
 import { formatDate } from "./utils";
 
 interface SearchResultsListProps {
@@ -77,7 +78,15 @@ export default function SearchResultsList({
         </div>
       ) : (
         results.map((row, index) => (
-          <li key={row.conversation_id}>
+          <li
+            key={row.conversation_id}
+            style={
+              // CSS containment for large lists (1000+ results): virtualizes off-screen rows
+              results.length > 50
+                ? ({ contentVisibility: "auto", containIntrinsicSize: "0 120px" } as CSSProperties)
+                : undefined
+            }
+          >
             <button
               type="button"
               ref={(element) => {

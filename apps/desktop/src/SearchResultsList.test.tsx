@@ -123,4 +123,60 @@ describe("SearchResultsList", () => {
     );
     expect(screen.getByText("b").tagName).toBe("MARK");
   });
+
+  it("virtualizes large result sets (>50) with contentVisibility:auto", () => {
+    const rows = Array.from({ length: 100 }, (_, i) =>
+      makeRow({ conversation_id: `c${i}`, title: `Title ${i}` })
+    );
+    const { container } = render(
+      <SearchResultsList
+        results={rows}
+        hasQuery={true}
+        selectedIndex={-1}
+        onSelectRow={vi.fn()}
+        onHoverRow={vi.fn()}
+        resultRefs={{ current: [] }}
+        sourceLabel={(s) => s}
+        loading={false}
+        loadingMore={false}
+        totalMatches={100}
+        onLoadMore={vi.fn()}
+      />
+    );
+    const items = container.querySelectorAll("li");
+    expect(items.length).toBe(100);
+    // each <li> should have contentVisibility:auto + containIntrinsicSize when >50 results
+    for (const li of Array.from(items)) {
+      const el = li as HTMLElement;
+      expect(el.style.contentVisibility).toBe("auto");
+      expect(el.style.containIntrinsicSize).toBe("0 120px");
+    }
+    // spot check a few titles still render correctly
+    expect(screen.getByText("Title 0")).toBeInTheDocument();
+    expect(screen.getByText("Title 99")).toBeInTheDocument();
+  });
+
+  it("does not virtualize small result sets (<=50)", () => {
+    const rows = Array.from({ length: 3 }, (_, i) =>
+      makeRow({ conversation_id: `s${i}`, title: `Small ${i}` })
+    );
+    const { container } = render(
+      <SearchResultsList
+        results={rows}
+        hasQuery={true}
+        selectedIndex={-1}
+        onSelectRow={vi.fn()}
+        onHoverRow={vi.fn()}
+        resultRefs={{ current: [] }}
+        sourceLabel={(s) => s}
+        loading={false}
+        loadingMore={false}
+        totalMatches={3}
+        onLoadMore={vi.fn()}
+      />
+    );
+    for (const li of Array.from(container.querySelectorAll("li"))) {
+      expect((li as HTMLElement).style.contentVisibility).toBe("");
+    }
+  });
 });
