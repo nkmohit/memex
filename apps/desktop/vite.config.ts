@@ -16,11 +16,10 @@ export default defineConfig(async () => ({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      // thresholds start low to keep CI green while we grow coverage from 11% → 70%
-      // TODO: raise to lines:70, branches:60 once breadth improves (see T-081/082)
+      // raised from 10 → 40 as we hit 41.69% (T-124 interim, T-130). Final target lines:70, branches:60
       thresholds: {
-        lines: 10,
-        branches: 10,
+        lines: 40,
+        branches: 40,
       },
     },
   },
