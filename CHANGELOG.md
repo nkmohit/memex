@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-30
+
+### Added
+- Virtualized `SearchResultsList` via `contentVisibility:auto` + `containIntrinsicSize` for 1000+ results (`SearchResultsList.tsx:79`, 7 tests incl. 100-item virtualization) — `perf(search): virtualize SearchResultsList for 1000+ results`
+- E2E smoke `e2e/smoke.spec.ts:1` (Playwright, mocks `open`/`readTextFile` via `packages/core/fixtures/claude.json` 2 conversations, asserts Overview 2 conv + Search finds `hello`) + CI job `e2e` (`ci.yml:71`) + `playwright.config.ts:1`
+
+### Changed
+- Bump `0.5.0→0.6.0` (`apps/desktop/package.json:3`, `src-tauri/Cargo.toml:3`, `lib/diagnostics.ts:5`)
+
 ## [0.5.0] - 2026-08-30
 
 ### Added

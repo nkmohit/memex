@@ -3,7 +3,7 @@ import type { DbStats, SourceStats } from "../db/types";
 import { logger } from "./logger";
 
 // App version — keep in sync with apps/desktop/package.json
-export const APP_VERSION = "0.5.0";
+export const APP_VERSION = "0.6.0";
 
 export interface IndexHealth {
   /** Percentage of messages indexed (0–100). 100 when no messages. */

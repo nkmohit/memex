@@ -39,11 +39,12 @@ describe("OnboardingPage", () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
-  it("shows Coming soon for unavailable sources", () => {
+  it("shows no Coming soon when all sources are available (4/4)", () => {
     render(
       <OnboardingPage onImport={vi.fn()} importing={false} importingSource={null} onCancelImport={vi.fn()} importProgress={null} onSkip={vi.fn()} />
     );
-    expect(screen.getAllByText("Coming soon").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Import").length).toBe(4);
   });
 
   it("calls onSkip", () => {
