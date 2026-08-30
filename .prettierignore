@@ -1,0 +1,7 @@
+node_modules
+dist
+target
+apps/desktop/dist
+apps/desktop/node_modules
+packages/core/dist
+packages/core/node_modules
