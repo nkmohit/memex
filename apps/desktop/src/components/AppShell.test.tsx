@@ -228,4 +228,44 @@ describe("AppShell", () => {
     render(<AppShell {...makeProps({ clearConfirmOpen: true })} />);
     expect(screen.getByTestId("clear-dialog")).toBeInTheDocument();
   });
+
+  it("renders settings when activeView=settings", () => {
+    render(<AppShell {...makeProps({ activeView: "settings" })} />);
+    expect(screen.getByTestId("settings")).toBeInTheDocument();
+  });
+
+  it("renders conversations list+viewer when activeView=conversations", () => {
+    render(<AppShell {...makeProps({ activeView: "conversations" })} />);
+    expect(screen.getByTestId("conv-list")).toBeInTheDocument();
+    expect(screen.getByTestId("conv-viewer")).toBeInTheDocument();
+  });
+
+  it("onboarding dismiss via skip", () => {
+    const onSkip = vi.fn();
+    render(<AppShell {...makeProps({ showOnboarding: true, onboardingProps: { onImport: vi.fn(), importing: false, importingSource: null, onCancelImport: vi.fn(), importProgress: null, onSkip } })} />);
+    fireEvent.click(screen.getByText("skip"));
+    expect(onSkip).toHaveBeenCalled();
+  });
+
+  it("sidebar onSelectView triggers setActiveView", () => {
+    const setActiveView = vi.fn();
+    render(<AppShell {...makeProps({ setActiveView })} />);
+    fireEvent.click(screen.getByText("go-search"));
+    expect(setActiveView).toHaveBeenCalledWith("search");
+  });
+
+  it("shows multiple toasts", () => {
+    render(
+      <AppShell
+        {...makeProps({
+          toasts: [
+            { id: 1, message: "one", variant: "info" },
+            { id: 2, message: "two", variant: "error" },
+          ],
+        })}
+      />
+    );
+    expect(screen.getByText("one")).toBeInTheDocument();
+    expect(screen.getByText("two")).toBeInTheDocument();
+  });
 });

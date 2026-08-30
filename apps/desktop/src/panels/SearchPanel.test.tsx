@@ -148,4 +148,103 @@ describe("SearchPanel", () => {
     );
     expect(screen.getByText("Select a conversation to view messages.")).toBeInTheDocument();
   });
+
+  it("shows loading when messagesLoading", () => {
+    const viewer = makeViewer({
+      open: true,
+      selectedConversation: { id: "c1", source: "claude", title: "T", created_at: 1, last_message_at: 1, message_count: 1 },
+      messagesLoading: true,
+    });
+    render(
+      <SearchPanel query="" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} onSelectResult={vi.fn()} selectedConversationId="c1" focusRequestId={null} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} skipSearchOnceRef={{ current: false }} restoreSelectedConversationId={null} onRestoreSelectionDone={vi.fn()} viewer={viewer} />
+    );
+    expect(screen.getByText("Loading messages...")).toBeInTheDocument();
+  });
+
+  it("viewer search open shows input and nav", () => {
+    const onCloseViewerSearch = vi.fn();
+    const onPrev = vi.fn();
+    const onNext = vi.fn();
+    const onQuery = vi.fn();
+    const viewer = makeViewer({
+      open: true,
+      selectedConversation: { id: "c1", source: "claude", title: "T", created_at: Date.now(), last_message_at: Date.now(), message_count: 2 },
+      messages: [{ id: "m1", sender: "human", content: "hello world hello", created_at: 1 }],
+      viewerSearchOpen: true,
+      messageSearchQuery: "hello",
+      matchCount: 2,
+      messageMatchCount: 1,
+      currentMatchIndex: 0,
+      onCloseViewerSearch,
+      onPrevMatch: onPrev,
+      onNextMatch: onNext,
+      onMessageSearchQueryChange: onQuery,
+      highlightText: (t: string) => t,
+      copyToast: "copied!",
+    });
+    render(
+      <SearchPanel query="" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} onSelectResult={vi.fn()} selectedConversationId="c1" focusRequestId={null} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} skipSearchOnceRef={{ current: false }} restoreSelectedConversationId={null} onRestoreSelectionDone={vi.fn()} viewer={viewer} />
+    );
+    expect(screen.getByPlaceholderText("Search in conversation...")).toBeInTheDocument();
+    expect(screen.getByText("1 of 2")).toBeInTheDocument();
+    expect(screen.getByText("copied!")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Previous match"));
+    expect(onPrev).toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText("Next match"));
+    expect(onNext).toHaveBeenCalled();
+    fireEvent.change(screen.getByPlaceholderText("Search in conversation..."), { target: { value: "new" } });
+    expect(onQuery).toHaveBeenCalledWith("new");
+    fireEvent.click(screen.getByLabelText("Close in-conversation search"));
+    expect(onCloseViewerSearch).toHaveBeenCalled();
+  });
+
+  it("viewer search no results", () => {
+    const viewer = makeViewer({
+      open: true,
+      selectedConversation: { id: "c1", source: "claude", title: "T", created_at: 1, last_message_at: 1, message_count: 1 },
+      messages: [{ id: "m1", sender: "human", content: "hello", created_at: 1 }],
+      viewerSearchOpen: true,
+      messageSearchQuery: "zzz",
+      matchCount: 0,
+    });
+    render(
+      <SearchPanel query="" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} onSelectResult={vi.fn()} selectedConversationId="c1" focusRequestId={null} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} skipSearchOnceRef={{ current: false }} restoreSelectedConversationId={null} onRestoreSelectionDone={vi.fn()} viewer={viewer} />
+    );
+    expect(screen.getByText("No results")).toBeInTheDocument();
+  });
+
+  it("copy message button calls onCopyMessage and highlights", () => {
+    const onCopy = vi.fn();
+    const viewer = makeViewer({
+      open: true,
+      selectedConversation: { id: "c1", source: "chatgpt", title: "Chat", created_at: 1, last_message_at: 1, message_count: 1 },
+      messages: [{ id: "m1", sender: "assistant", content: "answer", created_at: 1 }],
+      highlightedMessageId: "m1",
+      onCopyMessage: onCopy,
+    });
+    render(
+      <SearchPanel query="" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} onSelectResult={vi.fn()} selectedConversationId="c1" focusRequestId={null} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} skipSearchOnceRef={{ current: false }} restoreSelectedConversationId={null} onRestoreSelectionDone={vi.fn()} viewer={viewer} />
+    );
+    fireEvent.click(screen.getByLabelText("Copy message"));
+    expect(onCopy).toHaveBeenCalled();
+    expect(document.querySelector(".highlighted")).toBeInTheDocument();
+  });
+
+  it("opens viewer search via icon button", () => {
+    const onOpen = vi.fn();
+    const viewer = makeViewer({
+      open: true,
+      selectedConversation: { id: "c1", source: "claude", title: "T", created_at: 1, last_message_at: 1, message_count: 1 },
+      messages: [{ id: "m1", sender: "human", content: "hi", created_at: 1 }],
+      viewerSearchOpen: false,
+      onOpenViewerSearch: onOpen,
+    });
+    render(
+      <SearchPanel query="" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} onSelectResult={vi.fn()} selectedConversationId="c1" focusRequestId={null} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} skipSearchOnceRef={{ current: false }} restoreSelectedConversationId={null} onRestoreSelectionDone={vi.fn()} viewer={viewer} />
+    );
+    fireEvent.click(screen.getByLabelText("Search in conversation"));
+    expect(onOpen).toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText("Close panel"));
+    expect(viewer.onClose).toHaveBeenCalled();
+  });
 });
