@@ -29,12 +29,22 @@ It is a **recall engine** — a searchable memory layer over your past AI conver
 
 - **Frontend**: React 19 + Vite 7
 - **Desktop runtime**: Tauri 2
-- **Database**: SQLite (`memex.db`)
+- **Database**: SQLite (`memex.db`) — see `apps/desktop/src/db/` (connection, migrations, queries, search, dashboard)
 - **Search**: FTS5 (BM25 ranking, snippet highlighting)
 - **Styling**: Tailwind CSS v4
 - **Icons**: `lucide-react` + custom LLM brand icons
+- **Core parsers**: `packages/core` (pure, tested Claude/ChatGPT importers)
+- **Logging**: `lib/logger.ts` (structured, `TAURI_DEBUG` gated)
+- **Validation**: `lib/validation.ts` at DB boundaries
 
 All data is stored locally in `memex.db`.
+
+### Code map
+
+- `apps/desktop/src/db/` — modular DB layer (<500 LOC per file)
+- `apps/desktop/src/hooks/` — `useToast`, `useCopyClipboard`, `useImportState`, `useViewerSearch`, `useAppData`, etc.
+- `apps/desktop/src/components/AppShell.tsx` — shell layout + routing
+- `packages/core/src/importers/` — tested pure parsers
 
 ## Database schema (simplified)
 
@@ -64,17 +74,34 @@ All data is stored locally in `memex.db`.
 
 ## Getting started
 
-From the repo root:
+Prerequisites: Node 20 (`.nvmrc` / devcontainer), Rust stable, and system Tauri deps. See `.devcontainer/devcontainer.json` and `apps/desktop/Dockerfile.dev` for the exact toolchain.
 
 ```bash
+# 1. Clone and install (reproducible — lockfiles committed)
+npm ci --prefix apps/desktop
+npm ci --prefix packages/core
+npm run build --prefix packages/core   # builds @memex/core for desktop imports
+
+# 2. Environment (optional)
+cp apps/desktop/.env.example apps/desktop/.env
+# Set TAURI_DEV_HOST to your LAN IP only if you need network dev (leave empty for localhost)
+
+# 3. Fresh verification — must all pass before you push
+npm run lint --prefix apps/desktop
+npm run format:check --prefix apps/desktop
+npm run typecheck --prefix apps/desktop
+npm run test --prefix apps/desktop
+npm run test --prefix packages/core
+npm run build --prefix apps/desktop
+
+# 4. Start dev mode
 cd apps/desktop
-
-# install dependencies
-NPM_CONFIG_REGISTRY=https://registry.npmjs.org npm install
-
-# start dev mode
 npm run tauri dev
+# or frontend only:
+npm run dev
 ```
+
+Reproducible sandbox: open in VS Code → “Reopen in Container”, or `docker build -f apps/desktop/Dockerfile.dev -t memex:dev . && docker run -it -p 1420:1420 memex:dev`.
 
 ## Search behavior
 
@@ -85,8 +112,19 @@ npm run tauri dev
 - Message-level highlighting
 - Conversation viewer with in-place search
 
-
 Preference is persisted in `localStorage`.
+
+## Quality & CI
+
+- **Tests**: Vitest + jsdom + Testing Library — `apps/desktop/src/*.test.ts` and `packages/core/src/**/*.test.ts` (62 tests). Run `npm run test` in each package.
+- **Lint/Format**: `eslint` (flat config) + `prettier` — `npm run lint`, `npm run format:check`, `npm run lint:fix`, `npm run format` (enforced in CI).
+- **Typecheck**: `npm run typecheck` (`tsc --noEmit`).
+- **Security audit**: `npm audit --audit-level=high` in CI; Dependabot weekly for npm & cargo; input validation in `lib/validation.ts`.
+- **CI**: `.github/workflows/ci.yml` runs lint, typecheck, tests, and audit on every PR/push.
+
+## Contributing
+
+See `CONTRIBUTING.md` for the full workflow. TL;DR: keep commits small and Conventional (`feat:`, `fix:`), include tests with the feature, and ensure `npm run lint && npm run typecheck && npm run test` passes before pushing. Releases are tagged and documented in `CHANGELOG.md`.
 
 ## Current focus
 
