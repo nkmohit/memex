@@ -2,21 +2,52 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| Version | Supported |
+| ------- | --------- |
+| 0.6.x   | ✅        |
+| <0.6    | ❌        |
 
 ## Reporting a Vulnerability
 
-Please open a private security advisory on GitHub or email the maintainer listed in `Cargo.toml`/`package.json`. Do not open a public issue for sensitive reports.
+Please report vulnerabilities via GitHub Security Advisories or email `security@memex.local` (placeholder). Do not open public issues for sensitive flaws. We aim to respond within 48h and patch within 7 days.
 
-## Hardening in this repo
+## Threat Model
 
-- No secrets are committed (`.env` is ignored; `.env.example` is the template).
-- `npm audit --audit-level=high` runs in CI and fails the build on high-severity advisories.
-- Inputs at SQL boundaries are validated via `apps/desktop/src/lib/validation.ts`:
-  - `sanitizeSource`, `clampLimit`, `clampOffset`, `sanitizeQuery`, etc.
-  - Conversation IDs and timestamps are range-checked before use.
-- `cargo audit` is recommended locally (`cargo install cargo-audit && cargo audit`).
+**Trust boundary:**
+- App runs as local Tauri desktop with SQLite `WAL` + FTS5, no cloud sync. All data stays on device.
+- Importer reads user-selected JSON/zip from `$HOME/Downloads` (scoped via `tauri-plugin-fs` allowlist).
+- No remote code execution; plugins in `~/.memex/plugins/*.js` are evaluated with `new Function` and only `registerImporter` is injected.
 
-We welcome PRs that improve validation and audit coverage.
+**In scope:**
+- Zip traversal during import (`importer.ts:133` guarded, fuzzed with `fast-check`).
+- DB injection via FTS query (`validation.ts` + `sanitizeSource` + `clampLimit`).
+- XSS via snippet `<mark>` highlighting (escaped, `renderHighlightedSnippet` splits on `<mark>`).
+- Supply chain: `cargo audit`, `cargo deny` (licenses/advisories), `npm audit`, `cargo cyclonedx` SBOM, signed bundle via `tauri.conf.json` `bundle`.
+
+**Out of scope:**
+- OS keychain compromise (Stronghold `age` encryption future).
+- Physical device access.
+
+## Hardening
+
+- `tauri.conf.json` `app.security.csp = "default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self' 'unsafe-inline'"` — enforced CSP.
+- `capabilities/default.json` `fs:allowReadFile` scoped to `$HOME/Downloads` and `PLUGIN_DIR` `~/.memex/plugins` only.
+- `bundle` `publisher` + `createUpdaterArtifacts` + signing key via env `TAURI_SIGNING_PRIVATE_KEY` (placeholder, enforced in `release.yml`).
+- CI: `cargo deny check advisories licenses`, `cargo audit`, `cargo cyclonedx` SBOM artifact, `gitleaks`, `trivy`.
+
+## SBOM
+
+SBOM generated via `cargo cyclonedx` (`apps/desktop/src-tauri/Cargo.toml`) and uploaded as `sbom.cyclonedx.json` artifact in CI (`sbom` job). See `.github/workflows/ci.yml: sbom`.
+
+## Signed Builds
+
+`tauri build --debug` smoke on PR, `tauri build` on tag with `TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (see `.github/workflows/release.yml`). Bundle creates signed updater artifacts.
+
+## Verification
+
+```bash
+npm run lint && npm run typecheck && npm run test -- --coverage
+cargo check && cargo clippy && cargo audit && cargo deny check
+npm audit --audit-level=high
+npx playwright test e2e/smoke.spec.ts
+```

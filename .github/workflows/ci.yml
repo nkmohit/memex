@@ -121,6 +121,53 @@ jobs:
           cargo install cargo-audit --locked || true
           cargo audit --ignore RUSTSEC-0000-0000 || echo "cargo audit reported issues (non-blocking for now)"
 
+  sbom:
+    name: SBOM + deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/desktop/src-tauri/target
+          key: ${{ runner.os }}-sbom-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
+
+      - name: Install cargo-deny and cargo-cyclonedx
+        run: |
+          cargo install cargo-deny --locked || true
+          cargo install cargo-cyclonedx --locked || true
+
+      - name: Cargo deny check
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo deny check advisories || echo "deny advisories check (non-blocking)"
+          cargo deny check licenses || echo "deny licenses check (non-blocking)"
+
+      - name: Generate SBOM (CycloneDX)
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo cyclonedx --format json --override-filename sbom.cyclonedx.json || echo "cyclonedx failed (non-blocking)"
+          ls -lh sbom.cyclonedx.json || echo "no SBOM generated"
+          cat sbom.cyclonedx.json | head -n 20 || true
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: apps/desktop/src-tauri/sbom.cyclonedx.json
+          if-no-files-found: warn
+
   e2e:
     name: E2E smoke
     runs-on: ubuntu-latest

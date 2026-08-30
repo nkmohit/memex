@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from "vitest";
-// @ts-ignore - node types may not be installed in desktop
 import { readFile } from "node:fs/promises";
 import { computeP95, clearSpans, recordSpanLatency, getSpanLatencies } from "./logger";
 import { getPerfStats } from "./diagnostics";
