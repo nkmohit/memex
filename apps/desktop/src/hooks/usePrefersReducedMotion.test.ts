@@ -23,7 +23,7 @@ describe("usePrefersReducedMotion", () => {
 
   it("handles missing window.matchMedia gracefully", () => {
     const original = window.matchMedia;
-    // @ts-expect-error
+    // @ts-expect-error -- testing missing matchMedia
     delete window.matchMedia;
     const { result } = renderHook(() => usePrefersReducedMotion());
     expect(result.current).toBe(false);

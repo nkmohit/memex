@@ -114,3 +114,9 @@ jobs:
       - name: Cargo clippy (warnings as warnings)
         working-directory: apps/desktop/src-tauri
         run: cargo clippy -- -D warnings || echo "clippy warnings found"
+
+      - name: Cargo audit (requires cargo-audit)
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo install cargo-audit --locked || true
+          cargo audit --ignore RUSTSEC-0000-0000 || echo "cargo audit reported issues (non-blocking for now)"

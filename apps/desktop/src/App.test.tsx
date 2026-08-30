@@ -128,7 +128,7 @@ import App from "./App";
 describe("App", () => {
   beforeEach(() => {
     if (!Element.prototype.scrollIntoView) {
-      // @ts-expect-error
+      // @ts-expect-error -- jsdom lacks scrollIntoView
       Element.prototype.scrollIntoView = vi.fn();
     }
     const store: Record<string, string> = {};

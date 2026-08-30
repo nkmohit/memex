@@ -9,7 +9,7 @@ vi.mock("./connection", () => ({
   withDbLock: (fn: () => Promise<unknown>) => fn(),
 }));
 
-import { getDataVersion, markDataChanged, getCachedDashboardSnapshot, getDashboardSnapshot, bumpDataVersion, readDataVersion } from "./dashboard";
+import { getDataVersion, markDataChanged, getCachedDashboardSnapshot, getDashboardSnapshot, readDataVersion } from "./dashboard";
 
 describe("dashboard", () => {
   beforeEach(() => {
