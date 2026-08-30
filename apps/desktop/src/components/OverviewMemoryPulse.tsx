@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Flame } from "lucide-react";
+import { Activity, Flame, Hash } from "lucide-react";
 import AppSelect from "./AppSelect";
 import type { ActivityHeatmapPoint, SourceStats } from "../db";
 import { SourceIcon, sourceLabel } from "../lib/sourceDisplay";
+import { computeTopTopics, computeTopicTimeline } from "../lib/topics";
 
 function dayToDate(day: string): Date {
   const [y, m, d] = day.split("-").map((p) => Number(p));
@@ -25,9 +26,11 @@ interface HeatmapHoverState {
 interface Props {
   activityTimeline: ActivityHeatmapPoint[];
   sourceStats: SourceStats[];
+  topicTexts?: string[];
+  topicDates?: number[];
 }
 
-export default function OverviewMemoryPulse({ activityTimeline, sourceStats }: Props) {
+export default function OverviewMemoryPulse({ activityTimeline, sourceStats, topicTexts, topicDates }: Props) {
   const [selectedYear, setSelectedYear] = useState<string>("latest");
   const [hoveredHeatmap, setHoveredHeatmap] = useState<HeatmapHoverState | null>(null);
 
@@ -167,6 +170,17 @@ export default function OverviewMemoryPulse({ activityTimeline, sourceStats }: P
   }
 
   const sourceMessageTotal = sourceStats.reduce((sum, source) => sum + source.messageCount, 0);
+
+  const topTopics = useMemo(() => {
+    if (!topicTexts || topicTexts.length === 0) return [];
+    return computeTopTopics(topicTexts, 5);
+  }, [topicTexts]);
+
+  const topicTimeline = useMemo(() => {
+    if (!topicTexts || !topicDates || topicTexts.length === 0) return [];
+    const items = topicTexts.map((text, i) => ({ text, date: topicDates[i] ?? Date.now() }));
+    return computeTopicTimeline(items, 3);
+  }, [topicTexts, topicDates]);
 
   return (
     <section
@@ -332,6 +346,25 @@ export default function OverviewMemoryPulse({ activityTimeline, sourceStats }: P
                 );
               })}
           </ul>
+        )}
+
+        {topTopics.length > 0 && (
+          <div className="overview-topics" aria-label="Top topics">
+            <h4 className="overview-topics-title">
+              <Hash size={14} /> Top topics: {topTopics.join(", ")}
+            </h4>
+            {topicTimeline.length > 0 && (
+              <ul className="overview-topic-timeline" aria-label="Topic timeline">
+                {topicTimeline.map((point) => (
+                  <li key={point.month} className="overview-topic-point">
+                    <span className="overview-topic-month">{point.month}</span>
+                    <span className="overview-topic-terms">{point.topTopics.join(", ") || "—"}</span>
+                    <span className="overview-topic-count">{point.count} threads</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </aside>
     </section>

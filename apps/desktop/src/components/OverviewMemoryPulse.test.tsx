@@ -74,4 +74,29 @@ describe("OverviewMemoryPulse", () => {
       expect(cell).toBeInTheDocument();
     }
   });
+
+  it("shows Top topics via TF-IDF when topicTexts provided", () => {
+    const y = new Date().getFullYear();
+    const points = [makePoint(`${y}-03-15`, 5)];
+    const texts = [
+      "React frontend UI discussion about hooks",
+      "Rust Cargo Tauri desktop app with React",
+      "React and Rust integration for Memex",
+    ];
+    const dates = texts.map(() => Date.now());
+    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={texts} topicDates={dates} />);
+    const topicsEl = screen.getByText(/Top topics:/);
+    expect(topicsEl).toBeInTheDocument();
+    expect(topicsEl.textContent).toMatch(/React/);
+    expect(topicsEl.textContent).toMatch(/Rust/);
+    // timeline should show months
+    expect(screen.getByLabelText("Topic timeline")).toBeInTheDocument();
+  });
+
+  it("shows nothing for topics when no texts", () => {
+    const y = new Date().getFullYear();
+    const points = [makePoint(`${y}-03-15`, 5)];
+    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={[]} />);
+    expect(screen.queryByText(/Top topics:/)).not.toBeInTheDocument();
+  });
 });

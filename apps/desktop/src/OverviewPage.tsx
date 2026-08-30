@@ -234,7 +234,12 @@ export default function OverviewPage({
             </article>
           </section>
 
-          <OverviewMemoryPulse activityTimeline={activityTimeline} sourceStats={sourceStats} />
+          <OverviewMemoryPulse
+            activityTimeline={activityTimeline}
+            sourceStats={sourceStats}
+            topicTexts={recent.map((r) => r.title || "Untitled")}
+            topicDates={recent.map((r) => r.last_message_at)}
+          />
 
           <section
             className="overview-recent-activity overview-stage stage-4"
