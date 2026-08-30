@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-30
+
+### Added
+- Gemini + Grok importers `packages/core/src/importers/gemini.ts:1` 9 tests + `grok.ts:1` 8 tests, `core` 17→34 tests, `IMPORT_SOURCES` 2/4→4/4 available (`importer.ts:19`)
+- Desktop `importGemini`/`importGrok` with progress + `insertConversations` + `logger` (`importer.ts:175`)
+
 ## [0.4.0] - 2026-08-30
 
 ### Added
