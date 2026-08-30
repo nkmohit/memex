@@ -64,6 +64,10 @@ jobs:
         working-directory: apps/desktop
         run: npm run test
 
+      - name: Coverage (desktop)
+        working-directory: apps/desktop
+        run: npm run test -- --coverage
+
       - name: Test (core)
         working-directory: packages/core
         run: npm run test
