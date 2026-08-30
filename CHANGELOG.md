@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-30
+
+### Added
+- `OverviewMemoryPulse` (5), `ConversationViewerPanel` (6), `SettingsPanel` (4), `Sidebar` (2), `SearchPage` (6) specs — SearchPage 0→~60% (B)
+- Hook specs: `useToast` (2), `useViewerSearch` (6), `useCopyClipboard` (4), `useImportState` (4), `usePersistedSearchState` (5), `useSearchSession` (3), `useThemeMode` (3), `sources` (3) — hooks 20.87→~85%
+- Coverage thresholds `40/40 → 70/60` at `70.42%` lines / `81.14%` branches — 188 desktop tests (was 62)
+
 ## [0.2.0] - 2026-08-30
 
 ### Added
