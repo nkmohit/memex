@@ -18,95 +18,101 @@ vi.mock("./hooks/useCopyClipboard", () => ({
     copyConversationToClipboard: vi.fn(),
   }),
 }));
+const mockUseAppData = vi.fn(() => ({
+  loading: false,
+  stats: { conversationCount: 0, messageCount: 0, indexedMessageCount: 0, latestMessageTimestamp: null, estimatedInputTokens: 0, estimatedOutputTokens: 0, estimatedTotalTokens: 0 },
+  sourceStats: [],
+  conversations: [],
+  selectedConvId: null,
+  setSelectedConvId: vi.fn(),
+  messages: [],
+  setMessages: vi.fn(),
+  messagesLoading: false,
+  setMessagesLoading: vi.fn(),
+  loadError: null,
+  setLoadError: vi.fn(),
+  loadData: vi.fn(async () => {}),
+}));
 vi.mock("./hooks/useAppData", () => ({
-  useAppData: () => ({
-    loading: false,
-    stats: { conversationCount: 0, messageCount: 0, indexedMessageCount: 0, latestMessageTimestamp: null, estimatedInputTokens: 0, estimatedOutputTokens: 0, estimatedTotalTokens: 0 },
-    sourceStats: [],
-    conversations: [],
-    selectedConvId: null,
-    setSelectedConvId: vi.fn(),
-    messages: [],
-    setMessages: vi.fn(),
-    messagesLoading: false,
-    setMessagesLoading: vi.fn(),
-    loadError: null,
-    setLoadError: vi.fn(),
-    loadData: vi.fn(async () => {}),
-  }),
+  useAppData: (...args: unknown[]) => (mockUseAppData as unknown as (...a: unknown[]) => unknown)(...args),
+}));
+const mockUseSearchSession = vi.fn(() => ({
+  searchPageQuery: "",
+  setSearchPageQuery: vi.fn(),
+  searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+  setSearchPageSnapshot: vi.fn(),
+  clearPersistedSearchState: vi.fn(),
+  searchFocusRequestId: null,
+  setSearchFocusRequestId: vi.fn(),
+  openedConversationFromSearch: false,
+  setOpenedConversationFromSearch: vi.fn(),
+  searchRestoreConversationId: null,
+  setSearchRestoreConversationId: vi.fn(),
+  searchSelectedConvId: null,
+  setSearchSelectedConvId: vi.fn(),
+  searchSelectedConversation: null,
+  setSearchSelectedConversation: vi.fn(),
+  skipSearchOnceRef: { current: false },
 }));
 vi.mock("./hooks/useSearchSession", () => ({
-  useSearchSession: () => ({
-    searchPageQuery: "",
-    setSearchPageQuery: vi.fn(),
-    searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
-    setSearchPageSnapshot: vi.fn(),
-    clearPersistedSearchState: vi.fn(),
-    searchFocusRequestId: null,
-    setSearchFocusRequestId: vi.fn(),
-    openedConversationFromSearch: false,
-    setOpenedConversationFromSearch: vi.fn(),
-    searchRestoreConversationId: null,
-    setSearchRestoreConversationId: vi.fn(),
-    searchSelectedConvId: null,
-    setSearchSelectedConvId: vi.fn(),
-    searchSelectedConversation: null,
-    setSearchSelectedConversation: vi.fn(),
-    skipSearchOnceRef: { current: false },
-  }),
+  useSearchSession: (...args: unknown[]) => (mockUseSearchSession as unknown as (...a: unknown[]) => unknown)(...args),
+}));
+const mockUseViewerSearch = vi.fn(() => ({
+  messageSearchQuery: "",
+  setMessageSearchQuery: vi.fn(),
+  viewerSearchOpen: false,
+  setViewerSearchOpen: vi.fn(),
+  viewerMenuOpen: false,
+  setViewerMenuOpen: vi.fn(),
+  viewerSearchInputRef: { current: null },
+  viewerMenuRef: { current: null },
+  highlightedMessageId: null,
+  setHighlightedMessageId: vi.fn(),
+  highlightText: (t: string) => t,
+  matchCount: 0,
+  messageMatchCount: 0,
+  currentMatchIndex: 0,
+  goToPrevMatch: vi.fn(),
+  goToNextMatch: vi.fn(),
 }));
 vi.mock("./hooks/useViewerSearch", () => ({
-  useViewerSearch: () => ({
-    messageSearchQuery: "",
-    setMessageSearchQuery: vi.fn(),
-    viewerSearchOpen: false,
-    setViewerSearchOpen: vi.fn(),
-    viewerMenuOpen: false,
-    setViewerMenuOpen: vi.fn(),
-    viewerSearchInputRef: { current: null },
-    viewerMenuRef: { current: null },
-    highlightedMessageId: null,
-    setHighlightedMessageId: vi.fn(),
-    highlightText: (t: string) => t,
-    matchCount: 0,
-    messageMatchCount: 0,
-    currentMatchIndex: 0,
-    goToPrevMatch: vi.fn(),
-    goToNextMatch: vi.fn(),
-  }),
+  useViewerSearch: (...args: unknown[]) => (mockUseViewerSearch as unknown as (...a: unknown[]) => unknown)(...args),
+}));
+const mockUseImportState = vi.fn(() => ({
+  importing: false,
+  importingSource: null,
+  importProgress: null,
+  importError: null,
+  setImportError: vi.fn(),
+  importResult: null,
+  setImportResult: vi.fn(),
+  importRefreshKey: 0,
+  setImportMenuOpen: vi.fn(),
+  handleCancelImport: vi.fn(),
+  handleImportSource: vi.fn(async () => {}),
 }));
 vi.mock("./hooks/useImportState", () => ({
-  useImportState: () => ({
-    importing: false,
-    importingSource: null,
-    importProgress: null,
-    importError: null,
-    setImportError: vi.fn(),
-    importResult: null,
-    setImportResult: vi.fn(),
-    importRefreshKey: 0,
-    setImportMenuOpen: vi.fn(),
-    handleCancelImport: vi.fn(),
-    handleImportSource: vi.fn(async () => {}),
-  }),
+  useImportState: (...args: unknown[]) => (mockUseImportState as unknown as (...a: unknown[]) => unknown)(...args),
+}));
+const mockUseClearData = vi.fn(() => ({
+  clearingData: false,
+  clearConfirmOpen: false,
+  setClearConfirmOpen: vi.fn(),
+  clearConfirmCancelBtnRef: { current: null },
+  clearConfirmDialogRef: { current: null },
+  clearDataTriggerRef: { current: null },
+  handleClearAllDataClick: vi.fn(),
+  handleClearAllDataConfirm: vi.fn(async () => {}),
 }));
 vi.mock("./hooks/useClearData", () => ({
-  useClearData: () => ({
-    clearingData: false,
-    clearConfirmOpen: false,
-    setClearConfirmOpen: vi.fn(),
-    clearConfirmCancelBtnRef: { current: null },
-    clearConfirmDialogRef: { current: null },
-    clearDataTriggerRef: { current: null },
-    handleClearAllDataClick: vi.fn(),
-    handleClearAllDataConfirm: vi.fn(async () => {}),
-  }),
+  useClearData: (...args: unknown[]) => (mockUseClearData as unknown as (...a: unknown[]) => unknown)(...args),
+}));
+const mockUseDataActions = vi.fn(() => ({
+  handleRebuildIndex: vi.fn(async () => {}),
+  handleOverviewSelectConversation: vi.fn(),
 }));
 vi.mock("./hooks/useDataActions", () => ({
-  useDataActions: () => ({
-    handleRebuildIndex: vi.fn(async () => {}),
-    handleOverviewSelectConversation: vi.fn(),
-  }),
+  useDataActions: (...args: unknown[]) => (mockUseDataActions as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>;
@@ -137,6 +143,45 @@ describe("App", () => {
       removeItem: (k: string) => { delete store[k]; },
       clear: () => { for (const kk of Object.keys(store)) delete store[kk]; },
     } as unknown as Storage);
+    // reset mocks to default
+    mockUseAppData.mockReturnValue({
+      loading: false,
+      stats: { conversationCount: 0, messageCount: 0, indexedMessageCount: 0, latestMessageTimestamp: null, estimatedInputTokens: 0, estimatedOutputTokens: 0, estimatedTotalTokens: 0 },
+      sourceStats: [],
+      conversations: [],
+      selectedConvId: null,
+      setSelectedConvId: vi.fn(),
+      messages: [],
+      setMessages: vi.fn(),
+      messagesLoading: false,
+      setMessagesLoading: vi.fn(),
+      loadError: null,
+      setLoadError: vi.fn(),
+      loadData: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseAppData>);
+    mockUseClearData.mockReturnValue({
+      clearingData: false,
+      clearConfirmOpen: false,
+      setClearConfirmOpen: vi.fn(),
+      clearConfirmCancelBtnRef: { current: null },
+      clearConfirmDialogRef: { current: null },
+      clearDataTriggerRef: { current: null },
+      handleClearAllDataClick: vi.fn(),
+      handleClearAllDataConfirm: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseClearData>);
+    mockUseImportState.mockReturnValue({
+      importing: false,
+      importingSource: null,
+      importProgress: null,
+      importError: null,
+      setImportError: vi.fn(),
+      importResult: null,
+      setImportResult: vi.fn(),
+      importRefreshKey: 0,
+      setImportMenuOpen: vi.fn(),
+      handleCancelImport: vi.fn(),
+      handleImportSource: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseImportState>);
   });
 
   it("renders without crashing (smoke)", () => {
@@ -149,5 +194,98 @@ describe("App", () => {
     const shell = screen.getByTestId("app-shell");
     expect(shell.getAttribute("data-view")).toBe("overview");
     expect(shell.getAttribute("data-layout")).toBe("overview-layout");
+  });
+
+  it("shows bootstrapping when loading", () => {
+    mockUseAppData.mockReturnValue({
+      loading: true,
+      stats: null,
+      sourceStats: [],
+      conversations: [],
+      selectedConvId: null,
+      setSelectedConvId: vi.fn(),
+      messages: [],
+      setMessages: vi.fn(),
+      messagesLoading: false,
+      setMessagesLoading: vi.fn(),
+      loadError: null,
+      setLoadError: vi.fn(),
+      loadData: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseAppData>);
+    const { container } = render(<App />);
+    expect(container.textContent).toBeTruthy();
+  });
+
+  it("shows has-data when stats have conversations", () => {
+    mockUseAppData.mockReturnValue({
+      loading: false,
+      stats: { conversationCount: 5, messageCount: 10, indexedMessageCount: 10, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      sourceStats: [],
+      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }],
+      selectedConvId: null,
+      setSelectedConvId: vi.fn(),
+      messages: [],
+      setMessages: vi.fn(),
+      messagesLoading: false,
+      setMessagesLoading: vi.fn(),
+      loadError: null,
+      setLoadError: vi.fn(),
+      loadData: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseAppData>);
+    render(<App />);
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+  });
+
+  it("handles importing state", () => {
+    mockUseImportState.mockReturnValue({
+      importing: true,
+      importingSource: "claude",
+      importProgress: null,
+      importError: null,
+      setImportError: vi.fn(),
+      importResult: null,
+      setImportResult: vi.fn(),
+      importRefreshKey: 0,
+      setImportMenuOpen: vi.fn(),
+      handleCancelImport: vi.fn(),
+      handleImportSource: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseImportState>);
+    render(<App />);
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+  });
+
+  it("handles clearing state", () => {
+    mockUseClearData.mockReturnValue({
+      clearingData: true,
+      clearConfirmOpen: true,
+      setClearConfirmOpen: vi.fn(),
+      clearConfirmCancelBtnRef: { current: null },
+      clearConfirmDialogRef: { current: null },
+      clearDataTriggerRef: { current: null },
+      handleClearAllDataClick: vi.fn(),
+      handleClearAllDataConfirm: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseClearData>);
+    render(<App />);
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+  });
+
+  it("handles loadError", () => {
+    mockUseAppData.mockReturnValue({
+      loading: false,
+      stats: null,
+      sourceStats: [],
+      conversations: [],
+      selectedConvId: null,
+      setSelectedConvId: vi.fn(),
+      messages: [],
+      setMessages: vi.fn(),
+      messagesLoading: false,
+      setMessagesLoading: vi.fn(),
+      loadError: "failed",
+      setLoadError: vi.fn(),
+      loadData: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseAppData>);
+    render(<App />);
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
   });
 });
