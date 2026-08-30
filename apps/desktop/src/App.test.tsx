@@ -128,8 +128,7 @@ import App from "./App";
 describe("App", () => {
   beforeEach(() => {
     if (!Element.prototype.scrollIntoView) {
-      // @ts-expect-error -- jsdom lacks scrollIntoView
-      Element.prototype.scrollIntoView = vi.fn();
+      (Element.prototype as unknown as Record<string, unknown>).scrollIntoView = vi.fn();
     }
     const store: Record<string, string> = {};
     vi.stubGlobal("localStorage", {

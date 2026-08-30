@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -6,7 +7,7 @@ vi.mock("../lib/errorTracking", () => ({
   reportError: vi.fn(),
 }));
 
-function Throw(): JSX.Element {
+function Throw(): React.ReactElement {
   throw new Error("boom from child");
 }
 
