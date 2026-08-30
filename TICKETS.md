@@ -490,3 +490,102 @@ git push --tags && git push origin main
 | Add dependency update automation and audit step | **T-060…T-061**, **T-022** |
 
 **Ready for 70+** once pushed.
+
+---
+
+## H — Next: 67 → 70+ (assessment 2026-08-30, 67 C)
+
+> **Gaps:** Test breadth 1:13 (B 45), DRY violation SourceIcon/sourceLabel (C 78→), lockfile not detected (E 58), no integration test for FTS path (B). Fixes below are ~19 points combined (B up to 7, C up to 3, E up to 5, integration up to 7).
+
+### T-080 — chore: add coverage dep + thresholds
+
+- **Commit:** `chore(test): add @vitest/coverage-v8 and thresholds`
+- **Description:** No coverage threshold in CI. Add `@vitest/coverage-v8` to `apps/desktop/package.json:devDependencies`, add `coverage:{provider:"v8", thresholds:{lines:70, branches:60}}` to `apps/desktop/vite.config.ts:8`, add `test:coverage` script if missing.
+- **Acceptance:**
+  - [ ] `npm install --prefix apps/desktop` updates lockfile
+  - [ ] `npm run test -- --coverage` shows `Coverage` and respects thresholds (fails below 70/60)
+- **Files:** `apps/desktop/package.json`, `apps/desktop/package-lock.json`, `apps/desktop/vite.config.ts`
+- **Dim:** B 45→
+
+### T-081 — test: SearchPanel happy+error path
+
+- **Commit:** `test(search): add SearchPanel happy and error specs`
+- **Description:** `AppShell.tsx` and `SearchPage.tsx` untested. Create `src/panels/SearchPanel.test.tsx:1` rendering `SearchPanel` with mocked `SearchPage` + `SearchViewer` props, assert query change, source filter, result select, viewer open/close, empty state. Commit together with any tiny refactor needed to make it testable (no logic change).
+- **Acceptance:**
+  - [ ] `src/panels/SearchPanel.test.tsx` 2+ tests, `npm run test -- src/panels/SearchPanel.test.tsx` passes
+  - [ ] Coverage lines increase
+- **Files:** `apps/desktop/src/panels/SearchPanel.test.tsx`
+- **Dim:** B
+
+### T-082 — test: useAppData hook
+
+- **Commit:** `test(hooks): add useAppData happy and error specs`
+- **Description:** Hook currently untested. Create `src/hooks/useAppData.test.ts:1` using `renderHook` + mocked `src/db` (`getStats`, `getSourceStats`, `getConversations`), cover `loadData` success (sets stats/source/conversations) and error (sets loadError + pushToast), plus `loading` transitions. Mock `lib/logger` to silence.
+- **Acceptance:**
+  - [ ] `src/hooks/useAppData.test.ts` 2+ tests, `npm run test -- src/hooks/useAppData.test.ts` passes
+- **Files:** `apps/desktop/src/hooks/useAppData.test.ts`
+- **Dim:** B
+
+### T-083 — ci: add coverage gate
+
+- **Commit:** `ci: add coverage step with threshold`
+- **Description:** Add `Coverage` step to `.github/workflows/ci.yml:1` after `Test` step: `npm run test -- --coverage` (desktop) and fail below thresholds. Ensure `actions/setup-node` cache still hits.
+- **Acceptance:**
+  - [ ] `ci.yml` has `npm run test -- --coverage` step, job fails if <70 lines
+  - [ ] Local `npm run test -- --coverage` exits 0 with ≥70% (after T-081/082)
+- **Files:** `.github/workflows/ci.yml`
+- **Dim:** B, H
+
+### T-090 — refactor: extract sourceDisplay
+
+- **Commit:** `refactor(overview): extract SourceIcon and sourceLabel`
+- **Description:** DRY violation: `SourceIcon` + `sourceLabel` copy-pasted in `OverviewPage.tsx:1` and `OverviewMemoryPulse.tsx:1`. Create `src/lib/sourceDisplay.tsx:1` exporting both (reuse `IMPORT_SOURCES` + dot span). Remove duplicates and import from lib.
+- **Acceptance:**
+  - [ ] `src/lib/sourceDisplay.tsx` exists, both `OverviewPage` and `OverviewMemoryPulse` import from it, no duplicate definitions remain
+  - [ ] `grep -rn "function SourceIcon" apps/desktop/src` → 1 hit (lib only)
+- **Files:** `apps/desktop/src/lib/sourceDisplay.tsx`, `apps/desktop/src/OverviewPage.tsx`, `apps/desktop/src/components/OverviewMemoryPulse.tsx`
+- **Dim:** C 78→
+
+### T-091 — test: sourceDisplay
+
+- **Commit:** `test(lib): add sourceDisplay specs`
+- **Description:** Add `src/lib/sourceDisplay.test.tsx:1` asserting `sourceLabel` for `claude`→"Claude", `chatgpt`→"ChatGPT", `gemini`→"Gemini", `grok`→"Grok", `unknown`→capitalized, plus `SourceIcon` renders correct dot class. Commit together with T-090 as **one focused commit** (refactor + test) to be mineable.
+- **Acceptance:**
+  - [ ] `src/lib/sourceDisplay.test.tsx` 5+ asserts, `npm run test -- src/lib/sourceDisplay.test.tsx` passes
+  - [ ] `npm run lint` and `npm run test` both 0
+- **Files:** `apps/desktop/src/lib/sourceDisplay.test.tsx` (and `sourceDisplay.tsx` if not already)
+- **Dim:** C, B
+
+### T-100 — chore: commit desktop lockfile
+
+- **Commit:** `chore: commit desktop lockfile for reproducible installs`
+- **Description:** Stats reports `lockfiles_found` for `packages/core` and `Cargo.lock` but not `apps/desktop` — likely stale or uncommitted. Regenerate `apps/desktop/package-lock.json` against current `package.json` and ensure CI `cache-dependency-path` already references it.
+- **Acceptance:**
+  - [ ] `apps/desktop/package-lock.json` is committed, `git ls-files | grep package-lock.json` shows both `apps/desktop` and `packages/core`
+  - [ ] `npm ci --prefix apps/desktop` exits 0 on clean checkout (verified in CI)
+  - [ ] `.github/workflows/ci.yml` `cache-dependency-path` includes `apps/desktop/package-lock.json`
+- **Files:** `apps/desktop/package-lock.json`
+- **Dim:** E 58→
+
+### T-110 — test: db integration (import→search)
+
+- **Commit:** `test(db): add import-to-search integration spec`
+- **Description:** Current tests mock DB. Create `src/db.integration.test.ts:1` that uses a real sqlite driver (file-based temp `memex.test.db` via `better-sqlite3` or `sqlite3` with `fts5` if available, otherwise skip gracefully). Test: run `migrations` (`initDatabase` equivalent via direct SQL), import small Claude fixture via `insertConversations` helper (or direct `db` inserts), call `rebuildSearchIndex`, then `searchMessages` and assert non-empty ranked results. If native sqlite not available in CI, the test skips with `it.skip` but does not fail.
+- **Acceptance:**
+  - [ ] `src/db.integration.test.ts` exists, `npm run test -- db.integration` passes (or skips gracefully)
+  - [ ] Added as separate `Integration test` step in `ci.yml` (or part of coverage run) that fails PR on breakage when sqlite available
+- **Files:** `apps/desktop/src/db.integration.test.ts`, `.github/workflows/ci.yml` (optional separate step)
+- **Dim:** B
+
+> **Order to land:** T-090+T-091 together (one commit), T-100 (one commit), T-080→T-083 in order, T-110 last. Each ticket = one commit. Keep `npm run lint && npm run test` green per commit.
+
+---
+
+## Mapping to new assessment (67 C, 2026-08-30)
+
+| Assessment “How to improve” | Ticket(s) |
+|----------------------------|-----------|
+| Raise test breadth and add a coverage gate | **T-080…T-083** |
+| Extract duplicated source-label/icon helpers | **T-090, T-091** |
+| Commit a package-lock.json for apps/desktop | **T-100** |
+| Add integration test for the Tauri SQLite import-to-search flow | **T-110** |
