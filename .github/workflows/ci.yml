@@ -68,6 +68,10 @@ jobs:
         working-directory: apps/desktop
         run: npm run test -- --coverage
 
+      - name: Integration test (desktop)
+        working-directory: apps/desktop
+        run: npm run test -- src/db.integration.test.ts
+
       - name: Test (core)
         working-directory: packages/core
         run: npm run test
