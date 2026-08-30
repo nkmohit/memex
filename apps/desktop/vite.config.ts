@@ -16,10 +16,9 @@ export default defineConfig(async () => ({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      // raised from 10 → 40 as we hit 41.69% (T-124 interim, T-130). Final target lines:70, branches:60
       thresholds: {
-        lines: 40,
-        branches: 40,
+        lines: 70,
+        branches: 60,
       },
     },
   },
