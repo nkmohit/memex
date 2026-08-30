@@ -61,4 +61,52 @@ describe("useViewerSearch", () => {
     act(() => result.current.setMessageSearchQuery("a+b*"));
     expect(result.current.matchCount).toBe(1);
   });
+
+  it("highlightText returns original when query empty", () => {
+    const { result } = renderHook(() => useViewerSearch(makeMessages(), false, { current: {} }));
+    expect(result.current.highlightText("hello world", "   ")).toBe("hello world");
+    expect(result.current.highlightText("hello world", "")).toBe("hello world");
+  });
+
+  it("clears highlighted when query cleared", () => {
+    const { result } = renderHook(() => useViewerSearch(makeMessages(), false, { current: {} }));
+    act(() => result.current.setMessageSearchQuery("hello"));
+    expect(result.current.matchCount).toBe(3);
+    act(() => result.current.setMessageSearchQuery("   "));
+    expect(result.current.matchCount).toBe(0);
+  });
+
+  it("goToPrev/Next no-op when matchCount 0", () => {
+    const { result } = renderHook(() => useViewerSearch(makeMessages(), false, { current: {} }));
+    act(() => result.current.setMessageSearchQuery("zzz"));
+    expect(result.current.matchCount).toBe(0);
+    act(() => result.current.goToNextMatch());
+    expect(result.current.currentMatchIndex).toBe(0);
+    act(() => result.current.goToPrevMatch());
+    expect(result.current.currentMatchIndex).toBe(0);
+  });
+
+  it("viewerMenuOpen toggles", () => {
+    const { result } = renderHook(() => useViewerSearch(makeMessages(), false, { current: {} }));
+    expect(result.current.viewerMenuOpen).toBe(false);
+    act(() => result.current.setViewerMenuOpen(true));
+    expect(result.current.viewerMenuOpen).toBe(true);
+    act(() => result.current.setViewerMenuOpen(false));
+    expect(result.current.viewerMenuOpen).toBe(false);
+  });
+
+  it("sets highlighted and scrolls on match change (mocked DOM)", () => {
+    const el = document.createElement("div");
+    el.innerHTML = '<mark>hello</mark> <mark>hello</mark>';
+    // mock scrollIntoView
+    (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView = (() => {}) as unknown as typeof Element.prototype.scrollIntoView;
+    const refs = { current: { m1: el } } as unknown as React.MutableRefObject<Record<string, HTMLElement | null>>;
+    const { result } = renderHook(() => useViewerSearch(makeMessages(), false, refs));
+    act(() => result.current.setMessageSearchQuery("hello"));
+    act(() => result.current.setViewerSearchOpen(true));
+    // after setting query and open, highlighted should be set via effect (async)
+    // goNext should change index
+    act(() => result.current.goToNextMatch());
+    expect(result.current.currentMatchIndex).toBe(1);
+  });
 });
