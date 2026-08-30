@@ -40,7 +40,7 @@ describe("useCopyClipboard", () => {
   });
 
   it("copyToClipboard returns false when no clipboard", async () => {
-    // @ts-ignore
+    // @ts-expect-error - navigator.clipboard optional
     delete navigator.clipboard;
     const { result } = renderHook(() => useCopyClipboard());
     const ok = await result.current.copyToClipboard("test");

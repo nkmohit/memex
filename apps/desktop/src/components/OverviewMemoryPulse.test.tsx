@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import OverviewMemoryPulse from "./OverviewMemoryPulse";
 import type { ActivityHeatmapPoint, SourceStats } from "../db";
@@ -48,7 +48,6 @@ describe("OverviewMemoryPulse", () => {
   });
 
   it("computes intensity levels via heatmap cells", () => {
-    const today = new Date().toISOString().slice(0, 10);
     const y = new Date().getFullYear();
     // create points with varying counts to hit intensity branches
     const points = [

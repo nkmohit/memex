@@ -35,7 +35,7 @@ describe("SearchPage", () => {
     mockGetAll.mockResolvedValue({ rows: [], totalMatches: 0 });
     mockSearchMessages.mockResolvedValue({ rows: [], totalMatches: 0, totalOccurrences: 0 });
     if (!Element.prototype.scrollIntoView) {
-      // @ts-ignore
+      // @ts-expect-error - jsdom lacks scrollIntoView
       Element.prototype.scrollIntoView = vi.fn();
     } else {
       vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
