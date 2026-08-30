@@ -1,0 +1,106 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import SearchPage from "./SearchPage";
+import type { SearchPageSnapshot } from "./SearchPage";
+
+const mockSearchMessages = vi.fn();
+const mockGetAll = vi.fn();
+
+vi.mock("./db", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    searchMessages: (...args: unknown[]) => mockSearchMessages(...args),
+    getAllConversationsForSearch: (...args: unknown[]) => mockGetAll(...args),
+  };
+});
+
+function makeSnapshot(overrides: Partial<SearchPageSnapshot> = {}): SearchPageSnapshot {
+  return {
+    source: "",
+    dateFrom: "",
+    dateTo: "",
+    sort: "last_occurrence_desc",
+    results: [],
+    totalMatches: 0,
+    totalOccurrences: 0,
+    latencyMs: null,
+    ...overrides,
+  };
+}
+
+describe("SearchPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAll.mockResolvedValue({ rows: [], totalMatches: 0 });
+    mockSearchMessages.mockResolvedValue({ rows: [], totalMatches: 0, totalOccurrences: 0 });
+    if (!Element.prototype.scrollIntoView) {
+      // @ts-ignore
+      Element.prototype.scrollIntoView = vi.fn();
+    } else {
+      vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    }
+  });
+
+  it("renders search input and shows browse results when no query (happy path)", async () => {
+    mockGetAll.mockResolvedValue({
+      rows: [
+        { conversation_id: "c1", title: "Hello", source: "claude", created_at: 0, last_message_at: Date.now(), message_count: 3 },
+      ],
+      totalMatches: 1,
+    });
+    render(
+      <SearchPage query="" onQueryChange={vi.fn()} availableSources={["claude"]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />
+    );
+    expect(screen.getByLabelText("Search all messages")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Hello")).toBeInTheDocument(), { timeout: 2000 });
+    expect(screen.getByText(/1 conversations/)).toBeInTheDocument();
+  });
+
+  it("calls onQueryChange when typing (happy path)", () => {
+    const onChange = vi.fn();
+    render(<SearchPage query="hello" onQueryChange={onChange} availableSources={[]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />);
+    const input = screen.getByLabelText("Search all messages");
+    fireEvent.change(input, { target: { value: "world" } });
+    expect(onChange).toHaveBeenCalledWith("world");
+  });
+
+  it("shows too-short when query <3", async () => {
+    render(<SearchPage query="ab" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />);
+    expect(await screen.findByText("Keep typing to search.")).toBeInTheDocument();
+  });
+
+  it("searches when query >=3 and shows results (search happy path)", async () => {
+    mockSearchMessages.mockResolvedValue({
+      rows: [
+        { conversation_id: "c1", title: "Result", source: "chatgpt", snippet: "hi <mark>hello</mark>", snippets: ["hi <mark>hello</mark>"], created_at: 0, last_occurrence: Date.now(), occurrence_count: 1, message_match_count: 1, rank: -1, first_match_message_id: "m1" },
+      ],
+      totalMatches: 1,
+      totalOccurrences: 1,
+    });
+    render(<SearchPage query="hello" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s.toUpperCase()} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText("Result")).toBeInTheDocument(), { timeout: 2000 });
+    expect(screen.getByText("CHATGPT")).toBeInTheDocument();
+  });
+
+  it("handles onSelectResult click", async () => {
+    mockSearchMessages.mockResolvedValue({
+      rows: [
+        { conversation_id: "c1", title: "ClickMe", source: "claude", snippet: "", snippets: [], created_at: 0, last_occurrence: 123, occurrence_count: 1, message_match_count: 1, rank: -1, first_match_message_id: null },
+      ],
+      totalMatches: 1,
+      totalOccurrences: 1,
+    });
+    const onSelect = vi.fn();
+    render(<SearchPage query="hello" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} onSelectResult={onSelect} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText("ClickMe")).toBeInTheDocument(), { timeout: 2000 });
+    fireEvent.click(screen.getByText("ClickMe"));
+    expect(onSelect).toHaveBeenCalledWith("c1", "ClickMe", "claude", 123);
+  });
+
+  it("shows error when search fails (error path)", async () => {
+    mockSearchMessages.mockRejectedValue(new Error("search boom"));
+    render(<SearchPage query="hello" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText("search boom")).toBeInTheDocument(), { timeout: 2000 });
+  });
+});
