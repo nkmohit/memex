@@ -74,6 +74,8 @@ export interface SearchOptions {
   limit?: number;
   offset?: number;
   sort?: "relevance" | "last_occurrence_desc" | "occurrence_count_desc" | "title_az" | "title_za";
+  /** Search mode: FTS (default), semantic (vector), or hybrid (FTS + vector). */
+  mode?: "fts" | "semantic" | "hybrid";
 }
 
 export interface DashboardSnapshot {

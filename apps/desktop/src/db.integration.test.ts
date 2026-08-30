@@ -56,6 +56,10 @@ class FakeDB {
       }
       return;
     }
+    if (s.includes("insert or replace into messages_vec")) {
+      // vector embeddings — ignored in fake DB (no-op, but don't treat as messages)
+      return;
+    }
     if (s.includes("insert or replace into messages")) {
       for (let i = 0; i < params.length; i += 5) {
         const [id, conversation_id, sender, content, created_at] = params.slice(i, i + 5) as any[];
@@ -241,6 +245,21 @@ class FakeDB {
       }
       return [{ inputTokens: input, outputTokens: output } as any] as any;
     }
+    if (s.includes("select m.id as message_id") && s.includes("from messages m")) {
+      // semantic search — return all messages joined with conversations
+      return this.messages.map((m) => {
+        const conv = this.conversations.find((c) => c.id === m.conversation_id);
+        return {
+          message_id: m.id,
+          conversation_id: m.conversation_id,
+          content: m.content,
+          message_created_at: m.created_at ?? 0,
+          title: conv?.title ?? "Untitled",
+          source: conv?.source ?? "claude",
+          conv_created_at: conv?.created_at ?? 0,
+        };
+      }) as any;
+    }
     if (s.includes("select") && s.includes("date(m.created_at")) {
       // activityTimeline - return empty for simplicity
       return [] as any;
@@ -319,5 +338,49 @@ describe("db integration — import to search", () => {
     expect(empty.rows).toHaveLength(0);
     const noMatch = await searchMessages("nonexistentkeywordxyz");
     expect(noMatch.totalMatches).toBe(0);
+  });
+
+  it("semantic search finds paraphrase via vector (vacation ~ holiday)", async () => {
+    const { parseClaudeConversations } = await import("@memex/core");
+    const { insertConversations } = await import("./dbInsert");
+    const { searchMessages } = await import("./db");
+
+    const fixture = [
+      {
+        uuid: "conv-vec-1",
+        name: "Travel Chat",
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T01:00:00Z",
+        chat_messages: [
+          { uuid: "m10", sender: "human", created_at: "2026-02-01T00:00:00Z", text: "We went on a holiday trip last summer and loved it" },
+        ],
+      },
+      {
+        uuid: "conv-vec-2",
+        name: "Other Chat",
+        created_at: "2026-02-02T00:00:00Z",
+        updated_at: "2026-02-02T01:00:00Z",
+        chat_messages: [
+          { uuid: "m11", sender: "human", created_at: "2026-02-02T00:00:00Z", text: "quantum physics discussion" },
+        ],
+      },
+    ];
+
+    const parsed = parseClaudeConversations(fixture as any);
+    await insertConversations(parsed);
+
+    // FTS alone should NOT find "vacation" when content is "holiday trip"
+    const fts = await searchMessages("vacation", { mode: "fts" });
+    expect(fts.totalMatches).toBe(0);
+
+    // Semantic should find it via synonym-aware embedding
+    const sem = await searchMessages("vacation", { mode: "semantic" });
+    expect(sem.totalMatches).toBe(1);
+    expect(sem.rows[0].conversation_id).toBe("conv-vec-1");
+
+    // Hybrid should also find it (union of FTS + semantic)
+    const hybrid = await searchMessages("vacation", { mode: "hybrid" });
+    expect(hybrid.totalMatches).toBeGreaterThanOrEqual(1);
+    expect(hybrid.rows.some((r) => r.conversation_id === "conv-vec-1")).toBe(true);
   });
 });

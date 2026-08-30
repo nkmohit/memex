@@ -78,6 +78,15 @@ export function initDatabase(): Promise<void> {
     `);
 
     await database.execute(`
+      CREATE TABLE IF NOT EXISTS messages_vec (
+        message_id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        embedding BLOB NOT NULL,
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+      );
+    `);
+
+    await database.execute(`
       INSERT OR IGNORE INTO app_meta (key, value)
       VALUES ('data_version', '0')
     `);
