@@ -100,8 +100,7 @@ export default function SearchResultsList({
                   </div>
                 ) : (
                   <div className="search-result-occurrences">
-                    {row.occurrence_count}{" "}
-                    {row.occurrence_count === 1 ? "message" : "messages"}
+                    {row.occurrence_count} {row.occurrence_count === 1 ? "message" : "messages"}
                   </div>
                 )}
               </div>
@@ -120,7 +119,9 @@ export default function SearchResultsList({
                 </div>
               )}
               <div className="search-result-meta">
-                <span className="source-tag" data-source={row.source.toLowerCase()}>{sourceLabel(row.source)}</span>
+                <span className="source-tag" data-source={row.source.toLowerCase()}>
+                  {sourceLabel(row.source)}
+                </span>
                 <span>{formatDate(row.last_occurrence)}</span>
               </div>
             </button>

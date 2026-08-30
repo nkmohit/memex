@@ -13,9 +13,10 @@
      Typography — prefer system fonts for a native feel
      ----------------------------------------------------------------- */
   --font-heading: "JetBrains Mono", "Cascadia Mono", "SF Mono", "Consolas", "Menlo", monospace;
-  --font-body: "Aptos", "Segoe UI Variable", "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  --font-body:
+    "Aptos", "Segoe UI Variable", "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --text-title: 24px;
   --text-section: 16px;
@@ -229,7 +230,11 @@ body {
   letter-spacing: 0.01em;
   line-height: 1;
   cursor: pointer;
-  transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.12s ease, box-shadow 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.16s ease;
 }
 
 .ui-btn:hover:not(:disabled) {
@@ -330,7 +335,10 @@ body {
   gap: 8px;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .app-select-value {
@@ -425,7 +433,6 @@ body {
   background: color-mix(in srgb, var(--surface-2) 92%, transparent);
 }
 
-
 /* -------------------------------------------------------------------
    Layout: app shell — small spacing, subtle gradient for glass depth
    ------------------------------------------------------------------- */
@@ -433,16 +440,9 @@ body {
   display: grid;
   height: 100vh;
   overflow: hidden;
-  background: radial-gradient(
-      1200px circle at 24% 0%,
-      rgb(10 132 255 / 0.08),
-      transparent 42%
-    ),
-    radial-gradient(
-      1200px circle at 90% 40%,
-      rgb(125 211 252 / 0.08),
-      transparent 50%
-    ),
+  background:
+    radial-gradient(1200px circle at 24% 0%, rgb(10 132 255 / 0.08), transparent 42%),
+    radial-gradient(1200px circle at 90% 40%, rgb(125 211 252 / 0.08), transparent 50%),
     var(--surface-0);
   color: var(--color-foreground);
   padding: var(--space-2);
@@ -450,16 +450,9 @@ body {
 }
 
 .dark .app-shell {
-  background: radial-gradient(
-      1200px circle at 24% 0%,
-      rgb(47 129 247 / 0.12),
-      transparent 42%
-    ),
-    radial-gradient(
-      1200px circle at 92% 38%,
-      rgb(34 211 238 / 0.08),
-      transparent 48%
-    ),
+  background:
+    radial-gradient(1200px circle at 24% 0%, rgb(47 129 247 / 0.12), transparent 42%),
+    radial-gradient(1200px circle at 92% 38%, rgb(34 211 238 / 0.08), transparent 48%),
     var(--surface-0);
 }
 
@@ -611,7 +604,10 @@ body {
   color: var(--text-2);
   cursor: pointer;
   position: relative;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
 }
 
 .sidebar-item:hover {
@@ -1203,7 +1199,9 @@ body {
   font-family: inherit;
   background: rgb(15 23 42 / 0.04);
   color: var(--text-1);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .dark .search-input {
@@ -1225,7 +1223,9 @@ body {
   color: var(--text-2);
   cursor: pointer;
   font-size: 12px;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
 .search-filters-toggle:hover {
@@ -1312,7 +1312,10 @@ body {
   flex-direction: column;
   gap: 6px;
   font-family: inherit;
-  transition: border-color 0.15s, background-color 0.15s, transform 0.12s ease;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s,
+    transform 0.12s ease;
 }
 
 .search-result:hover {
@@ -1400,18 +1403,8 @@ body {
   background:
     radial-gradient(920px 560px at 10% -10%, rgb(15 76 255 / 0.18), transparent 60%),
     radial-gradient(980px 620px at 95% 20%, rgb(11 180 110 / 0.14), transparent 62%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 31px,
-      var(--ov-grid-line) 32px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 31px,
-      var(--ov-grid-line) 32px
-    ),
+    repeating-linear-gradient(0deg, transparent, transparent 31px, var(--ov-grid-line) 32px),
+    repeating-linear-gradient(90deg, transparent, transparent 31px, var(--ov-grid-line) 32px),
     var(--ov-bg);
   color: var(--text-1);
 }
@@ -1426,7 +1419,9 @@ body {
   background-image:
     radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.7) 0.5px, transparent 0.8px),
     radial-gradient(circle at 80% 70%, rgb(255 255 255 / 0.6) 0.5px, transparent 0.8px);
-  background-size: 4px 4px, 6px 6px;
+  background-size:
+    4px 4px,
+    6px 6px;
 }
 
 .onboarding-topbar {
@@ -1465,7 +1460,9 @@ body {
   border-radius: 999px;
   font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
 .onboarding-skip:hover {
@@ -1578,7 +1575,9 @@ body {
   border-radius: 999px;
   cursor: pointer;
   font-size: 12px;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
 .onboarding-card-btn:hover:not(:disabled) {
@@ -1730,7 +1729,6 @@ body {
   color: var(--text-1);
 }
 
-
 .search-detail-panel {
   display: flex;
   flex-direction: column;
@@ -1819,7 +1817,10 @@ body {
   border: 1px solid var(--border-1);
   border-radius: var(--radius-2);
   padding: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.12s ease;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.12s ease;
 }
 
 .dark .overview-card {
@@ -1916,7 +1917,9 @@ body {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
 }
 
 .overview-cta:hover {
@@ -1996,7 +1999,9 @@ body {
   font-size: 14px;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.15s, background-color 0.15s;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
 }
 
 .settings-theme-option:hover {
@@ -2022,7 +2027,9 @@ body {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .settings-danger-btn:hover {
@@ -2277,7 +2284,9 @@ body {
   font-family: inherit;
   cursor: pointer;
   box-shadow: 0 8px 20px rgb(0 0 0 / 0.12);
-  transition: opacity 0.15s, transform 0.15s;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
 }
 
 .import-source-btn:hover:not(:disabled) {
@@ -2432,7 +2441,9 @@ body {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
 }
 
 .confirm-cancel-btn:active,
@@ -2485,7 +2496,9 @@ body {
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
 .search-load-more-btn:hover:not(:disabled) {
@@ -2618,18 +2631,8 @@ body {
   position: relative;
   background:
     radial-gradient(960px 560px at 50% -12%, rgb(148 163 184 / 0.08), transparent 62%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 31px,
-      var(--ov-grid-line) 32px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 31px,
-      var(--ov-grid-line) 32px
-    ),
+    repeating-linear-gradient(0deg, transparent, transparent 31px, var(--ov-grid-line) 32px),
+    repeating-linear-gradient(90deg, transparent, transparent 31px, var(--ov-grid-line) 32px),
     var(--ov-bg);
 }
 
@@ -2643,7 +2646,9 @@ body {
   background-image:
     radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.7) 0.5px, transparent 0.8px),
     radial-gradient(circle at 80% 70%, rgb(255 255 255 / 0.6) 0.5px, transparent 0.8px);
-  background-size: 4px 4px, 6px 6px;
+  background-size:
+    4px 4px,
+    6px 6px;
 }
 
 .app-shell.overview-layout {
@@ -2659,11 +2664,15 @@ body {
 .sidebar {
   background: color-mix(in srgb, var(--ov-card-bg) 92%, transparent);
   border: 1px solid var(--ov-card-border);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2), var(--ov-shadow-hard);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.2),
+    var(--ov-shadow-hard);
 }
 
 .dark .sidebar {
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.04), var(--ov-shadow-hard);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.04),
+    var(--ov-shadow-hard);
 }
 
 .sidebar-logo {
@@ -2804,7 +2813,10 @@ body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
 }
 
 .overview-btn:hover:not(:disabled) {
@@ -2889,7 +2901,10 @@ body {
   background: color-mix(in srgb, var(--ov-card-bg) 96%, transparent);
   padding: 12px;
   min-height: 104px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .overview-card-skeleton {
@@ -2903,12 +2918,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgb(255 255 255 / 0.26) 45%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.26) 45%, transparent 100%);
   animation: overview-skeleton-wave 1.25s linear infinite;
 }
 
@@ -2947,7 +2957,8 @@ body {
 }
 
 .overview-metric-card.accent {
-  background: linear-gradient(
+  background:
+    linear-gradient(
       165deg,
       color-mix(in srgb, var(--ov-accent-1) 15%, transparent),
       transparent 42%
@@ -3303,7 +3314,9 @@ body {
 
 .overview-table-row:not(.overview-table-head) {
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .overview-table-row:not(.overview-table-head):hover {
@@ -3654,7 +3667,9 @@ body {
 .sidebar {
   background: rgb(255 255 255 / 0.62) !important;
   border-color: rgb(15 23 42 / 0.24) !important;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), 0 6px 16px rgb(0 0 0 / 0.12) !important;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.18),
+    0 6px 16px rgb(0 0 0 / 0.12) !important;
 }
 
 .sidebar-logo,
@@ -3666,7 +3681,9 @@ body {
 .dark .sidebar {
   background: rgb(16 20 28 / 0.7) !important;
   border-color: rgb(226 232 240 / 0.2) !important;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05), 0 6px 16px rgb(0 0 0 / 0.35) !important;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.05),
+    0 6px 16px rgb(0 0 0 / 0.35) !important;
 }
 
 .dark .sidebar-logo,

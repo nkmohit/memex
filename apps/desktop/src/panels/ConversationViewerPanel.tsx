@@ -111,7 +111,10 @@ export default function ConversationViewerPanel({
               <div>
                 <h2>{selectedConversation.title || "Untitled"}</h2>
                 <p className="viewer-header-meta">
-                  <span className="source-tag" data-source={selectedConversation.source.toLowerCase()}>
+                  <span
+                    className="source-tag"
+                    data-source={selectedConversation.source.toLowerCase()}
+                  >
                     {sourceLabel(selectedConversation.source)}
                   </span>
                   <span>
@@ -162,7 +165,7 @@ export default function ConversationViewerPanel({
                     <input
                       ref={viewerSearchInputRef}
                       type="text"
-                    className="viewer-search-input"
+                      className="viewer-search-input"
                       placeholder="Search in conversation..."
                       value={messageSearchQuery}
                       onChange={(e) => onMessageSearchQueryChange(e.target.value)}
@@ -256,7 +259,9 @@ export default function ConversationViewerPanel({
                     </button>
                   </span>
                 </div>
-                <div className="msg-body">{highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}</div>
+                <div className="msg-body">
+                  {highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}
+                </div>
               </article>
             ))}
           </div>

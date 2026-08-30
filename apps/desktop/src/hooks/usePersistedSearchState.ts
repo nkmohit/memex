@@ -25,7 +25,13 @@ function loadSearchState(): Partial<PersistedSearchState> | null {
         dateTo: typeof p.dateTo === "string" ? p.dateTo : "",
         sort:
           typeof p.sort === "string" &&
-          ["relevance", "last_occurrence_desc", "occurrence_count_desc", "title_az", "title_za"].includes(p.sort)
+          [
+            "relevance",
+            "last_occurrence_desc",
+            "occurrence_count_desc",
+            "title_az",
+            "title_za",
+          ].includes(p.sort)
             ? (p.sort as PersistedSearchState["sort"])
             : "last_occurrence_desc",
       };
@@ -99,4 +105,3 @@ export function usePersistedSearchState() {
     clearPersistedState,
   };
 }
-

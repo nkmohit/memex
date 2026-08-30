@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  ClaudeIcon,
-  ChatGPTIcon,
-  GeminiIcon,
-  GrokIcon,
-} from "./icons";
+import { ClaudeIcon, ChatGPTIcon, GeminiIcon, GrokIcon } from "./icons";
 import { getSourceStats, getStats } from "./db";
 import type { DbStats, SourceStats } from "./db";
 import { formatDate } from "./utils";
@@ -67,10 +62,7 @@ export default function ImportPage({
       setLoading(true);
       setLoadError(null);
       try {
-        const [s, ss] = await Promise.all([
-          getStats(),
-          getSourceStats(),
-        ]);
+        const [s, ss] = await Promise.all([getStats(), getSourceStats()]);
         if (!cancelled) {
           setStats(s);
           setSourceStats(ss);
@@ -118,11 +110,11 @@ export default function ImportPage({
         <div className="import-banners">
           <div className="banner error import-load-error" role="alert">
             <span>{loadError}</span>
-              <button
-                type="button"
-                className="import-retry-btn ui-btn ui-btn--secondary ui-btn--sm"
-                onClick={() => setRetryTrigger((t) => t + 1)}
-              >
+            <button
+              type="button"
+              className="import-retry-btn ui-btn ui-btn--secondary ui-btn--sm"
+              onClick={() => setRetryTrigger((t) => t + 1)}
+            >
               Retry
             </button>
           </div>
@@ -147,7 +139,11 @@ export default function ImportPage({
             </div>
           )}
           {importResult && (
-            <div className="banner success import-result-banner dismissible" role="status" aria-live="polite">
+            <div
+              className="banner success import-result-banner dismissible"
+              role="status"
+              aria-live="polite"
+            >
               <span>{importResult}</span>
               {onDismissImportResult && (
                 <button
@@ -205,9 +201,7 @@ export default function ImportPage({
                     <span className="import-source-meta">
                       {convCount} conversations · {msgCount.toLocaleString()} messages
                     </span>
-                    <span className="import-source-last">
-                      Last sync: {lastSync}
-                    </span>
+                    <span className="import-source-last">Last sync: {lastSync}</span>
                     <span className="import-source-guide">Export guide →</span>
                   </div>
                   <div className="import-source-action">

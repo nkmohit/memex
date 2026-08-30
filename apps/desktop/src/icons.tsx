@@ -56,10 +56,7 @@ export function GeminiIcon({ className, size = defaultSize }: LLMIconProps) {
       className={className}
       aria-hidden
     >
-      <path
-        fill="#4285F4"
-        d="M12 2L9 8H3l2.5 4.5L4 17h5l3-6 3 6h5l-1.5-4.5L21 8h-6L12 2z"
-      />
+      <path fill="#4285F4" d="M12 2L9 8H3l2.5 4.5L4 17h5l3-6 3 6h5l-1.5-4.5L21 8h-6L12 2z" />
     </svg>
   );
 }
@@ -94,10 +91,7 @@ export function MemexLogoIcon({ className, size = 32 }: LLMIconProps) {
       aria-hidden
     >
       <rect width="32" height="32" rx="8" fill="currentColor" />
-      <path
-        fill="#fafafa"
-        d="M8 8h4v16h-4V8zm6 0h4l4 8 4-8h4v16h-4V14l-4 10h-4L14 14v10h-4V8z"
-      />
+      <path fill="#fafafa" d="M8 8h4v16h-4V8zm6 0h4l4 8 4-8h4v16h-4V14l-4 10h-4L14 14v10h-4V8z" />
     </svg>
   );
 }

@@ -7,7 +7,9 @@ const DEFAULT_IMPORT_CHUNK_SIZE = 150;
 
 function isDbLockedError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return msg.includes("database is locked") || msg.includes("SQLITE_BUSY") || msg.includes("code: 5");
+  return (
+    msg.includes("database is locked") || msg.includes("SQLITE_BUSY") || msg.includes("code: 5")
+  );
 }
 
 function assertNotAborted(signal?: AbortSignal): void {

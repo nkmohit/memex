@@ -50,4 +50,3 @@ export function useThemeMode() {
 
   return { theme, setThemeAndPersist };
 }
-

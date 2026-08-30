@@ -7,6 +7,4 @@ import { initDatabase } from "./db";
 // in the App will automatically queue behind it — no race possible.
 initDatabase().catch((err) => console.error("DB init failed:", err));
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <App />,
-);
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<App />);

@@ -83,7 +83,9 @@ export default function ConversationListPanel({
             >
               <span className="conv-title">{c.title || "Untitled"}</span>
               <span className="conv-meta">
-                <span className="source-tag" data-source={c.source.toLowerCase()}>{sourceLabel(c.source)}</span>
+                <span className="source-tag" data-source={c.source.toLowerCase()}>
+                  {sourceLabel(c.source)}
+                </span>
                 <span>{c.message_count} msgs</span>
                 <span>{formatDate(c.last_message_at)}</span>
               </span>

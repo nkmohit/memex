@@ -1,10 +1,4 @@
-import {
-  ClaudeIcon,
-  ChatGPTIcon,
-  GeminiIcon,
-  GrokIcon,
-  MemexLogoIcon,
-} from "./icons";
+import { ClaudeIcon, ChatGPTIcon, GeminiIcon, GrokIcon, MemexLogoIcon } from "./icons";
 import { IMPORT_SOURCES, type ImportSource } from "./importer";
 
 function SourceIcon({ source }: { source: string }) {
@@ -58,7 +52,11 @@ export default function OnboardingPage({
           <MemexLogoIcon size={28} />
           <span>Memex</span>
         </div>
-        <button type="button" className="onboarding-skip ui-btn ui-btn--secondary ui-btn--sm" onClick={onSkip}>
+        <button
+          type="button"
+          className="onboarding-skip ui-btn ui-btn--secondary ui-btn--sm"
+          onClick={onSkip}
+        >
           Skip setup
         </button>
       </header>
@@ -66,8 +64,8 @@ export default function OnboardingPage({
       <section className="onboarding-hero">
         <h1>Initialize Your Local Memory</h1>
         <p>
-          Your personal archive for every conversation. 100% local-first,
-          private, and searchable. We never send your data to the cloud.
+          Your personal archive for every conversation. 100% local-first, private, and searchable.
+          We never send your data to the cloud.
         </p>
       </section>
 

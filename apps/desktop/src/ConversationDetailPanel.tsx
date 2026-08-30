@@ -113,10 +113,7 @@ export default function ConversationDetailPanel({
       ) : (
         <div className="msg-list">
           {messages.map((m) => (
-            <article
-              key={m.id}
-              className={`msg ${m.sender === "human" ? "human" : "assistant"}`}
-            >
+            <article key={m.id} className={`msg ${m.sender === "human" ? "human" : "assistant"}`}>
               <div className="msg-top">
                 <span className="sender-pill">
                   {m.sender === "human" ? "You" : sourceLabel(source)}

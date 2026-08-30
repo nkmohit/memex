@@ -58,10 +58,12 @@ function SearchViewer({
       viewerSearchInputRef.current?.select();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [viewerSearchOpen, selectedConversation?.id, viewerSearchInputRef]);
+  }, [viewerSearchOpen, selectedConversation, viewerSearchInputRef]);
 
   return (
-    <main className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}>
+    <main
+      className={`viewer${viewerSearchOpen && messageSearchQuery.trim() ? " viewer-has-search" : ""}`}
+    >
       {!selectedConversation ? (
         <div className="viewer-empty">
           <p className="viewer-empty-text" aria-live="polite">
@@ -79,7 +81,10 @@ function SearchViewer({
               <div>
                 <h2>{selectedConversation.title || "Untitled"}</h2>
                 <p className="viewer-header-meta">
-                  <span className="source-tag" data-source={selectedConversation.source.toLowerCase()}>
+                  <span
+                    className="source-tag"
+                    data-source={selectedConversation.source.toLowerCase()}
+                  >
                     {sourceLabel(selectedConversation.source)}
                   </span>
                   <span>
@@ -100,7 +105,7 @@ function SearchViewer({
                     <input
                       ref={viewerSearchInputRef}
                       type="text"
-                    className="viewer-search-input"
+                      className="viewer-search-input"
                       placeholder="Search in conversation..."
                       value={messageSearchQuery}
                       onChange={(e) => onMessageSearchQueryChange(e.target.value)}
@@ -204,7 +209,9 @@ function SearchViewer({
                     </button>
                   </span>
                 </div>
-                <div className="msg-body">{highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}</div>
+                <div className="msg-body">
+                  {highlightText(m.content, viewerSearchOpen ? messageSearchQuery : "")}
+                </div>
               </article>
             ))}
           </div>

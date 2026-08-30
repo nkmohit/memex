@@ -8,7 +8,11 @@ interface SearchPageProps {
   onQueryChange: (query: string) => void;
   availableSources: string[];
   sourceLabel: (source: string) => string;
-  onOpenConversation?: (conversationId: string, activeQuery: string, messageId?: string | null) => void;
+  onOpenConversation?: (
+    conversationId: string,
+    activeQuery: string,
+    messageId?: string | null
+  ) => void;
   /** When provided, clicking a result only updates the detail panel (no view switch). */
   onSelectResult?: (
     conversationId: string,
@@ -29,12 +33,7 @@ export interface SearchPageSnapshot {
   source: string;
   dateFrom: string;
   dateTo: string;
-  sort:
-    | "relevance"
-    | "last_occurrence_desc"
-    | "occurrence_count_desc"
-    | "title_az"
-    | "title_za";
+  sort: "relevance" | "last_occurrence_desc" | "occurrence_count_desc" | "title_az" | "title_za";
   results: SearchResultRow[];
   totalMatches: number;
   totalOccurrences: number;
@@ -84,7 +83,12 @@ export default function SearchPage({
   const [latencyMs, setLatencyMs] = useState<number | null>(snapshot.latencyMs);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [filtersOpen, setFiltersOpen] = useState(() => {
-    return Boolean(snapshot.source || snapshot.dateFrom || snapshot.dateTo || snapshot.sort !== "last_occurrence_desc");
+    return Boolean(
+      snapshot.source ||
+      snapshot.dateFrom ||
+      snapshot.dateTo ||
+      snapshot.sort !== "last_occurrence_desc"
+    );
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -158,9 +162,9 @@ export default function SearchPage({
             offset: 0,
           });
           if (cancelled || searchRunIdRef.current !== runId) return;
-          
+
           // Convert ConversationListRow to SearchResultRow format
-          const convertedResults: SearchResultRow[] = response.rows.map(row => ({
+          const convertedResults: SearchResultRow[] = response.rows.map((row) => ({
             conversation_id: row.conversation_id,
             title: row.title,
             source: row.source,
@@ -173,19 +177,19 @@ export default function SearchPage({
             rank: 0,
             first_match_message_id: null,
           }));
-          
+
           setResults(convertedResults);
           setTotalMatches(response.totalMatches);
           setTotalOccurrences(0);
           setSelectedIndex(convertedResults.length > 0 ? 0 : -1);
           setLatencyMs(Math.round(performance.now() - start));
         } catch (err) {
-        if (cancelled || searchRunIdRef.current !== runId) return;
-        setResults([]);
-        setTotalMatches(0);
-        setTotalOccurrences(0);
-        setLatencyMs(null);
-        setError(err instanceof Error ? err.message : "Failed to load conversations");
+          if (cancelled || searchRunIdRef.current !== runId) return;
+          setResults([]);
+          setTotalMatches(0);
+          setTotalOccurrences(0);
+          setLatencyMs(null);
+          setError(err instanceof Error ? err.message : "Failed to load conversations");
         } finally {
           if (!cancelled && searchRunIdRef.current === runId) {
             setLoading(false);
@@ -249,14 +253,14 @@ export default function SearchPage({
     const idx = results.findIndex((r) => r.conversation_id === restoreSelectedConversationId);
     if (idx >= 0) setSelectedIndex(idx);
     onRestoreSelectionDone?.();
-  }, [restoreSelectedConversationId, results]);
+  }, [restoreSelectedConversationId, results, onRestoreSelectionDone]);
 
   useEffect(() => {
     if (selectedIndex < 0) return;
     resultRefs.current[selectedIndex]?.scrollIntoView({
       block: "nearest",
-      behavior: window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      behavior:
+        window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
           ? "auto"
           : "smooth",
     });
@@ -311,7 +315,14 @@ export default function SearchPage({
   }, [hasQuery, loading, onOpenConversation, onSelectResult, query, results, selectedIndex]);
 
   const searchContext = source ? `Source: ${sourceLabel(source)}` : "Source: all";
-  const dateContext = dateFrom && dateTo ? `Date: ${dateFrom} to ${dateTo}` : dateFrom ? `Date: from ${dateFrom}` : dateTo ? `Date: up to ${dateTo}` : "Date: all";
+  const dateContext =
+    dateFrom && dateTo
+      ? `Date: ${dateFrom} to ${dateTo}`
+      : dateFrom
+        ? `Date: from ${dateFrom}`
+        : dateTo
+          ? `Date: up to ${dateTo}`
+          : "Date: all";
 
   useEffect(() => {
     onSnapshotChange({
@@ -349,8 +360,8 @@ export default function SearchPage({
           limit: PAGE_SIZE,
           offset: results.length,
         });
-        
-        const convertedResults: SearchResultRow[] = response.rows.map(row => ({
+
+        const convertedResults: SearchResultRow[] = response.rows.map((row) => ({
           conversation_id: row.conversation_id,
           title: row.title,
           source: row.source,
@@ -415,7 +426,9 @@ export default function SearchPage({
 
         <div className="search-meta">
           {queryTooShort ? (
-            <span className="search-loading">Type at least {MIN_QUERY_LENGTH} characters to search.</span>
+            <span className="search-loading">
+              Type at least {MIN_QUERY_LENGTH} characters to search.
+            </span>
           ) : loading && results.length === 0 ? (
             <span className="search-loading">{hasQuery ? "Searching" : "Loading"}...</span>
           ) : !hasQuery ? (
@@ -423,13 +436,19 @@ export default function SearchPage({
               {`${totalMatches} conversations${latencyMs !== null ? ` • ${latencyMs} ms` : ""}`}
             </span>
           ) : (
-            <span title={`${searchContext} · ${dateContext} · ${totalOccurrences} occurrence${totalOccurrences !== 1 ? "s" : ""}`}>
+            <span
+              title={`${searchContext} · ${dateContext} · ${totalOccurrences} occurrence${totalOccurrences !== 1 ? "s" : ""}`}
+            >
               {`${totalMatches} results${latencyMs !== null ? ` • ${latencyMs} ms` : ""}`}
             </span>
           )}
         </div>
 
-        {error && <div className="banner error" role="alert">{error}</div>}
+        {error && (
+          <div className="banner error" role="alert">
+            {error}
+          </div>
+        )}
       </header>
 
       <SearchResultsList
@@ -441,7 +460,12 @@ export default function SearchPage({
         selectedIndex={selectedIndex}
         onSelectRow={(row) => {
           if (onSelectResult) {
-            onSelectResult(row.conversation_id, row.title || "Untitled", row.source, row.last_occurrence);
+            onSelectResult(
+              row.conversation_id,
+              row.title || "Untitled",
+              row.source,
+              row.last_occurrence
+            );
           } else if (onOpenConversation) {
             onOpenConversation?.(row.conversation_id, query, row.first_match_message_id);
           }
