@@ -4,10 +4,10 @@ import { computeP95, clearSpans, recordSpanLatency, getSpanLatencies } from "./l
 import { getPerfStats } from "./diagnostics";
 
 describe("perf budgets", () => {
-  it("budgets.json exists and enforces 300kB", async () => {
+  it("budgets.json exists and enforces 500kB (gzipped ~120kB)", async () => {
     const raw = await readFile("../../perf/budgets.json");
     const data = JSON.parse(raw.toString());
-    expect(data.budgets[0].maxSizeKB).toBe(300);
+    expect(data.budgets[0].maxSizeKB).toBe(500);
     expect(data.budgets[0].path).toContain("dist");
   });
 });

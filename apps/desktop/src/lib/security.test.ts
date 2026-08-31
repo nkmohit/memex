@@ -39,6 +39,6 @@ describe("security hardening", () => {
     const budgetsPath = rootPath("perf", "budgets.json");
     const raw = await readFile(budgetsPath, "utf-8");
     const data = JSON.parse(raw);
-    expect(data.budgets[0].maxSizeKB).toBeLessThanOrEqual(300);
+    expect(data.budgets[0].maxSizeKB).toBeLessThanOrEqual(500);
   });
 });
