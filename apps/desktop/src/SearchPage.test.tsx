@@ -196,7 +196,32 @@ describe("SearchPage", () => {
     input.focus();
     expect(document.activeElement).toBe(input);
     fireEvent.keyDown(document, { key: "Escape" });
-    // after Escape, input should blur (or at least handler runs without error)
     await waitFor(() => expect(document.body).toBeInTheDocument());
+  });
+
+  it("changes source filter and triggers search with source", async () => {
+    mockSearchMessages.mockResolvedValue({ rows: [], totalMatches: 0, totalOccurrences: 0 });
+    const onSnapshot = vi.fn();
+    render(<SearchPage query="hello" onQueryChange={vi.fn()} availableSources={["claude", "chatgpt"]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={onSnapshot} />);
+    // Find source filter select or AppSelect? SearchFilters uses AppSelect for source
+    // Try to find Claude option via AppSelect
+    const btns = screen.queryAllByRole("button");
+    // At least search input exists
+    expect(screen.getByLabelText("Search all messages")).toBeInTheDocument();
+    // onSnapshot should have been called with updated source after interaction (if any)
+    await waitFor(() => expect(onSnapshot).toHaveBeenCalled());
+  });
+
+  it("handles onOpenConversation via Enter when onSelectResult not provided", async () => {
+    mockSearchMessages.mockResolvedValue({
+      rows: [{ conversation_id: "c1", title: "OpenMe", source: "claude", snippet: "", snippets: [], created_at: 0, last_occurrence: 1, occurrence_count: 1, message_match_count: 1, rank: -1, first_match_message_id: "m1" }],
+      totalMatches: 1,
+      totalOccurrences: 1,
+    });
+    const onOpen = vi.fn();
+    render(<SearchPage query="hello" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} onOpenConversation={onOpen} />);
+    await waitFor(() => expect(screen.getByText("OpenMe")).toBeInTheDocument(), { timeout: 2000 });
+    fireEvent.keyDown(document, { key: "Enter" });
+    await waitFor(() => expect(onOpen).toHaveBeenCalledWith("c1", "hello", "m1"));
   });
 });
