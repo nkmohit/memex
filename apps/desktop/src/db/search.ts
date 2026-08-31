@@ -2,9 +2,86 @@ import { getDb, withDbLock } from "./connection";
 import { normalizeQuery } from "./helpers";
 import type { SearchMessagesResult, SearchOptions, SearchResultRow } from "./types";
 import { clampLimit, clampOffset } from "../lib/validation";
-import { cosineSimilarity, embed } from "../lib/vector";
+import { scoreRows } from "../workers/search.worker";
 import { logger } from "../lib/logger";
 import { validateSearchOptions } from "../lib/schemas";
+
+let searchWorker: Worker | null = null;
+let searchWorkerId = 0;
+
+function getSearchWorker(): Worker | null {
+  if (searchWorker) return searchWorker;
+  try {
+    if (typeof Worker !== "undefined") {
+      searchWorker = new Worker(new URL("../workers/search.worker.ts", import.meta.url), {
+        type: "module",
+      });
+      return searchWorker;
+    }
+  } catch {
+    // Worker not available (jsdom/tests) — fallback to sync
+  }
+  return null;
+}
+
+export function __resetSearchWorker() {
+  if (searchWorker) {
+    try {
+      searchWorker.terminate();
+    } catch {
+      // ignore
+    }
+    searchWorker = null;
+  }
+}
+
+async function scoreWithWorker(
+  query: string,
+  rows: {
+    message_id: string;
+    conversation_id: string;
+    content: string;
+    message_created_at: number;
+    title: string;
+    source: string;
+    conv_created_at: number;
+  }[],
+  threshold: number
+): Promise<
+  {
+    conversation_id: string;
+    title: string;
+    source: string;
+    conv_created_at: number;
+    message_id: string;
+    message_created_at: number;
+    content: string;
+    score: number;
+  }[]
+> {
+  const worker = getSearchWorker();
+  if (!worker) {
+    return scoreRows({ query, rows, threshold });
+  }
+  const id = (searchWorkerId += 1);
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      worker.removeEventListener("message", handler);
+      resolve(scoreRows({ query, rows, threshold }));
+    }, 50);
+    const handler = (e: MessageEvent) => {
+      const data = e.data as { id?: number; scored?: unknown; error?: string };
+      if (data?.id !== id) return;
+      clearTimeout(timeout);
+      worker.removeEventListener("message", handler);
+      if (data.error) reject(new Error(data.error));
+      else resolve(data.scored as Awaited<ReturnType<typeof scoreRows>>);
+    };
+    worker.addEventListener("message", handler);
+    worker.postMessage({ type: "score", id, payload: { query, rows, threshold } });
+  });
+}
+
 import {
   buildCountSql,
   buildFtsWhereClause,
@@ -112,7 +189,6 @@ export function searchMessages(
         const safeLimit = clampLimit(validatedOpts.limit, 20, 100);
         const safeOffset = clampOffset(validatedOpts.offset);
         const validatedSource = validatedOpts.source;
-        const queryVec = embed(rawQuery);
         const SEMANTIC_THRESHOLD = 0.22;
 
         // Fetch all messages with conversation join — filtered by source/date in JS
@@ -149,33 +225,33 @@ export function searchMessages(
           score: number;
         };
 
-        const scored: Scored[] = [];
-        for (const row of allRows) {
-          if (validatedSource && row.source !== validatedSource) continue;
+        // Filter by source/date before scoring; scoring offloaded to worker (fallback sync)
+        const candidates = allRows.filter((row) => {
+          if (validatedSource && row.source !== validatedSource) return false;
           if (
             typeof validatedOpts.dateFrom === "number" &&
             row.message_created_at < validatedOpts.dateFrom
           )
-            continue;
+            return false;
           if (
             typeof validatedOpts.dateTo === "number" &&
             row.message_created_at > validatedOpts.dateTo
           )
-            continue;
-          const sim = cosineSimilarity(queryVec, embed(row.content));
-          if (sim >= SEMANTIC_THRESHOLD) {
-            scored.push({
-              conversation_id: row.conversation_id,
-              title: row.title,
-              source: row.source,
-              conv_created_at: row.conv_created_at,
-              message_id: row.message_id,
-              message_created_at: row.message_created_at,
-              content: row.content,
-              score: sim,
-            });
-          }
-        }
+            return false;
+          return true;
+        });
+
+        const workerScored = await scoreWithWorker(rawQuery, candidates, SEMANTIC_THRESHOLD);
+        const scored: Scored[] = workerScored.map((s) => ({
+          conversation_id: s.conversation_id,
+          title: s.title,
+          source: s.source,
+          conv_created_at: s.conv_created_at,
+          message_id: s.message_id,
+          message_created_at: s.message_created_at,
+          content: s.content,
+          score: s.score,
+        }));
 
         // Group by conversation
         const grouped = new Map<
