@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-31
+
+### Added
+- Enforced coverage thresholds `70/60/70/70` in `vite.config.ts:19` (was `70/60`) — closes B 72 gap, CI now fails below 70.
+- Workspace manifests `workspaces:["apps/desktop","packages/core"]` in root `package.json:1` + regenerated lockfiles — `npm ci` reproducible, E 75→82.
+- `db/searchQueryBuilder.ts:120` extracted from `db/search.ts:476→384` — whereClause/orderBy/count/rows builders + 14 tests — C 68→82.
+- `hooks/useSearchPageQuery.ts:271` extracted from `SearchPage.tsx:483→283` — debounce, queryTooShort, date helpers + 9 tests.
+- `hooks/useAppNavigation.ts:212` + `useAppDialogs.ts:70` split `App.tsx:474→346` (<350) — C gate.
+- Zod `4.5.4` schemas `lib/schemas.ts:148` (ParsedConversation, SearchOptions, Claude/ChatGPT raw) + `ImportValidationError` + 15 tests; `packages/core/src/schemas.ts:85` + 5 tests — I 72→82.
+- Schema validation at DB/import boundaries: `db/search.ts:88` validates `SearchOptions` via zod, `importer.ts:124` validates raw payloads + `core/importers/*` validate output via `validateParsedConversations` — `input_validation_patterns` now non-empty.
+- Security hardening: scoped `fs:allow-read-text-file` to `$HOME/Downloads/**` + `Documents` (`capabilities/default.json:6`), added `gitleaks` SAST job to `ci.yml:15` — H 82→88.
+
+### Changed
+- Bump `0.6.0→0.7.0` (`apps/desktop/package.json:3`, `src-tauri/Cargo.toml:3`)
+
 ## [0.6.0] - 2026-08-30
 
 ### Added
