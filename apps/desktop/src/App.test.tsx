@@ -474,11 +474,29 @@ describe("App", () => {
       setSearchSelectedConversation: vi.fn(),
       skipSearchOnceRef: { current: false },
     } as unknown as ReturnType<typeof mockUseSearchSession>);
-    // Need to set activeView to conversations — App's activeView defaults to overview, but we can simulate via AppShell setActiveView not exposed
-    // Instead, test that Backspace handler is registered without error
     render(<App />);
     await act(async () => {
       const e = new KeyboardEvent("keydown", { key: "Backspace" });
+      document.dispatchEvent(e);
+    });
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+  });
+
+  it("handles clear confirm open focus trap", async () => {
+    const { act } = await import("@testing-library/react");
+    mockUseClearData.mockReturnValue({
+      clearingData: false,
+      clearConfirmOpen: true,
+      setClearConfirmOpen: vi.fn(),
+      clearConfirmCancelBtnRef: { current: document.createElement("button") },
+      clearConfirmDialogRef: { current: document.createElement("div") },
+      clearDataTriggerRef: { current: document.createElement("button") },
+      handleClearAllDataClick: vi.fn(),
+      handleClearAllDataConfirm: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseClearData>);
+    render(<App />);
+    await act(async () => {
+      const e = new KeyboardEvent("keydown", { key: "Escape" });
       document.dispatchEvent(e);
     });
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
