@@ -195,13 +195,23 @@ describe("importConversations", () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
         messageCount: 1,
-        messages: [{ id: `m-${d.id}`, conversationId: d.id, sender: "human" as const, content: "hello", createdAt: Date.now() }],
+        messages: [
+          {
+            id: `m-${d.id}`,
+            conversationId: d.id,
+            sender: "human" as const,
+            content: "hello",
+            createdAt: Date.now(),
+          },
+        ],
       }));
     });
     const { open } = await import("@tauri-apps/plugin-dialog");
     const { readTextFile } = await import("@tauri-apps/plugin-fs");
     (open as any).mockResolvedValueOnce("/tmp/notion.json");
-    (readTextFile as any).mockResolvedValueOnce(JSON.stringify([{ id: "n1", title: "Notion Doc" }]));
+    (readTextFile as any).mockResolvedValueOnce(
+      JSON.stringify([{ id: "n1", title: "Notion Doc" }])
+    );
     const result = await importConversations("notion" as any);
     expect(result?.source).toBe("notion");
     expect(result?.conversationCount).toBe(1);
@@ -235,8 +245,26 @@ describe("importConversations", () => {
         update_time: 1704067200,
         current_node: "node-2",
         mapping: {
-          "node-1": { id: "node-1", parent: null, message: { id: "msg-1", author: { role: "user" }, create_time: 1704067200, content: { parts: ["hi"] } } },
-          "node-2": { id: "node-2", parent: "node-1", message: { id: "msg-2", author: { role: "assistant" }, create_time: 1704067300, content: { parts: ["hello"] } } },
+          "node-1": {
+            id: "node-1",
+            parent: null,
+            message: {
+              id: "msg-1",
+              author: { role: "user" },
+              create_time: 1704067200,
+              content: { parts: ["hi"] },
+            },
+          },
+          "node-2": {
+            id: "node-2",
+            parent: "node-1",
+            message: {
+              id: "msg-2",
+              author: { role: "assistant" },
+              create_time: 1704067300,
+              content: { parts: ["hello"] },
+            },
+          },
         },
       },
     ];
@@ -289,13 +317,25 @@ describe("importConversations", () => {
     const { readTextFile } = await import("@tauri-apps/plugin-fs");
     (open as any).mockResolvedValueOnce("/tmp/empty.json");
     (readTextFile as any).mockResolvedValueOnce(JSON.stringify([{ id: "x" }]));
-    await expect(importConversations("emptyplug" as any)).rejects.toThrow(/No conversations found/i);
+    await expect(importConversations("emptyplug" as any)).rejects.toThrow(
+      /No conversations found/i
+    );
   });
 
   it("aborts import when signal already aborted", async () => {
     const { open } = await import("@tauri-apps/plugin-dialog");
     const { readTextFile } = await import("@tauri-apps/plugin-fs");
-    const fixture = [{ uuid: "c1", name: "T", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z", chat_messages: [{ uuid: "m1", sender: "human", created_at: "2026-01-01T00:00:00Z", text: "hi" }] }];
+    const fixture = [
+      {
+        uuid: "c1",
+        name: "T",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        chat_messages: [
+          { uuid: "m1", sender: "human", created_at: "2026-01-01T00:00:00Z", text: "hi" },
+        ],
+      },
+    ];
     (open as any).mockResolvedValueOnce("/tmp/claude.json");
     (readTextFile as any).mockResolvedValueOnce(JSON.stringify(fixture));
     const controller = new AbortController();
@@ -308,14 +348,28 @@ describe("importConversations", () => {
   it("handles onProgress for Gemini and Grok", async () => {
     const { open } = await import("@tauri-apps/plugin-dialog");
     const { readTextFile } = await import("@tauri-apps/plugin-fs");
-    const geminiFixture = [{ conversation_id: "g1", title: "Gemini", create_time: "2026-01-01T00:00:00Z", messages: [{ id: "m1", role: "user", content: "hi" }] }];
+    const geminiFixture = [
+      {
+        conversation_id: "g1",
+        title: "Gemini",
+        create_time: "2026-01-01T00:00:00Z",
+        messages: [{ id: "m1", role: "user", content: "hi" }],
+      },
+    ];
     (open as any).mockResolvedValueOnce("/tmp/gemini.json");
     (readTextFile as any).mockResolvedValueOnce(JSON.stringify(geminiFixture));
     const onProgress = vi.fn();
     const r1 = await importConversations("gemini", { onProgress });
     expect(r1?.source).toBe("gemini");
     expect(onProgress).toHaveBeenCalled();
-    const grokFixture = [{ conversation_id: "k1", title: "Grok", create_time: 1704067200, messages: [{ message_id: "m1", sender: "user", text: "hi" }] }];
+    const grokFixture = [
+      {
+        conversation_id: "k1",
+        title: "Grok",
+        create_time: 1704067200,
+        messages: [{ message_id: "m1", sender: "user", text: "hi" }],
+      },
+    ];
     (open as any).mockResolvedValueOnce("/tmp/grok.json");
     (readTextFile as any).mockResolvedValueOnce(JSON.stringify(grokFixture));
     const r2 = await importConversations("grok", { onProgress });

@@ -31,8 +31,24 @@ describe("useAppData", () => {
       estimatedOutputTokens: 10,
       estimatedTotalTokens: 20,
     });
-    mockGetSourceStats.mockResolvedValue([{ source: "claude", conversationCount: 1, messageCount: 2, lastActivityTimestamp: Date.now() }]);
-    mockGetConversations.mockResolvedValue([{ id: "c1", source: "claude", title: "Test", created_at: 0, last_message_at: 0, message_count: 2 }]);
+    mockGetSourceStats.mockResolvedValue([
+      {
+        source: "claude",
+        conversationCount: 1,
+        messageCount: 2,
+        lastActivityTimestamp: Date.now(),
+      },
+    ]);
+    mockGetConversations.mockResolvedValue([
+      {
+        id: "c1",
+        source: "claude",
+        title: "Test",
+        created_at: 0,
+        last_message_at: 0,
+        message_count: 2,
+      },
+    ]);
   });
 
   it("loads data happy path sets stats and conversations", async () => {
@@ -74,9 +90,28 @@ describe("useAppData", () => {
   it("uses cached snapshot when available and no source", async () => {
     const pushToast = vi.fn();
     const cached = {
-      stats: { conversationCount: 5, messageCount: 10, indexedMessageCount: 10, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
-      sourceStats: [{ source: "chatgpt", conversationCount: 5, messageCount: 10, lastActivityTimestamp: 123 }],
-      recentConversations: [{ id: "c2", source: "chatgpt", title: "Cached", created_at: 0, last_message_at: 0, message_count: 10 }],
+      stats: {
+        conversationCount: 5,
+        messageCount: 10,
+        indexedMessageCount: 10,
+        latestMessageTimestamp: 123,
+        estimatedInputTokens: 1,
+        estimatedOutputTokens: 1,
+        estimatedTotalTokens: 2,
+      },
+      sourceStats: [
+        { source: "chatgpt", conversationCount: 5, messageCount: 10, lastActivityTimestamp: 123 },
+      ],
+      recentConversations: [
+        {
+          id: "c2",
+          source: "chatgpt",
+          title: "Cached",
+          created_at: 0,
+          last_message_at: 0,
+          message_count: 10,
+        },
+      ],
       activityTimeline: [],
       dataVersion: 1,
       updatedAt: Date.now(),

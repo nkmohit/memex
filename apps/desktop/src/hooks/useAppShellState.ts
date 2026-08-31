@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import type { ActiveView } from "../components/Sidebar";
 
-export type AppDataState = "bootstrapping" | "ready-empty" | "ready-has-data" | "importing" | "clearing" | "error";
+export type AppDataState =
+  "bootstrapping" | "ready-empty" | "ready-has-data" | "importing" | "clearing" | "error";
 
 export function useAppShellState(params: {
   activeView: ActiveView;
@@ -12,12 +13,14 @@ export function useAppShellState(params: {
   clearingData: boolean;
   importing: boolean;
 }) {
-  const { activeView, searchSelectedConvId, loading, stats, loadError, clearingData, importing } = params;
+  const { activeView, searchSelectedConvId, loading, stats, loadError, clearingData, importing } =
+    params;
 
   const searchPanelClosed = activeView === "search" && !searchSelectedConvId;
 
   const shellLayoutClass = useMemo(() => {
-    if (activeView === "search") return searchPanelClosed ? "search-layout search-panel-closed" : "search-layout";
+    if (activeView === "search")
+      return searchPanelClosed ? "search-layout search-panel-closed" : "search-layout";
     if (activeView === "overview") return "overview-layout";
     if (activeView === "settings") return "settings-layout";
     if (activeView === "import") return "import-layout";

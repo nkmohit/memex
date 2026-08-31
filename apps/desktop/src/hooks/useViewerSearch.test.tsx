@@ -31,7 +31,12 @@ describe("useViewerSearch", () => {
     const out = result.current.highlightText("hello world", "hello");
     // out is array of strings/marks
     expect(Array.isArray(out)).toBe(true);
-    const hasMark = (out as unknown[]).some((el: unknown) => typeof el === "object" && el !== null && (el as { props?: { children?: string } }).props?.children === "hello");
+    const hasMark = (out as unknown[]).some(
+      (el: unknown) =>
+        typeof el === "object" &&
+        el !== null &&
+        (el as { props?: { children?: string } }).props?.children === "hello"
+    );
     expect(hasMark).toBe(true);
   });
 
@@ -57,7 +62,11 @@ describe("useViewerSearch", () => {
   });
 
   it("escapes regex special characters", () => {
-    const { result } = renderHook(() => useViewerSearch([{ id: "m1", sender: "human", content: "a+b*c", created_at: 0 }], false, { current: {} }));
+    const { result } = renderHook(() =>
+      useViewerSearch([{ id: "m1", sender: "human", content: "a+b*c", created_at: 0 }], false, {
+        current: {},
+      })
+    );
     act(() => result.current.setMessageSearchQuery("a+b*"));
     expect(result.current.matchCount).toBe(1);
   });
@@ -97,10 +106,13 @@ describe("useViewerSearch", () => {
 
   it("sets highlighted and scrolls on match change (mocked DOM)", () => {
     const el = document.createElement("div");
-    el.innerHTML = '<mark>hello</mark> <mark>hello</mark>';
+    el.innerHTML = "<mark>hello</mark> <mark>hello</mark>";
     // mock scrollIntoView
-    (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView = (() => {}) as unknown as typeof Element.prototype.scrollIntoView;
-    const refs = { current: { m1: el } } as unknown as React.MutableRefObject<Record<string, HTMLElement | null>>;
+    (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView =
+      (() => {}) as unknown as typeof Element.prototype.scrollIntoView;
+    const refs = { current: { m1: el } } as unknown as React.MutableRefObject<
+      Record<string, HTMLElement | null>
+    >;
     const { result } = renderHook(() => useViewerSearch(makeMessages(), false, refs));
     act(() => result.current.setMessageSearchQuery("hello"));
     act(() => result.current.setViewerSearchOpen(true));

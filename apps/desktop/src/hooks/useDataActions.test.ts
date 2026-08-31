@@ -50,7 +50,9 @@ describe("useDataActions", () => {
   });
 
   it("handleOverviewSelectConversation navigates and loads messages", async () => {
-    vi.mocked(getMessages).mockResolvedValue([{ id: "m1", sender: "human", content: "hi", created_at: Date.now() } as never]);
+    vi.mocked(getMessages).mockResolvedValue([
+      { id: "m1", sender: "human", content: "hi", created_at: Date.now() } as never,
+    ]);
     const opts = makeOpts({ loadData: vi.fn(async () => {}) });
     const { result } = renderHook(() => useDataActions(opts));
     await act(async () => {

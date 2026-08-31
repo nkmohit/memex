@@ -30,7 +30,12 @@ interface Props {
   topicDates?: number[];
 }
 
-export default function OverviewMemoryPulse({ activityTimeline, sourceStats, topicTexts, topicDates }: Props) {
+export default function OverviewMemoryPulse({
+  activityTimeline,
+  sourceStats,
+  topicTexts,
+  topicDates,
+}: Props) {
   const [selectedYear, setSelectedYear] = useState<string>("latest");
   const [hoveredHeatmap, setHoveredHeatmap] = useState<HeatmapHoverState | null>(null);
 
@@ -358,7 +363,9 @@ export default function OverviewMemoryPulse({ activityTimeline, sourceStats, top
                 {topicTimeline.map((point) => (
                   <li key={point.month} className="overview-topic-point">
                     <span className="overview-topic-month">{point.month}</span>
-                    <span className="overview-topic-terms">{point.topTopics.join(", ") || "—"}</span>
+                    <span className="overview-topic-terms">
+                      {point.topTopics.join(", ") || "—"}
+                    </span>
                     <span className="overview-topic-count">{point.count} threads</span>
                   </li>
                 ))}

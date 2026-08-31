@@ -318,153 +318,156 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AppShell
-      showOnboarding={showOnboarding}
-      onboardingProps={{
-        onImport: (s) => void handleImportSource(s),
-        importing,
-        importingSource,
-        onCancelImport: handleCancelImport,
-        importProgress,
-        onSkip: () => {
-          setSkipOnboarding(true);
-          setOnboardingVisible(false);
-          setActiveView("overview");
-          setImportError(null);
-          setImportResult(null);
-        },
-      }}
-      toasts={toasts}
-      dismissToast={dismissToast}
-      shellLayoutClass={shellLayoutClass}
-      appDataState={appDataState}
-      activeView={activeView}
-      setActiveView={setActiveView}
-      setImportMenuOpen={setImportMenuOpen}
-      theme={theme}
-      setThemeAndPersist={setThemeAndPersist}
-      clearingData={clearingData}
-      importing={importing}
-      loading={loading}
-      onClearAllDataClick={handleClearAllDataClick}
-      clearDataTriggerRef={clearDataTriggerRef}
-      clearConfirmOpen={clearConfirmOpen}
-      clearingDataConfirm={clearingData}
-      onCancelClear={() => setClearConfirmOpen(false)}
-      onConfirmClear={() => void handleClearAllDataConfirm()}
-      clearConfirmCancelBtnRef={clearConfirmCancelBtnRef}
-      clearConfirmDialogRef={clearConfirmDialogRef}
-      overviewProps={{
-        onOpenImport: () => setActiveView("import"),
-        onOpenSearch: () => {
-          setOpenedConversationFromSearch(false);
-          setActiveView("search");
-          setSearchFocusRequestId(Date.now());
-        },
-        onSelectConversation: handleOverviewSelectConversation,
-        onRebuildIndex: handleRebuildIndex,
-      }}
-      importProps={{
-        onImport: (s) => void handleImportSource(s),
-        importing,
-        importingSource,
-        onCancelImport: handleCancelImport,
-        importProgress,
-        importError,
-        importResult,
-        onDismissImportError: () => setImportError(null),
-        onDismissImportResult: () => setImportResult(null),
-        refreshKey: importRefreshKey,
-      }}
-      searchProps={{
-        query: searchPageQuery,
-        onQueryChange: setSearchPageQuery,
-        availableSources,
-        sourceLabel,
-        onSelectResult: (c, t, s, l) => void handleSearchResultSelect(c, t, s, l),
-        selectedConversationId: searchSelectedConvId,
-        focusRequestId: searchFocusRequestId,
-        snapshot: searchPageSnapshot,
-        onSnapshotChange: setSearchPageSnapshot,
-        skipSearchOnceRef,
-        restoreSelectedConversationId: searchRestoreConversationId,
-        onRestoreSelectionDone: () => setSearchRestoreConversationId(null),
-        viewer: {
-          open: Boolean(searchSelectedConvId),
-          onClose: () => {
-            setSearchSelectedConvId(null);
-            setSearchSelectedConversation(null);
-            setSelectedConvId(null);
-            setOpenedConversationFromSearch(false);
+        showOnboarding={showOnboarding}
+        onboardingProps={{
+          onImport: (s) => void handleImportSource(s),
+          importing,
+          importingSource,
+          onCancelImport: handleCancelImport,
+          importProgress,
+          onSkip: () => {
+            setSkipOnboarding(true);
+            setOnboardingVisible(false);
+            setActiveView("overview");
+            setImportError(null);
+            setImportResult(null);
           },
-          selectedConversation,
-          messages,
-          messagesLoading,
-          viewerSearchOpen,
-          onOpenViewerSearch: () => setViewerSearchOpen(true),
-          onCloseViewerSearch: () => setViewerSearchOpen(false),
-          messageSearchQuery,
-          onMessageSearchQueryChange: setMessageSearchQuery,
-          viewerSearchInputRef,
-          matchCount,
-          messageMatchCount,
-          currentMatchIndex,
-          onPrevMatch: goToPrevMatch,
-          onNextMatch: goToNextMatch,
-          copyToast,
-          onCopyMessage: (m) =>
-            copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? "")),
-          messageRefs,
-          highlightedMessageId,
-          highlightText,
-        },
-      }}
-      conversationsProps={{
-        conversations,
-        loading,
-        selectedConvId,
-        activeSource,
-        availableSources,
-        sourceStats,
-        convItemRefs,
-        onSelectSource: setActiveSource,
-        onSelectConversation: (id) => {
-          setOpenedConversationFromSearch(false);
-          void handleConversationClick(id);
-        },
-        sourceLabel,
-        viewer: {
-          stats,
-          selectedConversation,
-          messages,
-          messagesLoading,
-          openedConversationFromSearch,
-          onBackToSearch: goBackToSearch,
-          viewerMenuOpen,
-          onToggleViewerMenu: () => setViewerMenuOpen((o) => !o),
-          onCloseViewerMenu: () => setViewerMenuOpen(false),
-          viewerMenuRef,
-          viewerSearchOpen,
-          onOpenViewerSearch: () => setViewerSearchOpen(true),
-          onCloseViewerSearch: () => setViewerSearchOpen(false),
-          messageSearchQuery,
-          onMessageSearchQueryChange: setMessageSearchQuery,
-          viewerSearchInputRef,
-          matchCount,
-          messageMatchCount,
-          currentMatchIndex,
-          onPrevMatch: goToPrevMatch,
-          onNextMatch: goToNextMatch,
-          copyToast,
-          onCopyConversation: () =>
-            copyConversationToClipboard(messages, sourceLabel(selectedConversation?.source ?? "")),
-          onCopyMessage: (m) =>
-            copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? "")),
-          messageRefs,
-          highlightedMessageId,
-          highlightText,
+        }}
+        toasts={toasts}
+        dismissToast={dismissToast}
+        shellLayoutClass={shellLayoutClass}
+        appDataState={appDataState}
+        activeView={activeView}
+        setActiveView={setActiveView}
+        setImportMenuOpen={setImportMenuOpen}
+        theme={theme}
+        setThemeAndPersist={setThemeAndPersist}
+        clearingData={clearingData}
+        importing={importing}
+        loading={loading}
+        onClearAllDataClick={handleClearAllDataClick}
+        clearDataTriggerRef={clearDataTriggerRef}
+        clearConfirmOpen={clearConfirmOpen}
+        clearingDataConfirm={clearingData}
+        onCancelClear={() => setClearConfirmOpen(false)}
+        onConfirmClear={() => void handleClearAllDataConfirm()}
+        clearConfirmCancelBtnRef={clearConfirmCancelBtnRef}
+        clearConfirmDialogRef={clearConfirmDialogRef}
+        overviewProps={{
+          onOpenImport: () => setActiveView("import"),
+          onOpenSearch: () => {
+            setOpenedConversationFromSearch(false);
+            setActiveView("search");
+            setSearchFocusRequestId(Date.now());
+          },
+          onSelectConversation: handleOverviewSelectConversation,
+          onRebuildIndex: handleRebuildIndex,
+        }}
+        importProps={{
+          onImport: (s) => void handleImportSource(s),
+          importing,
+          importingSource,
+          onCancelImport: handleCancelImport,
+          importProgress,
+          importError,
+          importResult,
+          onDismissImportError: () => setImportError(null),
+          onDismissImportResult: () => setImportResult(null),
+          refreshKey: importRefreshKey,
+        }}
+        searchProps={{
+          query: searchPageQuery,
+          onQueryChange: setSearchPageQuery,
+          availableSources,
           sourceLabel,
-        },
-      }}
+          onSelectResult: (c, t, s, l) => void handleSearchResultSelect(c, t, s, l),
+          selectedConversationId: searchSelectedConvId,
+          focusRequestId: searchFocusRequestId,
+          snapshot: searchPageSnapshot,
+          onSnapshotChange: setSearchPageSnapshot,
+          skipSearchOnceRef,
+          restoreSelectedConversationId: searchRestoreConversationId,
+          onRestoreSelectionDone: () => setSearchRestoreConversationId(null),
+          viewer: {
+            open: Boolean(searchSelectedConvId),
+            onClose: () => {
+              setSearchSelectedConvId(null);
+              setSearchSelectedConversation(null);
+              setSelectedConvId(null);
+              setOpenedConversationFromSearch(false);
+            },
+            selectedConversation,
+            messages,
+            messagesLoading,
+            viewerSearchOpen,
+            onOpenViewerSearch: () => setViewerSearchOpen(true),
+            onCloseViewerSearch: () => setViewerSearchOpen(false),
+            messageSearchQuery,
+            onMessageSearchQueryChange: setMessageSearchQuery,
+            viewerSearchInputRef,
+            matchCount,
+            messageMatchCount,
+            currentMatchIndex,
+            onPrevMatch: goToPrevMatch,
+            onNextMatch: goToNextMatch,
+            copyToast,
+            onCopyMessage: (m) =>
+              copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? "")),
+            messageRefs,
+            highlightedMessageId,
+            highlightText,
+          },
+        }}
+        conversationsProps={{
+          conversations,
+          loading,
+          selectedConvId,
+          activeSource,
+          availableSources,
+          sourceStats,
+          convItemRefs,
+          onSelectSource: setActiveSource,
+          onSelectConversation: (id) => {
+            setOpenedConversationFromSearch(false);
+            void handleConversationClick(id);
+          },
+          sourceLabel,
+          viewer: {
+            stats,
+            selectedConversation,
+            messages,
+            messagesLoading,
+            openedConversationFromSearch,
+            onBackToSearch: goBackToSearch,
+            viewerMenuOpen,
+            onToggleViewerMenu: () => setViewerMenuOpen((o) => !o),
+            onCloseViewerMenu: () => setViewerMenuOpen(false),
+            viewerMenuRef,
+            viewerSearchOpen,
+            onOpenViewerSearch: () => setViewerSearchOpen(true),
+            onCloseViewerSearch: () => setViewerSearchOpen(false),
+            messageSearchQuery,
+            onMessageSearchQueryChange: setMessageSearchQuery,
+            viewerSearchInputRef,
+            matchCount,
+            messageMatchCount,
+            currentMatchIndex,
+            onPrevMatch: goToPrevMatch,
+            onNextMatch: goToNextMatch,
+            copyToast,
+            onCopyConversation: () =>
+              copyConversationToClipboard(
+                messages,
+                sourceLabel(selectedConversation?.source ?? "")
+              ),
+            onCopyMessage: (m) =>
+              copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? "")),
+            messageRefs,
+            highlightedMessageId,
+            highlightText,
+            sourceLabel,
+          },
+        }}
       />
     </ErrorBoundary>
   );

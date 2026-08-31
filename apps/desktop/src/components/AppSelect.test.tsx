@@ -39,7 +39,17 @@ describe("AppSelect", () => {
   });
 
   it("applies size sm and className/disabled", () => {
-    render(<AppSelect options={baseOptions} value="a" onChange={vi.fn()} ariaLabel="Select test" size="sm" className="custom" disabled />);
+    render(
+      <AppSelect
+        options={baseOptions}
+        value="a"
+        onChange={vi.fn()}
+        ariaLabel="Select test"
+        size="sm"
+        className="custom"
+        disabled
+      />
+    );
     const btn = screen.getByRole("button", { name: "Select test" });
     expect(btn).toBeDisabled();
     expect(document.querySelector(".app-select-root--sm")).toBeInTheDocument();

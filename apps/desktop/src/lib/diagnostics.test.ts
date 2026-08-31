@@ -6,7 +6,12 @@ vi.mock("../db/queries", () => ({
 }));
 
 import { getStats, getSourceStats } from "../db/queries";
-import { computeIndexHealth, getDiagnostics, isSearchIndexHealthy, APP_VERSION } from "./diagnostics";
+import {
+  computeIndexHealth,
+  getDiagnostics,
+  isSearchIndexHealthy,
+  APP_VERSION,
+} from "./diagnostics";
 import type { DbStats, SourceStats } from "../db/types";
 
 const mockedGetStats = vi.mocked(getStats);
@@ -28,7 +33,12 @@ function makeStats(overrides: Partial<DbStats> = {}): DbStats {
 function makeSourceStats(): SourceStats[] {
   return [
     { source: "claude", conversationCount: 5, messageCount: 50, lastActivityTimestamp: Date.now() },
-    { source: "chatgpt", conversationCount: 5, messageCount: 50, lastActivityTimestamp: Date.now() },
+    {
+      source: "chatgpt",
+      conversationCount: 5,
+      messageCount: 50,
+      lastActivityTimestamp: Date.now(),
+    },
   ];
 }
 

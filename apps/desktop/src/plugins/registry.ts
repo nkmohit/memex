@@ -61,7 +61,7 @@ export function clearPlugins(): void {
 
 export function getAllSources(
   builtin: { id: string; label: string; available: boolean }[]
-): (typeof builtin[number] | PluginSourceMeta)[] {
+): ((typeof builtin)[number] | PluginSourceMeta)[] {
   return [...builtin, ...getPluginSources()];
 }
 
@@ -76,14 +76,17 @@ export async function loadPlugins(): Promise<number> {
     // Dynamic import to avoid hard dependency in tests where plugin-fs not available
     const fs = await import("@tauri-apps/plugin-fs");
     // `readDir` may not exist in older plugin-fs; guard
-    const readDir = (fs as unknown as { readDir?: (path: string) => Promise<{ name: string }[]> }).readDir;
+    const readDir = (fs as unknown as { readDir?: (path: string) => Promise<{ name: string }[]> })
+      .readDir;
     if (!readDir) return 0;
     const entries = await readDir(PLUGIN_DIR);
     for (const entry of entries) {
       if (!entry.name.endsWith(".js")) continue;
       const filePath = `${PLUGIN_DIR}/${entry.name}`;
       try {
-        const text = await (fs as unknown as { readTextFile: (p: string) => Promise<string> }).readTextFile(filePath);
+        const text = await (
+          fs as unknown as { readTextFile: (p: string) => Promise<string> }
+        ).readTextFile(filePath);
         // Simple CJS evaluate: provide `registerImporter` as global
         const fn = new Function("registerImporter", "exports", "module", text);
         const modExports: Record<string, unknown> = {};

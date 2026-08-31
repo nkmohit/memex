@@ -79,7 +79,10 @@ export default function OverviewPage({
     () => snapshot?.recentConversations ?? [],
     [snapshot?.recentConversations]
   );
-  const activityTimeline = useMemo(() => snapshot?.activityTimeline ?? [], [snapshot?.activityTimeline]);
+  const activityTimeline = useMemo(
+    () => snapshot?.activityTimeline ?? [],
+    [snapshot?.activityTimeline]
+  );
 
   const topSource = useMemo(() => {
     if (sourceStats.length === 0) return null;
@@ -109,7 +112,10 @@ export default function OverviewPage({
       return;
     }
     let cancelled = false;
-    const recentTitles = recent.slice(0, 8).map((r) => r.title || "Untitled").join(". ");
+    const recentTitles = recent
+      .slice(0, 8)
+      .map((r) => r.title || "Untitled")
+      .join(". ");
     const text = [
       `You have ${totalConvs} conversations and ${totalMsgs} messages across ${sourceStats.length} sources.`,
       `Most active source is ${topSource ? sourceLabel(topSource.source) : "none"} with ${topSource?.messageCount ?? 0} messages.`,
@@ -122,7 +128,17 @@ export default function OverviewPage({
     return () => {
       cancelled = true;
     };
-  }, [snapshot, isEmpty, totalConvs, totalMsgs, sourceStats.length, topSource, recent, indexedPct, totalTokens]);
+  }, [
+    snapshot,
+    isEmpty,
+    totalConvs,
+    totalMsgs,
+    sourceStats.length,
+    topSource,
+    recent,
+    indexedPct,
+    totalTokens,
+  ]);
 
   return (
     <main className="overview-main" id="main-content">
@@ -311,8 +327,8 @@ export default function OverviewPage({
                 </ul>
               ) : (
                 <p>
-                  AI insight cards will surface recurring topics, high-value threads, and relationship
-                  trails across sources.
+                  AI insight cards will surface recurring topics, high-value threads, and
+                  relationship trails across sources.
                 </p>
               )}
             </article>

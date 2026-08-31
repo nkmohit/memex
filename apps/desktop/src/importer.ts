@@ -92,7 +92,9 @@ async function importPlugin(
   if (!filePath) return null;
   const content = await readTextFile(filePath as string);
   const rawData = JSON.parse(content);
-  const parsed = parser(rawData as unknown) as unknown as ReturnType<typeof parseClaudeConversations>;
+  const parsed = parser(rawData as unknown) as unknown as ReturnType<
+    typeof parseClaudeConversations
+  >;
   opts.onProgress?.({
     phase: "parse",
     conversationsDone: parsed.length,
@@ -101,8 +103,13 @@ async function importPlugin(
     messagesTotal: parsed.reduce((sum, conv) => sum + conv.messages.length, 0),
   });
   if (parsed.length === 0) throw new Error("No conversations found in the export file");
-  const result = await insertConversations(parsed, { signal: opts.signal, onProgress: opts.onProgress });
-  logger.info(`Plugin ${sourceId} import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`);
+  const result = await insertConversations(parsed, {
+    signal: opts.signal,
+    onProgress: opts.onProgress,
+  });
+  logger.info(
+    `Plugin ${sourceId} import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
+  );
   return { source: sourceId as ImportSource, ...result };
 }
 
@@ -240,7 +247,9 @@ async function importGemini(opts: ImportOptions): Promise<ImportResult | null> {
     onProgress: opts.onProgress,
   });
 
-  logger.info(`Gemini import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`);
+  logger.info(
+    `Gemini import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
+  );
 
   return {
     source: "gemini",
@@ -284,7 +293,9 @@ async function importGrok(opts: ImportOptions): Promise<ImportResult | null> {
     onProgress: opts.onProgress,
   });
 
-  logger.info(`Grok import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`);
+  logger.info(
+    `Grok import complete: ${result.conversationCount} conversations, ${result.messageCount} messages`
+  );
 
   return {
     source: "grok",

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createMockProvider, summarizeText, summarizeMessages, getCachedSummary, __clearMemoryCache } from "./summarize";
+import {
+  createMockProvider,
+  summarizeText,
+  summarizeMessages,
+  getCachedSummary,
+  __clearMemoryCache,
+} from "./summarize";
 
 describe("lib/summarize", () => {
   beforeEach(() => {
@@ -21,11 +27,18 @@ describe("lib/summarize", () => {
   });
 
   it("uses mocked LLM provider and parses bullets", async () => {
-    const provider = createMockProvider("- Bullet one from LLM\n- Bullet two from LLM\n- Bullet three from LLM");
-    const bullets = await summarizeText("some long conversation text that is enough to trigger summarize logic with multiple sentences. ".repeat(5), {
-      provider,
-      useCache: false,
-    });
+    const provider = createMockProvider(
+      "- Bullet one from LLM\n- Bullet two from LLM\n- Bullet three from LLM"
+    );
+    const bullets = await summarizeText(
+      "some long conversation text that is enough to trigger summarize logic with multiple sentences. ".repeat(
+        5
+      ),
+      {
+        provider,
+        useCache: false,
+      }
+    );
     expect(bullets).toHaveLength(3);
     expect(bullets[0]).toBe("Bullet one from LLM");
     expect(bullets[1]).toBe("Bullet two from LLM");
@@ -35,13 +48,15 @@ describe("lib/summarize", () => {
     const failing = vi.fn(async () => {
       throw new Error("LLM offline");
     });
-    const text = "Sentence one. Sentence two is longer and more important. Sentence three has unique keywords. Sentence four.";
+    const text =
+      "Sentence one. Sentence two is longer and more important. Sentence three has unique keywords. Sentence four.";
     const bullets = await summarizeText(text, { provider: failing, useCache: false });
     expect(bullets).toHaveLength(3);
   });
 
   it("caches result in dashboard_cache / localStorage", async () => {
-    const text = "Cache test content. Second sentence for scoring. Third sentence important. Fourth sentence extra.";
+    const text =
+      "Cache test content. Second sentence for scoring. Third sentence important. Fourth sentence extra.";
     const first = await summarizeText(text, { useCache: true });
     const cached = await getCachedSummary(text.slice(0, 500));
     expect(cached).toEqual(first);
@@ -51,7 +66,11 @@ describe("lib/summarize", () => {
   });
 
   it("summarizeMessages joins message contents", async () => {
-    const msgs = [{ content: "Hello world from Claude. This is a test message." }, { content: "Second message about Rust and Tauri." }, { content: "Third about vector search." }];
+    const msgs = [
+      { content: "Hello world from Claude. This is a test message." },
+      { content: "Second message about Rust and Tauri." },
+      { content: "Third about vector search." },
+    ];
     const bullets = await summarizeMessages(msgs, { useCache: false });
     expect(bullets).toHaveLength(3);
   });
@@ -68,14 +87,18 @@ describe("lib/summarize", () => {
     expect(bullets.length).toBeLessThanOrEqual(3);
     const emptyLike = "   \n\n   ";
     expect(await summarizeText(emptyLike, { useCache: false })).toHaveLength(3);
-    const singleLong = "This is a single very long sentence that exceeds twelve chars and should be returned as one bullet without scoring extra sentences. ";
+    const singleLong =
+      "This is a single very long sentence that exceeds twelve chars and should be returned as one bullet without scoring extra sentences. ";
     const b2 = await summarizeText(singleLong, { useCache: false });
     expect(b2.length).toBeGreaterThanOrEqual(1);
   });
 
   it("parses provider bullets with padding and trimming", async () => {
     const provider = createMockProvider("One\nTwo");
-    const bullets = await summarizeText("long enough text with many sentences. ".repeat(10), { provider, useCache: false });
+    const bullets = await summarizeText("long enough text with many sentences. ".repeat(10), {
+      provider,
+      useCache: false,
+    });
     expect(bullets).toHaveLength(3);
     expect(bullets[2]).toMatch(/Additional insight/);
     const dashProvider = createMockProvider("- Bullet A\n• Bullet B\n1. Bullet C\n2) Bullet D");
@@ -88,7 +111,8 @@ describe("lib/summarize", () => {
     __clearMemoryCache();
     const missing = await getCachedSummary("nonexistent-key-" + Date.now());
     expect(missing).toBeNull();
-    const text = "LocalStorage fallback test. Second sentence. Third sentence. Fourth sentence extra content for cache.";
+    const text =
+      "LocalStorage fallback test. Second sentence. Third sentence. Fourth sentence extra content for cache.";
     const first = await summarizeText(text, { useCache: true });
     __clearMemoryCache();
     // Should still hit via DB or localStorage after clearMemory
@@ -110,7 +134,8 @@ describe("lib/summarize", () => {
   });
 
   it("heuristic fallback splits by newlines when no sentence punct", async () => {
-    const text = "Line one with enough length to pass filter\nLine two with enough length to pass filter\nLine three with enough length to pass filter\nLine four extra for ranking";
+    const text =
+      "Line one with enough length to pass filter\nLine two with enough length to pass filter\nLine three with enough length to pass filter\nLine four extra for ranking";
     const bullets = await summarizeText(text, { useCache: false });
     expect(bullets.length).toBe(3);
   });
@@ -126,7 +151,12 @@ describe("lib/summarize", () => {
 
   it("summarizeMessages with provider and useCache false", async () => {
     const provider = createMockProvider("P1\nP2\nP3");
-    const msgs = [{ content: "Hello world. This is a test. Another sentence. Yet another. One more for ranking." }];
+    const msgs = [
+      {
+        content:
+          "Hello world. This is a test. Another sentence. Yet another. One more for ranking.",
+      },
+    ];
     const bullets = await summarizeMessages(msgs, { provider, useCache: false });
     expect(bullets).toHaveLength(3);
   });

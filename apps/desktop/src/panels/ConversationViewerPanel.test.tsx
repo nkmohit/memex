@@ -4,8 +4,23 @@ import ConversationViewerPanel from "./ConversationViewerPanel";
 
 function makeProps(overrides: Partial<React.ComponentProps<typeof ConversationViewerPanel>> = {}) {
   return {
-    stats: { conversationCount: 1, messageCount: 5, indexedMessageCount: 5, latestMessageTimestamp: Date.now(), estimatedInputTokens: 0, estimatedOutputTokens: 0, estimatedTotalTokens: 0 },
-    selectedConversation: { id: "c1", source: "claude", title: "Hello", created_at: Date.now(), last_message_at: Date.now(), message_count: 2 },
+    stats: {
+      conversationCount: 1,
+      messageCount: 5,
+      indexedMessageCount: 5,
+      latestMessageTimestamp: Date.now(),
+      estimatedInputTokens: 0,
+      estimatedOutputTokens: 0,
+      estimatedTotalTokens: 0,
+    },
+    selectedConversation: {
+      id: "c1",
+      source: "claude",
+      title: "Hello",
+      created_at: Date.now(),
+      last_message_at: Date.now(),
+      message_count: 2,
+    },
     messages: [
       { id: "m1", sender: "human" as const, content: "hello world", created_at: Date.now() },
       { id: "m2", sender: "assistant" as const, content: "response", created_at: Date.now() },
@@ -53,7 +68,11 @@ describe("ConversationViewerPanel", () => {
   it("renders messages with source label and handles copy/menu (happy path)", () => {
     const onCopy = vi.fn();
     const onToggle = vi.fn();
-    render(<ConversationViewerPanel {...makeProps({ onCopyMessage: onCopy, onToggleViewerMenu: onToggle })} />);
+    render(
+      <ConversationViewerPanel
+        {...makeProps({ onCopyMessage: onCopy, onToggleViewerMenu: onToggle })}
+      />
+    );
     expect(screen.getByText("Hello")).toBeInTheDocument();
     expect(screen.getByText("hello world")).toBeInTheDocument();
     expect(screen.getAllByText("CLAUDE").length).toBeGreaterThan(0);
@@ -64,14 +83,28 @@ describe("ConversationViewerPanel", () => {
   });
 
   it("shows search input when viewerSearchOpen", () => {
-    render(<ConversationViewerPanel {...makeProps({ viewerSearchOpen: true, messageSearchQuery: "hello", matchCount: 2, messageMatchCount: 1, currentMatchIndex: 0 })} />);
+    render(
+      <ConversationViewerPanel
+        {...makeProps({
+          viewerSearchOpen: true,
+          messageSearchQuery: "hello",
+          matchCount: 2,
+          messageMatchCount: 1,
+          currentMatchIndex: 0,
+        })}
+      />
+    );
     expect(screen.getByPlaceholderText("Search in conversation...")).toBeInTheDocument();
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
   });
 
   it("shows back button when opened from search", () => {
     const onBack = vi.fn();
-    render(<ConversationViewerPanel {...makeProps({ openedConversationFromSearch: true, onBackToSearch: onBack })} />);
+    render(
+      <ConversationViewerPanel
+        {...makeProps({ openedConversationFromSearch: true, onBackToSearch: onBack })}
+      />
+    );
     fireEvent.click(screen.getByLabelText("Back to search"));
     expect(onBack).toHaveBeenCalled();
   });

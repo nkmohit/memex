@@ -22,7 +22,9 @@ describe("Sidebar", () => {
   });
 
   it("highlights active view", () => {
-    const { rerender } = render(<Sidebar activeView="search" onSelectView={vi.fn()} onOpenImport={vi.fn()} />);
+    const { rerender } = render(
+      <Sidebar activeView="search" onSelectView={vi.fn()} onOpenImport={vi.fn()} />
+    );
     expect(screen.getByLabelText("Search").className).toContain("active");
     rerender(<Sidebar activeView="settings" onSelectView={vi.fn()} onOpenImport={vi.fn()} />);
     expect(screen.getByLabelText("Settings").className).toContain("active");

@@ -48,7 +48,10 @@ class FakeDB {
     if (s.includes("insert or replace into conversations")) {
       // params are flattened: 6 per row
       for (let i = 0; i < params.length; i += 6) {
-        const [id, source, title, created_at, updated_at, message_count] = params.slice(i, i + 6) as any[];
+        const [id, source, title, created_at, updated_at, message_count] = params.slice(
+          i,
+          i + 6
+        ) as any[];
         const idx = this.conversations.findIndex((c) => c.id === id);
         const row = { id, source, title, created_at, updated_at, message_count };
         if (idx >= 0) this.conversations[idx] = row;
@@ -71,7 +74,7 @@ class FakeDB {
       return;
     }
     if (s.includes("insert into messages_fts")) {
-        // Handle rebuild case: INSERT INTO ... SELECT ...
+      // Handle rebuild case: INSERT INTO ... SELECT ...
       if (s.includes("select") && s.includes("from messages")) {
         // Repopulate from messages and conversations
         this.messages_fts = [];
@@ -131,11 +134,21 @@ class FakeDB {
       if (!row) return [] as any;
       return [{ payload: row.payload, data_version: row.data_version } as any] as any;
     }
-    if (s.includes("select") && s.includes("from conversations c") && s.includes("group by c.source")) {
+    if (
+      s.includes("select") &&
+      s.includes("from conversations c") &&
+      s.includes("group by c.source")
+    ) {
       // sourceStats
       const map = new Map<string, any>();
       for (const c of this.conversations) {
-        if (!map.has(c.source)) map.set(c.source, { source: c.source, conversationCount: 0, messageCount: 0, lastActivityTimestamp: null });
+        if (!map.has(c.source))
+          map.set(c.source, {
+            source: c.source,
+            conversationCount: 0,
+            messageCount: 0,
+            lastActivityTimestamp: null,
+          });
         map.get(c.source).conversationCount += 1;
       }
       for (const m of this.messages) {
@@ -144,12 +157,19 @@ class FakeDB {
         const entry = map.get(conv.source);
         if (entry) {
           entry.messageCount += 1;
-          entry.lastActivityTimestamp = Math.max(entry.lastActivityTimestamp ?? 0, m.created_at ?? 0);
+          entry.lastActivityTimestamp = Math.max(
+            entry.lastActivityTimestamp ?? 0,
+            m.created_at ?? 0
+          );
         }
       }
       return Array.from(map.values()) as any;
     }
-    if (s.includes("select") && s.includes("from conversations c") && s.includes("order by last_message_at desc")) {
+    if (
+      s.includes("select") &&
+      s.includes("from conversations c") &&
+      s.includes("order by last_message_at desc")
+    ) {
       // getConversations or getAllConversationsForSearch
       // Check if it's count query
       if (s.includes("select count(*) as total")) {
@@ -172,13 +192,21 @@ class FakeDB {
         })
         .slice(0, 20) as any;
     }
-    if (s.includes("select") && s.includes("from messages") && s.includes("where conversation_id = $1")) {
+    if (
+      s.includes("select") &&
+      s.includes("from messages") &&
+      s.includes("where conversation_id = $1")
+    ) {
       const convId = params[0] as string;
-      return this.messages.filter((m) => m.conversation_id === convId).map((m) => ({ ...m, created_at: m.created_at ?? 0 })) as any;
+      return this.messages
+        .filter((m) => m.conversation_id === convId)
+        .map((m) => ({ ...m, created_at: m.created_at ?? 0 })) as any;
     }
     if (s.includes("select count(distinct messages_fts.conversation_id) as total")) {
       // search count - simple: count distinct conversations where content includes query term
-      const q = String(params[0] ?? "").replace(/\*/g, "").toLowerCase();
+      const q = String(params[0] ?? "")
+        .replace(/\*/g, "")
+        .toLowerCase();
       const matched = new Set<string>();
       for (const r of this.messages_fts) {
         if (r.content.toLowerCase().includes(q)) matched.add(r.conversation_id);
@@ -202,7 +230,9 @@ class FakeDB {
     }
     if (s.includes("with ranked_rows as")) {
       // searchMessages main query - simplified to return one row per conversation that matches
-      const q = String(params[0] ?? "").replace(/\*/g, "").toLowerCase();
+      const q = String(params[0] ?? "")
+        .replace(/\*/g, "")
+        .toLowerCase();
       const map = new Map<string, any>();
       for (const r of this.messages_fts) {
         if (!r.content.toLowerCase().includes(q)) continue;
@@ -231,13 +261,20 @@ class FakeDB {
       const q = String(params[0] ?? "").replace(/\*/g, "");
       const convId = params[1] as string;
       const rows = this.messages_fts
-        .filter((r) => r.conversation_id === convId && r.content.toLowerCase().includes(q.toLowerCase().replace(/\*/g, "")))
+        .filter(
+          (r) =>
+            r.conversation_id === convId &&
+            r.content.toLowerCase().includes(q.toLowerCase().replace(/\*/g, ""))
+        )
         .slice(0, 3)
-        .map((r) => ({ snippet: r.content.slice(0, 50) + (r.content.includes(q) ? `<mark>${q}</mark>` : "") }));
+        .map((r) => ({
+          snippet: r.content.slice(0, 50) + (r.content.includes(q) ? `<mark>${q}</mark>` : ""),
+        }));
       return rows as any;
     }
     if (s.includes("select") && s.includes("sum(") && s.includes("as inputtokens")) {
-      let input = 0, output = 0;
+      let input = 0,
+        output = 0;
       for (const m of this.messages) {
         const tokens = Math.ceil((m.content?.length ?? 0) / 4);
         if (m.sender === "human") input += tokens;
@@ -301,8 +338,18 @@ describe("db integration — import to search", () => {
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-02T00:00:00Z",
         chat_messages: [
-          { uuid: "m1", sender: "human", created_at: "2026-01-01T00:00:00Z", text: "hello from integration" },
-          { uuid: "m2", sender: "assistant", created_at: "2026-01-01T00:01:00Z", text: "world reply with keyword salary" },
+          {
+            uuid: "m1",
+            sender: "human",
+            created_at: "2026-01-01T00:00:00Z",
+            text: "hello from integration",
+          },
+          {
+            uuid: "m2",
+            sender: "assistant",
+            created_at: "2026-01-01T00:01:00Z",
+            text: "world reply with keyword salary",
+          },
         ],
       },
     ];
@@ -352,7 +399,12 @@ describe("db integration — import to search", () => {
         created_at: "2026-02-01T00:00:00Z",
         updated_at: "2026-02-01T01:00:00Z",
         chat_messages: [
-          { uuid: "m10", sender: "human", created_at: "2026-02-01T00:00:00Z", text: "We went on a holiday trip last summer and loved it" },
+          {
+            uuid: "m10",
+            sender: "human",
+            created_at: "2026-02-01T00:00:00Z",
+            text: "We went on a holiday trip last summer and loved it",
+          },
         ],
       },
       {
@@ -361,7 +413,12 @@ describe("db integration — import to search", () => {
         created_at: "2026-02-02T00:00:00Z",
         updated_at: "2026-02-02T01:00:00Z",
         chat_messages: [
-          { uuid: "m11", sender: "human", created_at: "2026-02-02T00:00:00Z", text: "quantum physics discussion" },
+          {
+            uuid: "m11",
+            sender: "human",
+            created_at: "2026-02-02T00:00:00Z",
+            text: "quantum physics discussion",
+          },
         ],
       },
     ];

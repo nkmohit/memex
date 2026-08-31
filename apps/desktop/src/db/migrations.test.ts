@@ -41,42 +41,64 @@ describe("db/migrations initDatabase", () => {
     // Call with mocked DB via dynamic import reset
     vi.resetModules();
     const { initDatabase: freshInit } = await import("./migrations");
-    const db = { execute: vi.fn(async () => {}), select: vi.fn(async (sql: string) => {
-      if (sql.includes("table_info(conversations)")) return [{ name: "id" }];
-      if (sql.includes("table_info(messages_fts)")) return [];
-      if (sql.includes("COUNT(*) AS count FROM messages") && !sql.includes("messages_fts")) return [{ count: 0 }];
-      if (sql.includes("messages_fts")) return [{ count: 0 }];
-      if (sql.includes("conversations")) return [{ count: 0 }];
-      return [];
-    }) };
-    vi.doMock("./connection", () => ({ rawGetDb: vi.fn(async () => db), withDbLock: (fn: () => Promise<unknown>) => fn() }));
+    const db = {
+      execute: vi.fn(async () => {}),
+      select: vi.fn(async (sql: string) => {
+        if (sql.includes("table_info(conversations)")) return [{ name: "id" }];
+        if (sql.includes("table_info(messages_fts)")) return [];
+        if (sql.includes("COUNT(*) AS count FROM messages") && !sql.includes("messages_fts"))
+          return [{ count: 0 }];
+        if (sql.includes("messages_fts")) return [{ count: 0 }];
+        if (sql.includes("conversations")) return [{ count: 0 }];
+        return [];
+      }),
+    };
+    vi.doMock("./connection", () => ({
+      rawGetDb: vi.fn(async () => db),
+      withDbLock: (fn: () => Promise<unknown>) => fn(),
+    }));
     // Just verify init doesn't throw with migration path
     await expect(freshInit()).resolves.toBeUndefined();
   });
 
   it("migrates FTS missing title", async () => {
     vi.resetModules();
-    const db = { execute: vi.fn(async () => {}), select: vi.fn(async (sql: string) => {
-      if (sql.includes("table_info(conversations)")) return [{ name: "id" }, { name: "updated_at" }];
-      if (sql.includes("table_info(messages_fts)")) return [{ name: "content" }];
-      if (sql.includes("COUNT(*)")) return [{ count: 0 }];
-      return [];
-    }) };
-    vi.doMock("./connection", () => ({ rawGetDb: vi.fn(async () => db), withDbLock: (fn: () => Promise<unknown>) => fn() }));
+    const db = {
+      execute: vi.fn(async () => {}),
+      select: vi.fn(async (sql: string) => {
+        if (sql.includes("table_info(conversations)"))
+          return [{ name: "id" }, { name: "updated_at" }];
+        if (sql.includes("table_info(messages_fts)")) return [{ name: "content" }];
+        if (sql.includes("COUNT(*)")) return [{ count: 0 }];
+        return [];
+      }),
+    };
+    vi.doMock("./connection", () => ({
+      rawGetDb: vi.fn(async () => db),
+      withDbLock: (fn: () => Promise<unknown>) => fn(),
+    }));
     const { initDatabase: freshInit } = await import("./migrations");
     await expect(freshInit()).resolves.toBeUndefined();
   });
 
   it("backfills FTS when msg>0 and fts==0", async () => {
     vi.resetModules();
-    const db = { execute: vi.fn(async () => {}), select: vi.fn(async (sql: string) => {
-      if (sql.includes("table_info")) return [{ name: "id" }, { name: "updated_at" }, { name: "title" }];
-      if (sql.includes("COUNT(*) AS count FROM messages") && !sql.includes("fts")) return [{ count: 5 }];
-      if (sql.includes("COUNT(*) AS count FROM messages_fts")) return [{ count: 0 }];
-      if (sql.includes("COUNT(*) as count FROM conversations")) return [{ count: 2 }];
-      return [];
-    }) };
-    vi.doMock("./connection", () => ({ rawGetDb: vi.fn(async () => db), withDbLock: (fn: () => Promise<unknown>) => fn() }));
+    const db = {
+      execute: vi.fn(async () => {}),
+      select: vi.fn(async (sql: string) => {
+        if (sql.includes("table_info"))
+          return [{ name: "id" }, { name: "updated_at" }, { name: "title" }];
+        if (sql.includes("COUNT(*) AS count FROM messages") && !sql.includes("fts"))
+          return [{ count: 5 }];
+        if (sql.includes("COUNT(*) AS count FROM messages_fts")) return [{ count: 0 }];
+        if (sql.includes("COUNT(*) as count FROM conversations")) return [{ count: 2 }];
+        return [];
+      }),
+    };
+    vi.doMock("./connection", () => ({
+      rawGetDb: vi.fn(async () => db),
+      withDbLock: (fn: () => Promise<unknown>) => fn(),
+    }));
     const { initDatabase: freshInit } = await import("./migrations");
     await expect(freshInit()).resolves.toBeUndefined();
     expect(db.execute).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO messages_fts"));

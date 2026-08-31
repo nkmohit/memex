@@ -6,7 +6,7 @@ const mockGetStats = vi.fn();
 const mockGetSourceStats = vi.fn();
 
 vi.mock("./db", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     getStats: (...args: unknown[]) => mockGetStats(...args),
@@ -18,9 +18,18 @@ describe("ImportPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders loading then data (happy path)", async () => {
-    mockGetStats.mockResolvedValue({ conversationCount: 5, messageCount: 50, latestMessageTimestamp: Date.now() });
+    mockGetStats.mockResolvedValue({
+      conversationCount: 5,
+      messageCount: 50,
+      latestMessageTimestamp: Date.now(),
+    });
     mockGetSourceStats.mockResolvedValue([
-      { source: "claude", conversationCount: 3, messageCount: 30, lastActivityTimestamp: Date.now() },
+      {
+        source: "claude",
+        conversationCount: 3,
+        messageCount: 30,
+        lastActivityTimestamp: Date.now(),
+      },
     ]);
     render(
       <ImportPage
@@ -57,7 +66,11 @@ describe("ImportPage", () => {
   });
 
   it("shows importing progress and cancel", async () => {
-    mockGetStats.mockResolvedValue({ conversationCount: 0, messageCount: 0, latestMessageTimestamp: null });
+    mockGetStats.mockResolvedValue({
+      conversationCount: 0,
+      messageCount: 0,
+      latestMessageTimestamp: null,
+    });
     mockGetSourceStats.mockResolvedValue([]);
     const onCancel = vi.fn();
     render(
@@ -66,7 +79,12 @@ describe("ImportPage", () => {
         importing={true}
         importingSource="claude"
         onCancelImport={onCancel}
-        importProgress={{ conversationsDone: 1, conversationsTotal: 2, messagesDone: 5, messagesTotal: 10 }}
+        importProgress={{
+          conversationsDone: 1,
+          conversationsTotal: 2,
+          messagesDone: 5,
+          messagesTotal: 10,
+        }}
         importError={null}
         importResult={null}
         refreshKey={0}
@@ -77,7 +95,11 @@ describe("ImportPage", () => {
   });
 
   it("shows import error and result banners with dismiss", async () => {
-    mockGetStats.mockResolvedValue({ conversationCount: 1, messageCount: 10, latestMessageTimestamp: Date.now() });
+    mockGetStats.mockResolvedValue({
+      conversationCount: 1,
+      messageCount: 10,
+      latestMessageTimestamp: Date.now(),
+    });
     mockGetSourceStats.mockResolvedValue([]);
     const onDismissErr = vi.fn();
     const onDismissRes = vi.fn();
@@ -100,7 +122,11 @@ describe("ImportPage", () => {
   });
 
   it("triggers onImport when clicking Import", async () => {
-    mockGetStats.mockResolvedValue({ conversationCount: 0, messageCount: 0, latestMessageTimestamp: null });
+    mockGetStats.mockResolvedValue({
+      conversationCount: 0,
+      messageCount: 0,
+      latestMessageTimestamp: null,
+    });
     mockGetSourceStats.mockResolvedValue([]);
     const onImport = vi.fn();
     render(
@@ -122,7 +148,13 @@ describe("ImportPage", () => {
   });
 
   it("retries on load error via Retry button", async () => {
-    mockGetStats.mockRejectedValueOnce(new Error("fail")).mockResolvedValueOnce({ conversationCount: 0, messageCount: 0, latestMessageTimestamp: null });
+    mockGetStats
+      .mockRejectedValueOnce(new Error("fail"))
+      .mockResolvedValueOnce({
+        conversationCount: 0,
+        messageCount: 0,
+        latestMessageTimestamp: null,
+      });
     mockGetSourceStats.mockRejectedValueOnce(new Error("fail")).mockResolvedValueOnce([]);
     render(
       <ImportPage

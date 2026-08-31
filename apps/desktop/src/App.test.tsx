@@ -20,7 +20,15 @@ vi.mock("./hooks/useCopyClipboard", () => ({
 }));
 const mockUseAppData = vi.fn(() => ({
   loading: false,
-  stats: { conversationCount: 0, messageCount: 0, indexedMessageCount: 0, latestMessageTimestamp: null, estimatedInputTokens: 0, estimatedOutputTokens: 0, estimatedTotalTokens: 0 },
+  stats: {
+    conversationCount: 0,
+    messageCount: 0,
+    indexedMessageCount: 0,
+    latestMessageTimestamp: null,
+    estimatedInputTokens: 0,
+    estimatedOutputTokens: 0,
+    estimatedTotalTokens: 0,
+  },
   sourceStats: [],
   conversations: [],
   selectedConvId: null,
@@ -34,12 +42,22 @@ const mockUseAppData = vi.fn(() => ({
   loadData: vi.fn(async () => {}),
 }));
 vi.mock("./hooks/useAppData", () => ({
-  useAppData: (...args: unknown[]) => (mockUseAppData as unknown as (...a: unknown[]) => unknown)(...args),
+  useAppData: (...args: unknown[]) =>
+    (mockUseAppData as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 const mockUseSearchSession = vi.fn(() => ({
   searchPageQuery: "",
   setSearchPageQuery: vi.fn(),
-  searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+  searchPageSnapshot: {
+    source: "",
+    dateFrom: "",
+    dateTo: "",
+    sort: "last_occurrence_desc",
+    results: [],
+    totalMatches: 0,
+    totalOccurrences: 0,
+    latencyMs: null,
+  },
   setSearchPageSnapshot: vi.fn(),
   clearPersistedSearchState: vi.fn(),
   searchFocusRequestId: null,
@@ -55,7 +73,8 @@ const mockUseSearchSession = vi.fn(() => ({
   skipSearchOnceRef: { current: false },
 }));
 vi.mock("./hooks/useSearchSession", () => ({
-  useSearchSession: (...args: unknown[]) => (mockUseSearchSession as unknown as (...a: unknown[]) => unknown)(...args),
+  useSearchSession: (...args: unknown[]) =>
+    (mockUseSearchSession as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 const mockUseViewerSearch = vi.fn(() => ({
   messageSearchQuery: "",
@@ -76,7 +95,8 @@ const mockUseViewerSearch = vi.fn(() => ({
   goToNextMatch: vi.fn(),
 }));
 vi.mock("./hooks/useViewerSearch", () => ({
-  useViewerSearch: (...args: unknown[]) => (mockUseViewerSearch as unknown as (...a: unknown[]) => unknown)(...args),
+  useViewerSearch: (...args: unknown[]) =>
+    (mockUseViewerSearch as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 const mockUseImportState = vi.fn(() => ({
   importing: false,
@@ -92,7 +112,8 @@ const mockUseImportState = vi.fn(() => ({
   handleImportSource: vi.fn(async () => {}),
 }));
 vi.mock("./hooks/useImportState", () => ({
-  useImportState: (...args: unknown[]) => (mockUseImportState as unknown as (...a: unknown[]) => unknown)(...args),
+  useImportState: (...args: unknown[]) =>
+    (mockUseImportState as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 const mockUseClearData = vi.fn(() => ({
   clearingData: false,
@@ -105,17 +126,19 @@ const mockUseClearData = vi.fn(() => ({
   handleClearAllDataConfirm: vi.fn(async () => {}),
 }));
 vi.mock("./hooks/useClearData", () => ({
-  useClearData: (...args: unknown[]) => (mockUseClearData as unknown as (...a: unknown[]) => unknown)(...args),
+  useClearData: (...args: unknown[]) =>
+    (mockUseClearData as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 const mockUseDataActions = vi.fn(() => ({
   handleRebuildIndex: vi.fn(async () => {}),
   handleOverviewSelectConversation: vi.fn(),
 }));
 vi.mock("./hooks/useDataActions", () => ({
-  useDataActions: (...args: unknown[]) => (mockUseDataActions as unknown as (...a: unknown[]) => unknown)(...args),
+  useDataActions: (...args: unknown[]) =>
+    (mockUseDataActions as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 vi.mock("./db", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     getMessages: vi.fn(async () => []),
@@ -144,14 +167,28 @@ describe("App", () => {
     const store: Record<string, string> = {};
     vi.stubGlobal("localStorage", {
       getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => { store[k] = v; },
-      removeItem: (k: string) => { delete store[k]; },
-      clear: () => { for (const kk of Object.keys(store)) delete store[kk]; },
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete store[k];
+      },
+      clear: () => {
+        for (const kk of Object.keys(store)) delete store[kk];
+      },
     } as unknown as Storage);
     // reset mocks to default
     mockUseAppData.mockReturnValue({
       loading: false,
-      stats: { conversationCount: 0, messageCount: 0, indexedMessageCount: 0, latestMessageTimestamp: null, estimatedInputTokens: 0, estimatedOutputTokens: 0, estimatedTotalTokens: 0 },
+      stats: {
+        conversationCount: 0,
+        messageCount: 0,
+        indexedMessageCount: 0,
+        latestMessageTimestamp: null,
+        estimatedInputTokens: 0,
+        estimatedOutputTokens: 0,
+        estimatedTotalTokens: 0,
+      },
       sourceStats: [],
       conversations: [],
       selectedConvId: null,
@@ -224,9 +261,26 @@ describe("App", () => {
   it("shows has-data when stats have conversations", () => {
     mockUseAppData.mockReturnValue({
       loading: false,
-      stats: { conversationCount: 5, messageCount: 10, indexedMessageCount: 10, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      stats: {
+        conversationCount: 5,
+        messageCount: 10,
+        indexedMessageCount: 10,
+        latestMessageTimestamp: 123,
+        estimatedInputTokens: 1,
+        estimatedOutputTokens: 1,
+        estimatedTotalTokens: 2,
+      },
       sourceStats: [],
-      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }],
+      conversations: [
+        {
+          id: "c1",
+          source: "claude",
+          title: "T",
+          created_at: 0,
+          last_message_at: 0,
+          message_count: 1,
+        },
+      ],
       selectedConvId: null,
       setSelectedConvId: vi.fn(),
       messages: [],
@@ -299,9 +353,26 @@ describe("App", () => {
     const setMessagesLoading = vi.fn();
     mockUseAppData.mockReturnValue({
       loading: false,
-      stats: { conversationCount: 1, messageCount: 2, indexedMessageCount: 2, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      stats: {
+        conversationCount: 1,
+        messageCount: 2,
+        indexedMessageCount: 2,
+        latestMessageTimestamp: 123,
+        estimatedInputTokens: 1,
+        estimatedOutputTokens: 1,
+        estimatedTotalTokens: 2,
+      },
       sourceStats: [],
-      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 2 }],
+      conversations: [
+        {
+          id: "c1",
+          source: "claude",
+          title: "T",
+          created_at: 0,
+          last_message_at: 0,
+          message_count: 2,
+        },
+      ],
       selectedConvId: null,
       setSelectedConvId: vi.fn(),
       messages: [],
@@ -313,9 +384,13 @@ describe("App", () => {
       loadData: vi.fn(async () => {}),
     } as unknown as ReturnType<typeof mockUseAppData>);
     const { getMessages } = await import("./db");
-    (getMessages as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ id: "m1", sender: "human", content: "hi", created_at: 0 }]);
+    (getMessages as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { id: "m1", sender: "human", content: "hi", created_at: 0 },
+    ]);
     render(<App />);
-    const props = capturedShellProps as unknown as { conversationsProps: { onSelectConversation: (id: string) => void } };
+    const props = capturedShellProps as unknown as {
+      conversationsProps: { onSelectConversation: (id: string) => void };
+    };
     await props.conversationsProps.onSelectConversation("c1");
     expect(getMessages).toHaveBeenCalledWith("c1");
     expect(setMessagesLoading).toHaveBeenCalled();
@@ -338,7 +413,16 @@ describe("App", () => {
     mockUseSearchSession.mockReturnValue({
       searchPageQuery: "hello",
       setSearchPageQuery: vi.fn(),
-      searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+      searchPageSnapshot: {
+        source: "",
+        dateFrom: "",
+        dateTo: "",
+        sort: "last_occurrence_desc",
+        results: [],
+        totalMatches: 0,
+        totalOccurrences: 0,
+        latencyMs: null,
+      },
       setSearchPageSnapshot: vi.fn(),
       clearPersistedSearchState: vi.fn(),
       searchFocusRequestId: null,
@@ -354,7 +438,9 @@ describe("App", () => {
       skipSearchOnceRef: { current: false },
     } as unknown as ReturnType<typeof mockUseSearchSession>);
     render(<App />);
-    const props = capturedShellProps as unknown as { searchProps: { onSelectResult: (a:string,b:string,c:string,d:number)=>void } };
+    const props = capturedShellProps as unknown as {
+      searchProps: { onSelectResult: (a: string, b: string, c: string, d: number) => void };
+    };
     expect(props.searchProps.onSelectResult).toBeDefined();
   });
 
@@ -362,9 +448,26 @@ describe("App", () => {
     const setMessages = vi.fn();
     mockUseAppData.mockReturnValue({
       loading: false,
-      stats: { conversationCount: 1, messageCount: 1, indexedMessageCount: 1, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      stats: {
+        conversationCount: 1,
+        messageCount: 1,
+        indexedMessageCount: 1,
+        latestMessageTimestamp: 123,
+        estimatedInputTokens: 1,
+        estimatedOutputTokens: 1,
+        estimatedTotalTokens: 2,
+      },
       sourceStats: [],
-      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }],
+      conversations: [
+        {
+          id: "c1",
+          source: "claude",
+          title: "T",
+          created_at: 0,
+          last_message_at: 0,
+          message_count: 1,
+        },
+      ],
       selectedConvId: null,
       setSelectedConvId: vi.fn(),
       messages: [],
@@ -376,9 +479,13 @@ describe("App", () => {
       loadData: vi.fn(async () => {}),
     } as unknown as ReturnType<typeof mockUseAppData>);
     const { getMessages } = await import("./db");
-    (getMessages as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("load fail"));
+    (getMessages as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("load fail")
+    );
     render(<App />);
-    const props = capturedShellProps as unknown as { conversationsProps: { onSelectConversation: (id:string)=>void } };
+    const props = capturedShellProps as unknown as {
+      conversationsProps: { onSelectConversation: (id: string) => void };
+    };
     await props.conversationsProps.onSelectConversation("c1");
     expect(setMessages).toHaveBeenCalledWith([]);
   });
@@ -386,9 +493,26 @@ describe("App", () => {
   it("goBackToSearch via AppShell conversationsProps", async () => {
     mockUseAppData.mockReturnValue({
       loading: false,
-      stats: { conversationCount: 1, messageCount: 1, indexedMessageCount: 1, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      stats: {
+        conversationCount: 1,
+        messageCount: 1,
+        indexedMessageCount: 1,
+        latestMessageTimestamp: 123,
+        estimatedInputTokens: 1,
+        estimatedOutputTokens: 1,
+        estimatedTotalTokens: 2,
+      },
       sourceStats: [],
-      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }],
+      conversations: [
+        {
+          id: "c1",
+          source: "claude",
+          title: "T",
+          created_at: 0,
+          last_message_at: 0,
+          message_count: 1,
+        },
+      ],
       selectedConvId: "c1",
       setSelectedConvId: vi.fn(),
       messages: [],
@@ -402,7 +526,16 @@ describe("App", () => {
     mockUseSearchSession.mockReturnValue({
       searchPageQuery: "",
       setSearchPageQuery: vi.fn(),
-      searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+      searchPageSnapshot: {
+        source: "",
+        dateFrom: "",
+        dateTo: "",
+        sort: "last_occurrence_desc",
+        results: [],
+        totalMatches: 0,
+        totalOccurrences: 0,
+        latencyMs: null,
+      },
       setSearchPageSnapshot: vi.fn(),
       clearPersistedSearchState: vi.fn(),
       searchFocusRequestId: null,
@@ -413,12 +546,21 @@ describe("App", () => {
       setSearchRestoreConversationId: vi.fn(),
       searchSelectedConvId: "c1",
       setSearchSelectedConvId: vi.fn(),
-      searchSelectedConversation: { id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 },
+      searchSelectedConversation: {
+        id: "c1",
+        source: "claude",
+        title: "T",
+        created_at: 0,
+        last_message_at: 0,
+        message_count: 1,
+      },
       setSearchSelectedConversation: vi.fn(),
       skipSearchOnceRef: { current: false },
     } as unknown as ReturnType<typeof mockUseSearchSession>);
     render(<App />);
-    const props = capturedShellProps as unknown as { conversationsProps: { viewer: { onBackToSearch: ()=>void } } };
+    const props = capturedShellProps as unknown as {
+      conversationsProps: { viewer: { onBackToSearch: () => void } };
+    };
     expect(props.conversationsProps.viewer.onBackToSearch).toBeDefined();
     props.conversationsProps.viewer.onBackToSearch();
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
@@ -426,7 +568,10 @@ describe("App", () => {
 
   it("overview onOpenImport and onOpenSearch via AppShell", async () => {
     render(<App />);
-    const props = capturedShellProps as unknown as { overviewProps: { onOpenImport: ()=>void; onOpenSearch: ()=>void }, importProps: { onImport: (s:string)=>void } };
+    const props = capturedShellProps as unknown as {
+      overviewProps: { onOpenImport: () => void; onOpenSearch: () => void };
+      importProps: { onImport: (s: string) => void };
+    };
     expect(props.overviewProps.onOpenImport).toBeDefined();
     props.overviewProps.onOpenImport();
     props.overviewProps.onOpenSearch();
@@ -435,7 +580,9 @@ describe("App", () => {
 
   it("import onImport via AppShell", async () => {
     render(<App />);
-    const props = capturedShellProps as unknown as { importProps: { onImport: (s:string)=>void } };
+    const props = capturedShellProps as unknown as {
+      importProps: { onImport: (s: string) => void };
+    };
     expect(props.importProps.onImport).toBeDefined();
   });
 
@@ -443,9 +590,26 @@ describe("App", () => {
     const { act } = await import("@testing-library/react");
     mockUseAppData.mockReturnValue({
       loading: false,
-      stats: { conversationCount: 1, messageCount: 1, indexedMessageCount: 1, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      stats: {
+        conversationCount: 1,
+        messageCount: 1,
+        indexedMessageCount: 1,
+        latestMessageTimestamp: 123,
+        estimatedInputTokens: 1,
+        estimatedOutputTokens: 1,
+        estimatedTotalTokens: 2,
+      },
       sourceStats: [],
-      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }],
+      conversations: [
+        {
+          id: "c1",
+          source: "claude",
+          title: "T",
+          created_at: 0,
+          last_message_at: 0,
+          message_count: 1,
+        },
+      ],
       selectedConvId: "c1",
       setSelectedConvId: vi.fn(),
       messages: [],
@@ -459,7 +623,16 @@ describe("App", () => {
     mockUseSearchSession.mockReturnValue({
       searchPageQuery: "",
       setSearchPageQuery: vi.fn(),
-      searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+      searchPageSnapshot: {
+        source: "",
+        dateFrom: "",
+        dateTo: "",
+        sort: "last_occurrence_desc",
+        results: [],
+        totalMatches: 0,
+        totalOccurrences: 0,
+        latencyMs: null,
+      },
       setSearchPageSnapshot: vi.fn(),
       clearPersistedSearchState: vi.fn(),
       searchFocusRequestId: null,
@@ -470,7 +643,14 @@ describe("App", () => {
       setSearchRestoreConversationId: vi.fn(),
       searchSelectedConvId: "c1",
       setSearchSelectedConvId: vi.fn(),
-      searchSelectedConversation: { id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 },
+      searchSelectedConversation: {
+        id: "c1",
+        source: "claude",
+        title: "T",
+        created_at: 0,
+        last_message_at: 0,
+        message_count: 1,
+      },
       setSearchSelectedConversation: vi.fn(),
       skipSearchOnceRef: { current: false },
     } as unknown as ReturnType<typeof mockUseSearchSession>);
@@ -511,17 +691,34 @@ describe("App", () => {
 
   it("handles viewer search toggle via AppShell searchProps", async () => {
     render(<App />);
-    const props = capturedShellProps as unknown as { searchProps: { viewer: { onOpenViewerSearch: ()=>void; onCloseViewerSearch: ()=>void } } };
+    const props = capturedShellProps as unknown as {
+      searchProps: { viewer: { onOpenViewerSearch: () => void; onCloseViewerSearch: () => void } };
+    };
     props.searchProps.viewer.onOpenViewerSearch();
     props.searchProps.viewer.onCloseViewerSearch();
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
   });
 
   it("derives selectedConversation from search vs conversations", async () => {
-    const conv = { id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 };
+    const conv = {
+      id: "c1",
+      source: "claude",
+      title: "T",
+      created_at: 0,
+      last_message_at: 0,
+      message_count: 1,
+    };
     mockUseAppData.mockReturnValue({
       loading: false,
-      stats: { conversationCount: 1, messageCount: 1, indexedMessageCount: 1, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      stats: {
+        conversationCount: 1,
+        messageCount: 1,
+        indexedMessageCount: 1,
+        latestMessageTimestamp: 123,
+        estimatedInputTokens: 1,
+        estimatedOutputTokens: 1,
+        estimatedTotalTokens: 2,
+      },
       sourceStats: [],
       conversations: [conv],
       selectedConvId: "c1",
@@ -537,7 +734,16 @@ describe("App", () => {
     mockUseSearchSession.mockReturnValue({
       searchPageQuery: "",
       setSearchPageQuery: vi.fn(),
-      searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+      searchPageSnapshot: {
+        source: "",
+        dateFrom: "",
+        dateTo: "",
+        sort: "last_occurrence_desc",
+        results: [],
+        totalMatches: 0,
+        totalOccurrences: 0,
+        latencyMs: null,
+      },
       setSearchPageSnapshot: vi.fn(),
       clearPersistedSearchState: vi.fn(),
       searchFocusRequestId: null,
@@ -559,19 +765,27 @@ describe("App", () => {
   it("covers shellLayoutClass for all activeView values via captured setActiveView", async () => {
     const { act } = await import("@testing-library/react");
     render(<App />);
-    const props = capturedShellProps as unknown as { setActiveView: (v:string)=>void };
+    const props = capturedShellProps as unknown as { setActiveView: (v: string) => void };
     // Initial overview
     expect(screen.getByTestId("app-shell").getAttribute("data-layout")).toBe("overview-layout");
     // Change to search via setActiveView
-    await act(async () => { props.setActiveView("search"); });
+    await act(async () => {
+      props.setActiveView("search");
+    });
     // After state change, layout should be search-layout (or search-panel-closed if no selected conv)
     // At least component should still render without error
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
-    await act(async () => { props.setActiveView("import"); });
+    await act(async () => {
+      props.setActiveView("import");
+    });
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
-    await act(async () => { props.setActiveView("settings"); });
+    await act(async () => {
+      props.setActiveView("settings");
+    });
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
-    await act(async () => { props.setActiveView("conversations"); });
+    await act(async () => {
+      props.setActiveView("conversations");
+    });
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
   });
 });

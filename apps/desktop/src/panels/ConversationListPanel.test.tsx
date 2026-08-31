@@ -25,7 +25,14 @@ describe("ConversationListPanel", () => {
         selectedConvId="c1"
         activeSource={null}
         availableSources={["claude", "chatgpt"]}
-        sourceStats={[{ source: "claude", conversationCount: 2, messageCount: 10, lastActivityTimestamp: Date.now() }]}
+        sourceStats={[
+          {
+            source: "claude",
+            conversationCount: 2,
+            messageCount: 10,
+            lastActivityTimestamp: Date.now(),
+          },
+        ]}
         convItemRefs={{ current: {} }}
         onSelectSource={onSelectSource}
         onSelectConversation={onSelect}

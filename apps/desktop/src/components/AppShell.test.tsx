@@ -22,7 +22,13 @@ vi.mock("../OnboardingPage", () => ({
   ),
 }));
 vi.mock("./Sidebar", () => ({
-  default: ({ activeView, onSelectView }: { activeView: string; onSelectView: (v: string) => void }) => (
+  default: ({
+    activeView,
+    onSelectView,
+  }: {
+    activeView: string;
+    onSelectView: (v: string) => void;
+  }) => (
     <nav data-testid="sidebar" data-active={activeView}>
       <button onClick={() => onSelectView("overview")}>go-overview</button>
       <button onClick={() => onSelectView("search")}>go-search</button>
@@ -42,7 +48,8 @@ vi.mock("../panels/SettingsPanel", () => ({
   default: () => <div data-testid="settings">settings</div>,
 }));
 vi.mock("../panels/ClearDataConfirmDialog", () => ({
-  default: ({ open }: { open: boolean }) => (open ? <div data-testid="clear-dialog">clear</div> : null),
+  default: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="clear-dialog">clear</div> : null,
 }));
 
 function makeProps(overrides: Partial<React.ComponentProps<typeof AppShell>> = {}) {
@@ -242,7 +249,21 @@ describe("AppShell", () => {
 
   it("onboarding dismiss via skip", () => {
     const onSkip = vi.fn();
-    render(<AppShell {...makeProps({ showOnboarding: true, onboardingProps: { onImport: vi.fn(), importing: false, importingSource: null, onCancelImport: vi.fn(), importProgress: null, onSkip } })} />);
+    render(
+      <AppShell
+        {...makeProps({
+          showOnboarding: true,
+          onboardingProps: {
+            onImport: vi.fn(),
+            importing: false,
+            importingSource: null,
+            onCancelImport: vi.fn(),
+            importProgress: null,
+            onSkip,
+          },
+        })}
+      />
+    );
     fireEvent.click(screen.getByText("skip"));
     expect(onSkip).toHaveBeenCalled();
   });

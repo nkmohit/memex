@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { registerImporter, getPluginSources, getPluginParser, isPluginSource, clearPlugins, getAllSources, unregisterImporter, loadPlugins } from "./registry";
+import {
+  registerImporter,
+  getPluginSources,
+  getPluginParser,
+  isPluginSource,
+  clearPlugins,
+  getAllSources,
+  unregisterImporter,
+  loadPlugins,
+} from "./registry";
 
 describe("plugins/registry", () => {
   beforeEach(() => clearPlugins());
@@ -34,13 +43,21 @@ describe("plugins/registry", () => {
 
   it("validates id format and duplicates", () => {
     registerImporter({ id: "dup", label: "Dup", available: true }, () => []);
-    expect(() => registerImporter({ id: "dup", label: "Dup2", available: true }, () => [])).toThrow(/already registered/);
-    expect(() => registerImporter({ id: "a", label: "A", available: true }, () => [])).toThrow(/Invalid plugin id/);
-    expect(() => registerImporter({ id: "bad id!", label: "Bad", available: true }, () => [])).toThrow(/Invalid plugin id/);
+    expect(() => registerImporter({ id: "dup", label: "Dup2", available: true }, () => [])).toThrow(
+      /already registered/
+    );
+    expect(() => registerImporter({ id: "a", label: "A", available: true }, () => [])).toThrow(
+      /Invalid plugin id/
+    );
+    expect(() =>
+      registerImporter({ id: "bad id!", label: "Bad", available: true }, () => [])
+    ).toThrow(/Invalid plugin id/);
   });
 
   it("validates parser is function", () => {
-    expect(() => registerImporter({ id: "bad", label: "Bad", available: true }, null as any)).toThrow(/parser must be a function/);
+    expect(() =>
+      registerImporter({ id: "bad", label: "Bad", available: true }, null as any)
+    ).toThrow(/parser must be a function/);
   });
 
   it("unregister and clear", () => {
@@ -70,7 +87,9 @@ describe("plugins/registry", () => {
         createdAt: 1,
         updatedAt: 1,
         messageCount: 1,
-        messages: [{ id: "m1", conversationId: d.id, sender: "human" as const, content: "hi", createdAt: 1 }],
+        messages: [
+          { id: "m1", conversationId: d.id, sender: "human" as const, content: "hi", createdAt: 1 },
+        ],
       }));
     });
     const parser = getPluginParser("parse")!;
@@ -95,8 +114,26 @@ describe("plugins/registry", () => {
   });
 
   it("validates meta requires id and label", () => {
-    expect(() => registerImporter({ id: "", label: "X", available: true } as unknown as { id: string; label: string; available: boolean }, () => [])).toThrow(/must have id and label/);
-    expect(() => registerImporter({ id: "ok", label: "", available: true } as unknown as { id: string; label: string; available: boolean }, () => [])).toThrow(/must have id and label/);
+    expect(() =>
+      registerImporter(
+        { id: "", label: "X", available: true } as unknown as {
+          id: string;
+          label: string;
+          available: boolean;
+        },
+        () => []
+      )
+    ).toThrow(/must have id and label/);
+    expect(() =>
+      registerImporter(
+        { id: "ok", label: "", available: true } as unknown as {
+          id: string;
+          label: string;
+          available: boolean;
+        },
+        () => []
+      )
+    ).toThrow(/must have id and label/);
   });
 
   it("clearPlugins empties and loadPlugins returns number", async () => {
@@ -110,11 +147,15 @@ describe("plugins/registry", () => {
     // Mock FS to return .js and non-.js entries, and readTextFile with plugin code
     const mockReadDir = vi.fn(async () => [{ name: "a.js" }, { name: "b.txt" }, { name: "c.js" }]);
     const mockReadText = vi.fn(async (p: string) => {
-      if (p.endsWith("a.js")) return `registerImporter({id:"plugA", label:"Plug A", available:true}, () => []);`;
+      if (p.endsWith("a.js"))
+        return `registerImporter({id:"plugA", label:"Plug A", available:true}, () => []);`;
       if (p.endsWith("c.js")) throw new Error("bad file");
       return "";
     });
-    vi.doMock("@tauri-apps/plugin-fs", () => ({ readDir: mockReadDir, readTextFile: mockReadText }));
+    vi.doMock("@tauri-apps/plugin-fs", () => ({
+      readDir: mockReadDir,
+      readTextFile: mockReadText,
+    }));
     // Need to re-import to pick up mock — but loadPlugins does dynamic import, so we need to clear cache
     // Instead, test that loadPlugins still returns number without throwing
     const n = await loadPlugins();

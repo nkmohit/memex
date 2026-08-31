@@ -9,7 +9,13 @@ vi.mock("./connection", () => ({
   withDbLock: (fn: () => Promise<unknown>) => fn(),
 }));
 
-import { getDataVersion, markDataChanged, getCachedDashboardSnapshot, getDashboardSnapshot, readDataVersion } from "./dashboard";
+import {
+  getDataVersion,
+  markDataChanged,
+  getCachedDashboardSnapshot,
+  getDashboardSnapshot,
+  readDataVersion,
+} from "./dashboard";
 
 describe("dashboard", () => {
   beforeEach(() => {
@@ -47,7 +53,14 @@ describe("dashboard", () => {
   });
 
   it("getCachedDashboardSnapshot returns cached when version matches", async () => {
-    const fakeSnap = { stats: { conversationCount: 1 }, sourceStats: [], recentConversations: [], activityTimeline: [], dataVersion: 10, updatedAt: Date.now() };
+    const fakeSnap = {
+      stats: { conversationCount: 1 },
+      sourceStats: [],
+      recentConversations: [],
+      activityTimeline: [],
+      dataVersion: 10,
+      updatedAt: Date.now(),
+    };
     mockSelect.mockResolvedValueOnce([{ value: "10" }]); // data version
     mockSelect.mockResolvedValueOnce([{ payload: JSON.stringify(fakeSnap), data_version: 10 }]);
     const res = await getCachedDashboardSnapshot();

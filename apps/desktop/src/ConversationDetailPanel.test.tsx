@@ -24,21 +24,43 @@ describe("ConversationDetailPanel", () => {
 
   it("shows loading state", () => {
     render(
-      <ConversationDetailPanel title="T" source="chatgpt" messages={[]} loading={true} onCopyThread={vi.fn()} />
+      <ConversationDetailPanel
+        title="T"
+        source="chatgpt"
+        messages={[]}
+        loading={true}
+        onCopyThread={vi.fn()}
+      />
     );
     expect(screen.getByText("Loading messages...")).toBeInTheDocument();
   });
 
   it("calls onCopyThread from menu", () => {
     const onCopy = vi.fn();
-    render(<ConversationDetailPanel title="T" source="claude" messages={[]} loading={false} onCopyThread={onCopy} />);
+    render(
+      <ConversationDetailPanel
+        title="T"
+        source="claude"
+        messages={[]}
+        loading={false}
+        onCopyThread={onCopy}
+      />
+    );
     fireEvent.click(screen.getByLabelText("Options"));
     fireEvent.click(screen.getByText("Copy Thread"));
     expect(onCopy).toHaveBeenCalled();
   });
 
   it("shows Untitled fallback", () => {
-    render(<ConversationDetailPanel title="" source="unknown" messages={[]} loading={false} onCopyThread={vi.fn()} />);
+    render(
+      <ConversationDetailPanel
+        title=""
+        source="unknown"
+        messages={[]}
+        loading={false}
+        onCopyThread={vi.fn()}
+      />
+    );
     expect(screen.getByText("Untitled")).toBeInTheDocument();
   });
 });

@@ -61,7 +61,7 @@ export function embed(text: string): number[] {
     if (groupId !== undefined) {
       // Stable group bucket: map groupId to a reserved high bucket to boost synonym overlap
       // Use hash of group representative so groups are spread
-      const groupBucket = (hashToken(`__group_${groupId}`) % DIM);
+      const groupBucket = hashToken(`__group_${groupId}`) % DIM;
       vec[groupBucket]! += 1.5; // extra weight for synonym signal
       // Also boost the canonical token bucket
       const canon = SYNONYM_GROUPS[groupId]![0]!;

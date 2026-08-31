@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { getFlags, isEnabled, setFlag, setFlags, resetFlags, getFlagDefaults, __internal } from "./flags";
+import {
+  getFlags,
+  isEnabled,
+  setFlag,
+  setFlags,
+  resetFlags,
+  getFlagDefaults,
+  __internal,
+} from "./flags";
 
 describe("lib/flags", () => {
   beforeEach(() => {
@@ -94,7 +102,9 @@ describe("lib/flags", () => {
     expect(__internal.readStorage()).toEqual({});
     // throw
     vi.stubGlobal("localStorage", {
-      getItem: () => { throw new Error("quota"); },
+      getItem: () => {
+        throw new Error("quota");
+      },
       setItem: vi.fn(),
       removeItem: vi.fn(),
       clear: vi.fn(),
@@ -112,12 +122,24 @@ describe("lib/flags", () => {
     const orig = globalThis.localStorage;
     vi.stubGlobal("localStorage", {
       getItem: () => null,
-      setItem: () => { throw new Error("quota"); },
-      removeItem: () => { throw new Error("quota"); },
+      setItem: () => {
+        throw new Error("quota");
+      },
+      removeItem: () => {
+        throw new Error("quota");
+      },
       clear: vi.fn(),
     } as unknown as Storage);
     // should not throw
-    expect(() => __internal.writeStorage({ semanticSearch: true, vector: true, summarize: true, plugins: true, topicTimeline: true })).not.toThrow();
+    expect(() =>
+      __internal.writeStorage({
+        semanticSearch: true,
+        vector: true,
+        summarize: true,
+        plugins: true,
+        topicTimeline: true,
+      })
+    ).not.toThrow();
     expect(() => resetFlags()).not.toThrow();
     expect(() => setFlag("vector", false)).not.toThrow();
     vi.stubGlobal("localStorage", orig);

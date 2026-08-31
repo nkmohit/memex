@@ -5,7 +5,111 @@
  */
 
 const STOPWORDS = new Set([
-  "the","a","an","and","or","but","in","on","at","to","for","of","with","as","by","is","are","was","were","be","been","has","have","had","it","this","that","these","those","you","your","we","our","they","their","from","about","into","over","after","before","under","again","further","then","once","here","there","when","where","why","how","all","any","both","each","few","more","most","other","some","such","no","nor","not","only","own","same","so","than","too","very","can","will","just","don","should","now","what","which","who","whom","about","up","out","if","while","during","above","below","my","me","i","im","ive","id","ll","t","s","d","m","o","y","re","ve",
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "as",
+  "by",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "has",
+  "have",
+  "had",
+  "it",
+  "this",
+  "that",
+  "these",
+  "those",
+  "you",
+  "your",
+  "we",
+  "our",
+  "they",
+  "their",
+  "from",
+  "about",
+  "into",
+  "over",
+  "after",
+  "before",
+  "under",
+  "again",
+  "further",
+  "then",
+  "once",
+  "here",
+  "there",
+  "when",
+  "where",
+  "why",
+  "how",
+  "all",
+  "any",
+  "both",
+  "each",
+  "few",
+  "more",
+  "most",
+  "other",
+  "some",
+  "such",
+  "no",
+  "nor",
+  "not",
+  "only",
+  "own",
+  "same",
+  "so",
+  "than",
+  "too",
+  "very",
+  "can",
+  "will",
+  "just",
+  "don",
+  "should",
+  "now",
+  "what",
+  "which",
+  "who",
+  "whom",
+  "about",
+  "up",
+  "out",
+  "if",
+  "while",
+  "during",
+  "above",
+  "below",
+  "my",
+  "me",
+  "i",
+  "im",
+  "ive",
+  "id",
+  "ll",
+  "t",
+  "s",
+  "d",
+  "m",
+  "o",
+  "y",
+  "re",
+  "ve",
 ]);
 
 function tokenize(text: string): string[] {
@@ -51,12 +155,14 @@ export function computeTopTopics(texts: string[], topK = 5): string[] {
     scores.set(term, tfidfSum);
   }
 
-  return Array.from(scores.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, topK)
-    .map(([term]) => term)
-    // capitalize for display
-    .map((t) => t.charAt(0).toUpperCase() + t.slice(1));
+  return (
+    Array.from(scores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, topK)
+      .map(([term]) => term)
+      // capitalize for display
+      .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
+  );
 }
 
 export interface TopicTimelinePoint {
@@ -80,7 +186,9 @@ export function computeTopicTimeline(
     byMonth.set(month, arr);
   }
   const points: TopicTimelinePoint[] = [];
-  for (const [month, texts] of Array.from(byMonth.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+  for (const [month, texts] of Array.from(byMonth.entries()).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  )) {
     const topTopics = computeTopTopics(texts, topKPerMonth);
     points.push({ month, topTopics, count: texts.length });
   }

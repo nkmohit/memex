@@ -47,10 +47,22 @@ describe("dbInsert", () => {
     const res = await insertConversations([conv]);
     expect(res.conversationCount).toBe(1);
     expect(res.messageCount).toBe(2);
-    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("INSERT OR REPLACE INTO conversations"), expect.anything());
-    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("INSERT OR REPLACE INTO messages"), expect.anything());
-    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO messages_fts"), expect.anything());
-    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("messages_vec"), expect.anything());
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO conversations"),
+      expect.anything()
+    );
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO messages"),
+      expect.anything()
+    );
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO messages_fts"),
+      expect.anything()
+    );
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("messages_vec"),
+      expect.anything()
+    );
   });
 
   it("handles empty array", async () => {
@@ -64,13 +76,17 @@ describe("dbInsert", () => {
     const convs = [makeConv("c1"), makeConv("c2")];
     await insertConversations(convs, { onProgress, chunkSize: 1 });
     expect(onProgress).toHaveBeenCalledTimes(2);
-    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ conversationsDone: 1, conversationsTotal: 2 }));
+    expect(onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationsDone: 1, conversationsTotal: 2 })
+    );
   });
 
   it("aborts when signal aborted", async () => {
     const controller = new AbortController();
     controller.abort();
-    await expect(insertConversations([makeConv("c1")], { signal: controller.signal })).rejects.toThrow("Import cancelled");
+    await expect(
+      insertConversations([makeConv("c1")], { signal: controller.signal })
+    ).rejects.toThrow("Import cancelled");
   });
 
   it("retries on SQLITE_BUSY then succeeds", async () => {
@@ -127,7 +143,11 @@ describe("dbInsert", () => {
   });
 
   it("handles chunkSize clamping and conversation with no messages", async () => {
-    const convEmpty = { ...makeConv("cEmpty", 0), messages: [] as ParsedConversation["messages"], messageCount: 0 };
+    const convEmpty = {
+      ...makeConv("cEmpty", 0),
+      messages: [] as ParsedConversation["messages"],
+      messageCount: 0,
+    };
     const res = await insertConversations([convEmpty], { chunkSize: 0 });
     expect(res.conversationCount).toBe(1);
     expect(res.messageCount).toBe(0);

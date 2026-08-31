@@ -30,7 +30,12 @@ describe("OnboardingPage", () => {
         importing={true}
         importingSource="claude"
         onCancelImport={onCancel}
-        importProgress={{ conversationsDone: 1, conversationsTotal: 2, messagesDone: 10, messagesTotal: 20 }}
+        importProgress={{
+          conversationsDone: 1,
+          conversationsTotal: 2,
+          messagesDone: 10,
+          messagesTotal: 20,
+        }}
         onSkip={vi.fn()}
       />
     );
@@ -41,7 +46,14 @@ describe("OnboardingPage", () => {
 
   it("shows no Coming soon when all sources are available (4/4)", () => {
     render(
-      <OnboardingPage onImport={vi.fn()} importing={false} importingSource={null} onCancelImport={vi.fn()} importProgress={null} onSkip={vi.fn()} />
+      <OnboardingPage
+        onImport={vi.fn()}
+        importing={false}
+        importingSource={null}
+        onCancelImport={vi.fn()}
+        importProgress={null}
+        onSkip={vi.fn()}
+      />
     );
     expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
     expect(screen.getAllByText("Import").length).toBe(4);
@@ -49,7 +61,16 @@ describe("OnboardingPage", () => {
 
   it("calls onSkip", () => {
     const onSkip = vi.fn();
-    render(<OnboardingPage onImport={vi.fn()} importing={false} importingSource={null} onCancelImport={vi.fn()} importProgress={null} onSkip={onSkip} />);
+    render(
+      <OnboardingPage
+        onImport={vi.fn()}
+        importing={false}
+        importingSource={null}
+        onCancelImport={vi.fn()}
+        importProgress={null}
+        onSkip={onSkip}
+      />
+    );
     fireEvent.click(screen.getByText("Skip setup"));
     expect(onSkip).toHaveBeenCalled();
   });

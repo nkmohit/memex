@@ -30,7 +30,11 @@ describe("lib/logger", () => {
     const span = logger.startSpan("searchMessages", { q: "hello" });
     expect(span.name).toBe("searchMessages");
     expect(typeof span.start).toBe("number");
-    expect(logSpy).toHaveBeenCalledWith("[memex:debug]", expect.stringContaining("span:start searchMessages"), { q: "hello" });
+    expect(logSpy).toHaveBeenCalledWith(
+      "[memex:debug]",
+      expect.stringContaining("span:start searchMessages"),
+      { q: "hello" }
+    );
     const dur = logger.endSpan(span, { extra: 1 });
     expect(typeof dur).toBe("number");
     expect(dur).toBeGreaterThanOrEqual(0);
@@ -50,7 +54,11 @@ describe("lib/logger", () => {
 
   it("withSpan error rethrows but records latency", async () => {
     const err = new Error("boom");
-    await expect(logger.withSpan("failOp", async () => { throw err; })).rejects.toThrow("boom");
+    await expect(
+      logger.withSpan("failOp", async () => {
+        throw err;
+      })
+    ).rejects.toThrow("boom");
     expect(getSpanLatencies("failOp")).toHaveLength(1);
   });
 

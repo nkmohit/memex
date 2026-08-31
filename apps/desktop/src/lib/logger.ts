@@ -14,7 +14,11 @@ interface Logger {
   error: (...args: unknown[]) => void;
   startSpan: (name: string, attributes?: Record<string, unknown>) => Span;
   endSpan: (span: Span, extra?: Record<string, unknown>) => number;
-  withSpan: <T>(name: string, fn: () => Promise<T> | T, attributes?: Record<string, unknown>) => Promise<T>;
+  withSpan: <T>(
+    name: string,
+    fn: () => Promise<T> | T,
+    attributes?: Record<string, unknown>
+  ) => Promise<T>;
 }
 
 function formatArgs(level: LogLevel, args: unknown[]): unknown[] {
@@ -76,7 +80,12 @@ export const logger: Logger = {
   endSpan: (span: Span, extra) => {
     const duration = Date.now() - span.start;
     recordSpanLatency(span.name, duration);
-    console.log(...formatArgs("debug", [`span:end ${span.name} ${duration}ms`, { ...span.attributes, ...extra }]));
+    console.log(
+      ...formatArgs("debug", [
+        `span:end ${span.name} ${duration}ms`,
+        { ...span.attributes, ...extra },
+      ])
+    );
     return duration;
   },
   withSpan: async (name, fn, attributes) => {

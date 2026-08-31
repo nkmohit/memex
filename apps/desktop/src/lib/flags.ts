@@ -32,7 +32,8 @@ function readStorage(): Partial<Flags> {
 
 function writeStorage(flags: Flags): void {
   try {
-    if (typeof localStorage !== "undefined") localStorage.setItem(STORAGE_KEY, JSON.stringify(flags));
+    if (typeof localStorage !== "undefined")
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(flags));
   } catch {
     // ignore quota
   }

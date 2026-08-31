@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { initErrorTracking, reportError, isErrorTrackingInitialized, resetErrorTrackingForTest } from "./errorTracking";
+import {
+  initErrorTracking,
+  reportError,
+  isErrorTrackingInitialized,
+  resetErrorTrackingForTest,
+} from "./errorTracking";
 
 describe("errorTracking", () => {
   beforeEach(() => {

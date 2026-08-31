@@ -8,9 +8,15 @@ describe("useSearchSession", () => {
     for (const k of Object.keys(store)) delete store[k];
     vi.stubGlobal("localStorage", {
       getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => { store[k] = v; },
-      removeItem: (k: string) => { delete store[k]; },
-      clear: () => { for (const k of Object.keys(store)) delete store[k]; },
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete store[k];
+      },
+      clear: () => {
+        for (const k of Object.keys(store)) delete store[k];
+      },
     } as unknown as Storage);
   });
 

@@ -39,11 +39,17 @@ function splitSentences(text: string): string[] {
 function scoreSentences(sentences: string[]): number[] {
   const wordFreq = new Map<string, number>();
   for (const s of sentences) {
-    const words = s.toLowerCase().split(/[^a-z0-9]+/g).filter(Boolean);
+    const words = s
+      .toLowerCase()
+      .split(/[^a-z0-9]+/g)
+      .filter(Boolean);
     for (const w of words) wordFreq.set(w, (wordFreq.get(w) ?? 0) + 1);
   }
   return sentences.map((s) => {
-    const words = s.toLowerCase().split(/[^a-z0-9]+/g).filter(Boolean);
+    const words = s
+      .toLowerCase()
+      .split(/[^a-z0-9]+/g)
+      .filter(Boolean);
     const uniq = new Set(words);
     let freqScore = 0;
     for (const w of uniq) freqScore += Math.log(1 + (wordFreq.get(w) ?? 0));
@@ -57,8 +63,13 @@ function heuristicBullets(text: string): string[] {
   const sentences = splitSentences(text);
   if (sentences.length === 0) {
     const trimmed = text.trim().slice(0, 160);
-    if (!trimmed) return ["No content to summarize.", "Import more data.", "Insights will appear here."];
-    return [trimmed, "Key takeaway: conversation contains notable details.", "Review full thread for context."];
+    if (!trimmed)
+      return ["No content to summarize.", "Import more data.", "Insights will appear here."];
+    return [
+      trimmed,
+      "Key takeaway: conversation contains notable details.",
+      "Review full thread for context.",
+    ];
   }
   if (sentences.length <= 3) {
     return sentences.map((s) => s.slice(0, 160));
@@ -150,7 +161,8 @@ export async function summarizeText(
   opts: { provider?: SummarizeProvider; useCache?: boolean } = {}
 ): Promise<string[]> {
   const trimmed = text.trim();
-  if (!trimmed) return ["No content to summarize.", "Try importing data.", "Insights will appear here."];
+  if (!trimmed)
+    return ["No content to summarize.", "Try importing data.", "Insights will appear here."];
   const cacheKeyText = trimmed.slice(0, 500);
   if (opts.useCache !== false) {
     const cached = await getCachedSummary(cacheKeyText);

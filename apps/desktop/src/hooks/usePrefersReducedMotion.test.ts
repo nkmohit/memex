@@ -6,14 +6,20 @@ describe("usePrefersReducedMotion", () => {
   it("returns false initially and respects matchMedia (happy path)", () => {
     const addEventListener = vi.fn();
     const removeEventListener = vi.fn();
-    vi.stubGlobal("matchMedia", vi.fn(() => ({
-      matches: true,
-      media: "(prefers-reduced-motion: reduce)",
-      addEventListener,
-      removeEventListener,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    } as unknown as MediaQueryList)));
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(
+        () =>
+          ({
+            matches: true,
+            media: "(prefers-reduced-motion: reduce)",
+            addEventListener,
+            removeEventListener,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+          }) as unknown as MediaQueryList
+      )
+    );
 
     const { result } = renderHook(() => usePrefersReducedMotion());
     // effect runs and sets to true because mq.matches = true

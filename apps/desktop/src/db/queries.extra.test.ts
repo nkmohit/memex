@@ -9,7 +9,14 @@ vi.mock("./connection", () => ({
   withDbLock: (fn: () => Promise<unknown>) => fn(),
 }));
 
-import { getStats, getSourceStats, getConversations, getMessages, clearAllData, getActivityCountByDay } from "./queries";
+import {
+  getStats,
+  getSourceStats,
+  getConversations,
+  getMessages,
+  clearAllData,
+  getActivityCountByDay,
+} from "./queries";
 
 describe("queries extra", () => {
   beforeEach(() => {
@@ -32,17 +39,31 @@ describe("queries extra", () => {
   });
 
   it("getSourceStats returns per-source (happy path)", async () => {
-    const fake = [{ source: "claude", conversationCount: 1, messageCount: 5, lastActivityTimestamp: 123 }];
+    const fake = [
+      { source: "claude", conversationCount: 1, messageCount: 5, lastActivityTimestamp: 123 },
+    ];
     mockSelect.mockResolvedValueOnce(fake);
     const r = await getSourceStats();
     expect(r).toEqual(fake);
   });
 
   it("getConversations respects limit and source filter", async () => {
-    mockSelect.mockResolvedValueOnce([{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }]);
+    mockSelect.mockResolvedValueOnce([
+      {
+        id: "c1",
+        source: "claude",
+        title: "T",
+        created_at: 0,
+        last_message_at: 0,
+        message_count: 1,
+      },
+    ]);
     const rows = await getConversations(10, "claude");
     expect(rows.length).toBe(1);
-    expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining("WHERE c.source"), expect.anything());
+    expect(mockSelect).toHaveBeenCalledWith(
+      expect.stringContaining("WHERE c.source"),
+      expect.anything()
+    );
   });
 
   it("getMessages returns empty for invalid id (error path)", async () => {
@@ -138,14 +159,40 @@ describe("queries extra", () => {
   it("getAllConversationsForSearch with filters", async () => {
     mockSelect
       .mockResolvedValueOnce([{ total: 1 }]) // count
-      .mockResolvedValueOnce([{ conversation_id: "c1", title: "T", source: "claude", created_at: 0, last_message_at: 100, message_count: 1 }]); // rows
-    const res = await (await import("./queries")).getAllConversationsForSearch({ source: "claude", dateFrom: 10, dateTo: 200, limit: 10, offset: 0 });
+      .mockResolvedValueOnce([
+        {
+          conversation_id: "c1",
+          title: "T",
+          source: "claude",
+          created_at: 0,
+          last_message_at: 100,
+          message_count: 1,
+        },
+      ]); // rows
+    const res = await (
+      await import("./queries")
+    ).getAllConversationsForSearch({
+      source: "claude",
+      dateFrom: 10,
+      dateTo: 200,
+      limit: 10,
+      offset: 0,
+    });
     expect(res.rows.length).toBe(1);
     expect(res.totalMatches).toBe(1);
   });
 
   it("getConversations without source (branch)", async () => {
-    mockSelect.mockResolvedValueOnce([{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }]);
+    mockSelect.mockResolvedValueOnce([
+      {
+        id: "c1",
+        source: "claude",
+        title: "T",
+        created_at: 0,
+        last_message_at: 0,
+        message_count: 1,
+      },
+    ]);
     const rows = await getConversations(5);
     expect(rows.length).toBe(1);
     expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining("ORDER BY last_message_at"));

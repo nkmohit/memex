@@ -3,7 +3,11 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import OverviewMemoryPulse from "./OverviewMemoryPulse";
 import type { ActivityHeatmapPoint, SourceStats } from "../db";
 
-function makePoint(day: string, total = 5, overrides: Partial<ActivityHeatmapPoint> = {}): ActivityHeatmapPoint {
+function makePoint(
+  day: string,
+  total = 5,
+  overrides: Partial<ActivityHeatmapPoint> = {}
+): ActivityHeatmapPoint {
   return {
     day,
     totalCount: total,
@@ -19,7 +23,12 @@ function makePoint(day: string, total = 5, overrides: Partial<ActivityHeatmapPoi
 function makeStats(): SourceStats[] {
   return [
     { source: "claude", conversationCount: 5, messageCount: 50, lastActivityTimestamp: Date.now() },
-    { source: "chatgpt", conversationCount: 3, messageCount: 30, lastActivityTimestamp: Date.now() },
+    {
+      source: "chatgpt",
+      conversationCount: 3,
+      messageCount: 30,
+      lastActivityTimestamp: Date.now(),
+    },
   ];
 }
 
@@ -51,7 +60,14 @@ describe("OverviewMemoryPulse", () => {
     const y = new Date().getFullYear();
     // create points with varying counts to hit intensity branches
     const points = [
-      makePoint(`${y}-01-01`, 0, { totalCount: 0, chatgptCount: 0, claudeCount: 0, geminiCount: 0, grokCount: 0, otherCount: 0 }),
+      makePoint(`${y}-01-01`, 0, {
+        totalCount: 0,
+        chatgptCount: 0,
+        claudeCount: 0,
+        geminiCount: 0,
+        grokCount: 0,
+        otherCount: 0,
+      }),
       makePoint(`${y}-01-02`, 1),
       makePoint(`${y}-01-03`, 10),
     ];
@@ -66,7 +82,9 @@ describe("OverviewMemoryPulse", () => {
     const y = new Date().getFullYear();
     const points = [makePoint(`${y}-03-15`, 5)];
     render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} />);
-    const cell = document.querySelector(".overview-heatmap-cell.level-4, .overview-heatmap-cell.level-1, .overview-heatmap-cell") as HTMLElement;
+    const cell = document.querySelector(
+      ".overview-heatmap-cell.level-4, .overview-heatmap-cell.level-1, .overview-heatmap-cell"
+    ) as HTMLElement;
     if (cell) {
       fireEvent.mouseEnter(cell);
       // tooltip appears after hover
@@ -84,7 +102,14 @@ describe("OverviewMemoryPulse", () => {
       "React and Rust integration for Memex",
     ];
     const dates = texts.map(() => Date.now());
-    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={texts} topicDates={dates} />);
+    render(
+      <OverviewMemoryPulse
+        activityTimeline={points}
+        sourceStats={makeStats()}
+        topicTexts={texts}
+        topicDates={dates}
+      />
+    );
     const topicsEl = screen.getByText(/Top topics:/);
     expect(topicsEl).toBeInTheDocument();
     expect(topicsEl.textContent).toMatch(/React/);
@@ -96,7 +121,9 @@ describe("OverviewMemoryPulse", () => {
   it("shows nothing for topics when no texts", () => {
     const y = new Date().getFullYear();
     const points = [makePoint(`${y}-03-15`, 5)];
-    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={[]} />);
+    render(
+      <OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={[]} />
+    );
     expect(screen.queryByText(/Top topics:/)).not.toBeInTheDocument();
   });
 
@@ -118,8 +145,19 @@ describe("OverviewMemoryPulse", () => {
   it("renders topic timeline for multiple months", () => {
     const points = [makePoint("2026-01-15", 3)];
     const texts = ["React hooks Jan", "React state Jan", "Rust ownership Feb"];
-    const dates = [new Date("2026-01-10").getTime(), new Date("2026-01-20").getTime(), new Date("2026-02-05").getTime()];
-    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={texts} topicDates={dates} />);
+    const dates = [
+      new Date("2026-01-10").getTime(),
+      new Date("2026-01-20").getTime(),
+      new Date("2026-02-05").getTime(),
+    ];
+    render(
+      <OverviewMemoryPulse
+        activityTimeline={points}
+        sourceStats={makeStats()}
+        topicTexts={texts}
+        topicDates={dates}
+      />
+    );
     // Should show Top topics and timeline months
     expect(screen.getByText(/Top topics:/)).toBeInTheDocument();
     expect(screen.getByLabelText("Topic timeline")).toBeInTheDocument();
@@ -128,7 +166,14 @@ describe("OverviewMemoryPulse", () => {
   });
 
   it("handles empty sourceStats and single day", () => {
-    render(<OverviewMemoryPulse activityTimeline={[makePoint("2026-08-10", 1)]} sourceStats={[]} topicTexts={["solo"]} topicDates={[Date.now()]} />);
+    render(
+      <OverviewMemoryPulse
+        activityTimeline={[makePoint("2026-08-10", 1)]}
+        sourceStats={[]}
+        topicTexts={["solo"]}
+        topicDates={[Date.now()]}
+      />
+    );
     expect(screen.getByLabelText("Memory pulse strip")).toBeInTheDocument();
   });
 
@@ -136,11 +181,27 @@ describe("OverviewMemoryPulse", () => {
     const y = new Date().getFullYear();
     const points = [makePoint(`${y}-04-10`, 8), makePoint(`${y}-04-11`, 12)];
     render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} />);
-    const cell = document.querySelector(".overview-heatmap-cell.level-4, .overview-heatmap-cell.level-2, .overview-heatmap-cell") as HTMLElement;
+    const cell = document.querySelector(
+      ".overview-heatmap-cell.level-4, .overview-heatmap-cell.level-2, .overview-heatmap-cell"
+    ) as HTMLElement;
     if (cell) {
       // Mock getBoundingClientRect for cell and container
-      const mockRect = { left: 10, top: 10, width: 12, height: 12, right: 22, bottom: 22 } as DOMRect;
-      const containerRect = { left: 0, top: 0, width: 500, height: 100, right: 500, bottom: 100 } as DOMRect;
+      const mockRect = {
+        left: 10,
+        top: 10,
+        width: 12,
+        height: 12,
+        right: 22,
+        bottom: 22,
+      } as DOMRect;
+      const containerRect = {
+        left: 0,
+        top: 0,
+        width: 500,
+        height: 100,
+        right: 500,
+        bottom: 100,
+      } as DOMRect;
       vi.spyOn(cell, "getBoundingClientRect").mockReturnValue(mockRect);
       const canvas = document.querySelector(".overview-heatmap-canvas") as HTMLElement;
       if (canvas) vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue(containerRect);
@@ -156,8 +217,18 @@ describe("OverviewMemoryPulse", () => {
   it("renders source momentum percentages", () => {
     const points = [makePoint("2026-08-10", 1)];
     const stats: SourceStats[] = [
-      { source: "claude", conversationCount: 10, messageCount: 100, lastActivityTimestamp: Date.now() },
-      { source: "chatgpt", conversationCount: 5, messageCount: 50, lastActivityTimestamp: Date.now() },
+      {
+        source: "claude",
+        conversationCount: 10,
+        messageCount: 100,
+        lastActivityTimestamp: Date.now(),
+      },
+      {
+        source: "chatgpt",
+        conversationCount: 5,
+        messageCount: 50,
+        lastActivityTimestamp: Date.now(),
+      },
     ];
     render(<OverviewMemoryPulse activityTimeline={points} sourceStats={stats} />);
     expect(screen.getByText("67%")).toBeInTheDocument();
@@ -167,7 +238,14 @@ describe("OverviewMemoryPulse", () => {
   it("handles heatmap intensity levels 0-4", () => {
     const y = new Date().getFullYear();
     const points = [
-      makePoint(`${y}-06-01`, 0, { totalCount: 0, chatgptCount: 0, claudeCount: 0, geminiCount: 0, grokCount: 0, otherCount: 0 }),
+      makePoint(`${y}-06-01`, 0, {
+        totalCount: 0,
+        chatgptCount: 0,
+        claudeCount: 0,
+        geminiCount: 0,
+        grokCount: 0,
+        otherCount: 0,
+      }),
       makePoint(`${y}-06-02`, 1),
       makePoint(`${y}-06-03`, 5),
       makePoint(`${y}-06-04`, 10),

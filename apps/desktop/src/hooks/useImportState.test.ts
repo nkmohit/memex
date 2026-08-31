@@ -15,10 +15,21 @@ describe("useImportState", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("handles successful import (happy path)", async () => {
-    vi.mocked(importConversations).mockResolvedValue({ conversationCount: 2, messageCount: 10 } as never);
+    vi.mocked(importConversations).mockResolvedValue({
+      conversationCount: 2,
+      messageCount: 10,
+    } as never);
     const pushToast = vi.fn();
     const loadData = vi.fn(async () => {});
-    const { result } = renderHook(() => useImportState({ pushToast, loadData, activeSource: null, sourceLabel: (s) => s.toUpperCase(), clearingData: false }));
+    const { result } = renderHook(() =>
+      useImportState({
+        pushToast,
+        loadData,
+        activeSource: null,
+        sourceLabel: (s) => s.toUpperCase(),
+        clearingData: false,
+      })
+    );
     await act(async () => {
       await result.current.handleImportSource("claude");
     });
@@ -31,7 +42,15 @@ describe("useImportState", () => {
 
   it("does not start when clearingData", async () => {
     const pushToast = vi.fn();
-    const { result } = renderHook(() => useImportState({ pushToast, loadData: vi.fn(async () => {}), activeSource: null, sourceLabel: (s) => s, clearingData: true }));
+    const { result } = renderHook(() =>
+      useImportState({
+        pushToast,
+        loadData: vi.fn(async () => {}),
+        activeSource: null,
+        sourceLabel: (s) => s,
+        clearingData: true,
+      })
+    );
     await act(async () => {
       await result.current.handleImportSource("claude");
     });
@@ -41,7 +60,15 @@ describe("useImportState", () => {
   it("handles import error (error path)", async () => {
     vi.mocked(importConversations).mockRejectedValue(new Error("import boom"));
     const pushToast = vi.fn();
-    const { result } = renderHook(() => useImportState({ pushToast, loadData: vi.fn(async () => {}), activeSource: null, sourceLabel: (s) => s, clearingData: false }));
+    const { result } = renderHook(() =>
+      useImportState({
+        pushToast,
+        loadData: vi.fn(async () => {}),
+        activeSource: null,
+        sourceLabel: (s) => s,
+        clearingData: false,
+      })
+    );
     await act(async () => {
       await result.current.handleImportSource("claude");
     });
@@ -50,15 +77,33 @@ describe("useImportState", () => {
   });
 
   it("handleCancelImport aborts controller", async () => {
-    const { result } = renderHook(() => useImportState({ pushToast: vi.fn(), loadData: vi.fn(async () => {}), activeSource: null, sourceLabel: (s) => s, clearingData: false }));
+    const { result } = renderHook(() =>
+      useImportState({
+        pushToast: vi.fn(),
+        loadData: vi.fn(async () => {}),
+        activeSource: null,
+        sourceLabel: (s) => s,
+        clearingData: false,
+      })
+    );
     // initially no controller
     act(() => result.current.handleCancelImport());
     expect(result.current.importAbortRef.current).toBeNull();
     // simulate ongoing import by setting mock to pending
     let resolveImport!: (v: unknown) => void;
-    vi.mocked(importConversations).mockReturnValue(new Promise((r) => (resolveImport = r)) as never);
+    vi.mocked(importConversations).mockReturnValue(
+      new Promise((r) => (resolveImport = r)) as never
+    );
     const pushToast = vi.fn();
-    const { result: r2 } = renderHook(() => useImportState({ pushToast, loadData: vi.fn(async () => {}), activeSource: null, sourceLabel: (s) => s, clearingData: false }));
+    const { result: r2 } = renderHook(() =>
+      useImportState({
+        pushToast,
+        loadData: vi.fn(async () => {}),
+        activeSource: null,
+        sourceLabel: (s) => s,
+        clearingData: false,
+      })
+    );
     const importPromise = r2.current.handleImportSource("claude");
     // now abort
     act(() => r2.current.handleCancelImport());
