@@ -355,7 +355,72 @@ describe("App", () => {
     } as unknown as ReturnType<typeof mockUseSearchSession>);
     render(<App />);
     const props = capturedShellProps as unknown as { searchProps: { onSelectResult: (a:string,b:string,c:string,d:number)=>void } };
-    // Should be defined
     expect(props.searchProps.onSelectResult).toBeDefined();
+  });
+
+  it("handleConversationClick error path logs and clears", async () => {
+    const setMessages = vi.fn();
+    mockUseAppData.mockReturnValue({
+      loading: false,
+      stats: { conversationCount: 1, messageCount: 1, indexedMessageCount: 1, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      sourceStats: [],
+      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }],
+      selectedConvId: null,
+      setSelectedConvId: vi.fn(),
+      messages: [],
+      setMessages,
+      messagesLoading: false,
+      setMessagesLoading: vi.fn(),
+      loadError: null,
+      setLoadError: vi.fn(),
+      loadData: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseAppData>);
+    const { getMessages } = await import("./db");
+    (getMessages as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("load fail"));
+    render(<App />);
+    const props = capturedShellProps as unknown as { conversationsProps: { onSelectConversation: (id:string)=>void } };
+    await props.conversationsProps.onSelectConversation("c1");
+    expect(setMessages).toHaveBeenCalledWith([]);
+  });
+
+  it("goBackToSearch via AppShell conversationsProps", async () => {
+    mockUseAppData.mockReturnValue({
+      loading: false,
+      stats: { conversationCount: 1, messageCount: 1, indexedMessageCount: 1, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      sourceStats: [],
+      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 }],
+      selectedConvId: "c1",
+      setSelectedConvId: vi.fn(),
+      messages: [],
+      setMessages: vi.fn(),
+      messagesLoading: false,
+      setMessagesLoading: vi.fn(),
+      loadError: null,
+      setLoadError: vi.fn(),
+      loadData: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseAppData>);
+    mockUseSearchSession.mockReturnValue({
+      searchPageQuery: "",
+      setSearchPageQuery: vi.fn(),
+      searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+      setSearchPageSnapshot: vi.fn(),
+      clearPersistedSearchState: vi.fn(),
+      searchFocusRequestId: null,
+      setSearchFocusRequestId: vi.fn(),
+      openedConversationFromSearch: true,
+      setOpenedConversationFromSearch: vi.fn(),
+      searchRestoreConversationId: null,
+      setSearchRestoreConversationId: vi.fn(),
+      searchSelectedConvId: "c1",
+      setSearchSelectedConvId: vi.fn(),
+      searchSelectedConversation: { id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 1 },
+      setSearchSelectedConversation: vi.fn(),
+      skipSearchOnceRef: { current: false },
+    } as unknown as ReturnType<typeof mockUseSearchSession>);
+    render(<App />);
+    const props = capturedShellProps as unknown as { conversationsProps: { viewer: { onBackToSearch: ()=>void } } };
+    expect(props.conversationsProps.viewer.onBackToSearch).toBeDefined();
+    props.conversationsProps.viewer.onBackToSearch();
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
   });
 });
