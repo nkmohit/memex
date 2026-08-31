@@ -99,4 +99,36 @@ describe("OverviewMemoryPulse", () => {
     render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={[]} />);
     expect(screen.queryByText(/Top topics:/)).not.toBeInTheDocument();
   });
+
+  it("changes year via AppSelect", async () => {
+    const points = [makePoint("2026-01-15", 2), makePoint("2025-06-10", 7)];
+    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} />);
+    const btn = screen.getByRole("button", { name: "Pulse timeframe" });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    // AppSelect listbox should appear with Latest, 2026, 2025
+    const listbox = screen.getByRole("listbox");
+    expect(listbox).toBeInTheDocument();
+    const opt2025 = screen.getByRole("option", { name: "2025" });
+    fireEvent.click(opt2025);
+    // After selection, button should show 2025
+    expect(btn.textContent).toContain("2025");
+  });
+
+  it("renders topic timeline for multiple months", () => {
+    const points = [makePoint("2026-01-15", 3)];
+    const texts = ["React hooks Jan", "React state Jan", "Rust ownership Feb"];
+    const dates = [new Date("2026-01-10").getTime(), new Date("2026-01-20").getTime(), new Date("2026-02-05").getTime()];
+    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} topicTexts={texts} topicDates={dates} />);
+    // Should show Top topics and timeline months
+    expect(screen.getByText(/Top topics:/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Topic timeline")).toBeInTheDocument();
+    expect(screen.getByText("2026-01")).toBeInTheDocument();
+    expect(screen.getByText("2026-02")).toBeInTheDocument();
+  });
+
+  it("handles empty sourceStats and single day", () => {
+    render(<OverviewMemoryPulse activityTimeline={[makePoint("2026-08-10", 1)]} sourceStats={[]} topicTexts={["solo"]} topicDates={[Date.now()]} />);
+    expect(screen.getByLabelText("Memory pulse strip")).toBeInTheDocument();
+  });
 });
