@@ -1,9 +1,10 @@
 import { getDb, withDbLock } from "./connection";
 import { normalizeQuery } from "./helpers";
 import type { SearchMessagesResult, SearchOptions, SearchResultRow } from "./types";
-import { clampLimit, clampOffset, sanitizeSource } from "../lib/validation";
+import { clampLimit, clampOffset } from "../lib/validation";
 import { cosineSimilarity, embed } from "../lib/vector";
 import { logger } from "../lib/logger";
+import { validateSearchOptions } from "../lib/schemas";
 import {
   buildCountSql,
   buildFtsWhereClause,
@@ -84,15 +85,33 @@ export function searchMessages(
     return Promise.resolve({ rows: [], totalMatches: 0, totalOccurrences: 0 });
   }
 
+  // Schema validation at DB boundary — sanitize SearchOptions via zod
+  let validatedOpts: SearchOptions;
+  try {
+    const parsed = validateSearchOptions(opts);
+    validatedOpts = {
+      source: parsed.source,
+      dateFrom: parsed.dateFrom,
+      dateTo: parsed.dateTo,
+      limit: parsed.limit,
+      offset: parsed.offset,
+      sort: parsed.sort as SearchOptions["sort"],
+      mode: parsed.mode as SearchOptions["mode"],
+    };
+  } catch {
+    // On validation failure, fall back to empty opts (safe defaults)
+    validatedOpts = {};
+  }
+
   // Semantic / hybrid path — vector search offline, deterministic
-  const mode = opts.mode ?? "fts";
+  const mode = validatedOpts.mode ?? "fts";
   if (mode === "semantic" || mode === "hybrid") {
     return logger.withSpan("searchMessages", () =>
       withDbLock(async () => {
         const database = await getDb();
-        const safeLimit = clampLimit(opts.limit, 20, 100);
-        const safeOffset = clampOffset(opts.offset);
-        const validatedSource = sanitizeSource(opts.source);
+        const safeLimit = clampLimit(validatedOpts.limit, 20, 100);
+        const safeOffset = clampOffset(validatedOpts.offset);
+        const validatedSource = validatedOpts.source;
         const queryVec = embed(rawQuery);
         const SEMANTIC_THRESHOLD = 0.22;
 
@@ -133,8 +152,16 @@ export function searchMessages(
         const scored: Scored[] = [];
         for (const row of allRows) {
           if (validatedSource && row.source !== validatedSource) continue;
-          if (typeof opts.dateFrom === "number" && row.message_created_at < opts.dateFrom) continue;
-          if (typeof opts.dateTo === "number" && row.message_created_at > opts.dateTo) continue;
+          if (
+            typeof validatedOpts.dateFrom === "number" &&
+            row.message_created_at < validatedOpts.dateFrom
+          )
+            continue;
+          if (
+            typeof validatedOpts.dateTo === "number" &&
+            row.message_created_at > validatedOpts.dateTo
+          )
+            continue;
           const sim = cosineSimilarity(queryVec, embed(row.content));
           if (sim >= SEMANTIC_THRESHOLD) {
             scored.push({
@@ -212,7 +239,7 @@ export function searchMessages(
 
         if (mode === "hybrid") {
           // Also run FTS and merge
-          const ftsResult = await runFtsSearch(database, rawQuery, normalizedQuery, opts);
+          const ftsResult = await runFtsSearch(database, rawQuery, normalizedQuery, validatedOpts);
           // Merge: union by conversation_id, keep best rank, sum occurrence_count
           const merged = new Map<string, (typeof semanticRows)[number] & { ftsRank?: number }>();
           for (const r of semanticRows as any[])
@@ -293,13 +320,13 @@ export function searchMessages(
     withDbLock(async () => {
       const database = await getDb();
 
-      const safeLimit = clampLimit(opts.limit, 20, 100);
-      const safeOffset = clampOffset(opts.offset);
-      const { whereClause, params } = buildFtsWhereClause(rawQuery, normalizedQuery, opts);
+      const safeLimit = clampLimit(validatedOpts.limit, 20, 100);
+      const safeOffset = clampOffset(validatedOpts.offset);
+      const { whereClause, params } = buildFtsWhereClause(rawQuery, normalizedQuery, validatedOpts);
 
       const countSql = buildCountSql(whereClause);
       const totalOccurrencesSql = buildTotalOccurrencesSql(whereClause);
-      const orderBy = buildOrderBy(opts.sort);
+      const orderBy = buildOrderBy(validatedOpts.sort);
       const rowsSql = buildRankedRowsSql(whereClause, orderBy, safeLimit, safeOffset);
 
       const countRows = await database.select<{ total: number }[]>(countSql, params);
@@ -317,7 +344,7 @@ export function searchMessages(
         const { whereClause: snippetWhereClause, params: snippetParams } = buildSnippetWhereClause(
           normalizedQuery,
           row.conversation_id,
-          opts
+          validatedOpts
         );
 
         const snippetRows = await database.select<{ snippet: string }[]>(

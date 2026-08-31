@@ -1,4 +1,5 @@
 import { ParsedConversation, ParsedMessage } from "../types.js";
+import { validateParsedConversations } from "../schemas.js";
 
 function toTimestamp(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -34,7 +35,11 @@ function flattenContent(raw: unknown): string | null {
       const parts = obj.parts
         .map((p) => {
           if (typeof p === "string") return p.trim();
-          if (p && typeof p === "object" && typeof (p as Record<string, unknown>).text === "string") {
+          if (
+            p &&
+            typeof p === "object" &&
+            typeof (p as Record<string, unknown>).text === "string"
+          ) {
             return ((p as Record<string, unknown>).text as string).trim();
           }
           return "";
@@ -87,7 +92,8 @@ export function parseGrokConversations(rawJson: unknown): ParsedConversation[] {
       (conv.conversation_title as string | undefined) ??
       "Untitled";
 
-    const createdAtRaw = conv.create_time ?? conv.created_at ?? conv.createTime ?? conv.createdAt ?? conv.timestamp;
+    const createdAtRaw =
+      conv.create_time ?? conv.created_at ?? conv.createTime ?? conv.createdAt ?? conv.timestamp;
     const updatedAtRaw = conv.update_time ?? conv.updated_at ?? conv.updateTime ?? conv.updatedAt;
     const createdAt = toTimestamp(createdAtRaw);
     const updatedAt = toTimestamp(updatedAtRaw) || createdAt;
@@ -112,7 +118,8 @@ export function parseGrokConversations(rawJson: unknown): ParsedConversation[] {
         (msg.uuid as string | undefined);
       if (!msgId) continue;
 
-      const roleRaw = msg.sender ?? msg.role ?? msg.author ?? (msg.author as Record<string, unknown>)?.role;
+      const roleRaw =
+        msg.sender ?? msg.role ?? msg.author ?? (msg.author as Record<string, unknown>)?.role;
       const role = normalizeRole(roleRaw);
       if (!role) continue;
 
@@ -120,7 +127,13 @@ export function parseGrokConversations(rawJson: unknown): ParsedConversation[] {
       const content = flattenContent(contentRaw ?? msg);
       if (!content) continue;
 
-      const createdRaw = msg.create_time ?? msg.created_at ?? msg.createTime ?? msg.timestamp ?? msg.createdAt ?? msg.time;
+      const createdRaw =
+        msg.create_time ??
+        msg.created_at ??
+        msg.createTime ??
+        msg.timestamp ??
+        msg.createdAt ??
+        msg.time;
       const createdAtMsg = toTimestamp(createdRaw);
 
       messages.push({
@@ -146,5 +159,5 @@ export function parseGrokConversations(rawJson: unknown): ParsedConversation[] {
     });
   }
 
-  return conversations;
+  return validateParsedConversations(conversations);
 }

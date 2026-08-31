@@ -5,10 +5,13 @@ import {
   parseClaudeConversations,
   parseGeminiConversations,
   parseGrokConversations,
+  validateParsedConversations,
+  ImportValidationError,
 } from "@memex/core";
 import { insertConversations } from "./dbInsert";
 import { logger } from "./lib/logger";
 import { getPluginParser, type ParserFn } from "./plugins/registry";
+import { validateClaudePayload, validateChatGPTPayload } from "./lib/schemas";
 
 // ---------------------------------------------------------------------------
 // Source registry — add new sources here as they become available
@@ -95,6 +98,7 @@ async function importPlugin(
   const parsed = parser(rawData as unknown) as unknown as ReturnType<
     typeof parseClaudeConversations
   >;
+  validateParsedConversations(parsed as unknown);
   opts.onProgress?.({
     phase: "parse",
     conversationsDone: parsed.length,
@@ -131,10 +135,15 @@ async function importClaude(opts: ImportOptions): Promise<ImportResult | null> {
   const rawData = JSON.parse(content);
 
   if (!Array.isArray(rawData)) {
-    throw new Error("Invalid Claude export: expected a JSON array of conversations");
+    throw new ImportValidationError(
+      "Invalid Claude export: expected a JSON array of conversations",
+      []
+    );
   }
-
+  // Schema validation at import boundary
+  validateClaudePayload(rawData);
   const parsed = parseClaudeConversations(rawData);
+  validateParsedConversations(parsed);
   opts.onProgress?.({
     phase: "parse",
     conversationsDone: parsed.length,
@@ -180,10 +189,14 @@ async function importChatGPT(opts: ImportOptions): Promise<ImportResult | null> 
   const rawData = JSON.parse(content);
 
   if (!Array.isArray(rawData)) {
-    throw new Error("Invalid OpenAI / ChatGPT export: expected a JSON array of conversations");
+    throw new ImportValidationError(
+      "Invalid OpenAI / ChatGPT export: expected a JSON array of conversations",
+      []
+    );
   }
-
+  validateChatGPTPayload(rawData);
   const parsed = parseChatGPTConversations(rawData);
+  validateParsedConversations(parsed);
   opts.onProgress?.({
     phase: "parse",
     conversationsDone: parsed.length,
@@ -229,6 +242,7 @@ async function importGemini(opts: ImportOptions): Promise<ImportResult | null> {
   const rawData = JSON.parse(content);
 
   const parsed = parseGeminiConversations(rawData);
+  validateParsedConversations(parsed);
 
   opts.onProgress?.({
     phase: "parse",
@@ -275,6 +289,7 @@ async function importGrok(opts: ImportOptions): Promise<ImportResult | null> {
   const rawData = JSON.parse(content);
 
   const parsed = parseGrokConversations(rawData);
+  validateParsedConversations(parsed);
 
   opts.onProgress?.({
     phase: "parse",

@@ -1,4 +1,5 @@
 import { ParsedConversation, ParsedMessage } from "../types.js";
+import { validateParsedConversations } from "../schemas.js";
 
 /**
  * Convert an ISO date string to a Unix timestamp (milliseconds).
@@ -50,9 +51,7 @@ function flattenContent(message: Record<string, unknown>): string | null {
  * Input: the raw array from Claude's conversations.json export.
  * Output: clean domain objects ready for storage.
  */
-export function parseClaudeConversations(
-  rawJson: unknown[]
-): ParsedConversation[] {
+export function parseClaudeConversations(rawJson: unknown[]): ParsedConversation[] {
   const conversations: ParsedConversation[] = [];
 
   for (const raw of rawJson) {
@@ -104,5 +103,5 @@ export function parseClaudeConversations(
     });
   }
 
-  return conversations;
+  return validateParsedConversations(conversations);
 }

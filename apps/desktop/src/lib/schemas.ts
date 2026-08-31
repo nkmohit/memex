@@ -22,7 +22,7 @@ const ParsedMessageSchema = z.object({
 const ParsedConversationSchema = z.object({
   id: z.string().min(1),
   externalId: z.string().min(1),
-  source: z.enum(["claude", "chatgpt", "gemini", "grok"]),
+  source: z.string().min(1),
   title: z.string().min(1),
   createdAt: z.number().finite().nonnegative(),
   updatedAt: z.number().finite().nonnegative(),

@@ -34,7 +34,12 @@ describe("parseClaudeConversations", () => {
         updated_at: "2026-01-01T00:00:00Z",
         chat_messages: [
           { uuid: "m1", sender: "human", created_at: "2026-01-01T00:00:00Z", text: "   " },
-          { uuid: "m2", sender: "assistant", created_at: "2026-01-01T00:01:00Z", content: [{ type: "image", url: "x" }] },
+          {
+            uuid: "m2",
+            sender: "assistant",
+            created_at: "2026-01-01T00:01:00Z",
+            content: [{ type: "image", url: "x" }],
+          },
           { uuid: "m3", sender: "human", created_at: "2026-01-01T00:02:00Z", text: "Valid" },
         ],
       },
@@ -70,7 +75,10 @@ describe("parseClaudeConversations", () => {
   });
 
   it("skips conversations missing uuid or chat_messages", () => {
-    const raw = [{ name: "No uuid", chat_messages: [] }, { uuid: "ok", name: "ok", chat_messages: [] }] as any;
+    const raw = [
+      { name: "No uuid", chat_messages: [] },
+      { uuid: "ok", name: "ok", chat_messages: [] },
+    ] as any;
     const result = parseClaudeConversations(raw);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("ok");

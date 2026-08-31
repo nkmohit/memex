@@ -27,12 +27,27 @@ describe("schemas", () => {
       ];
       expect(() => validateParsedConversations(bad as unknown)).toThrow(ImportValidationError);
     });
-    it("rejects invalid source", () => {
+    it("accepts custom source (plugin)", () => {
+      const good = [
+        {
+          id: "c1",
+          externalId: "c1",
+          source: "custom",
+          title: "t",
+          createdAt: 0,
+          updatedAt: 0,
+          messageCount: 0,
+          messages: [],
+        },
+      ];
+      expect(() => validateParsedConversations(good as unknown)).not.toThrow();
+    });
+    it("rejects empty source", () => {
       const bad = [
         {
           id: "c1",
           externalId: "c1",
-          source: "unknown",
+          source: "",
           title: "t",
           createdAt: 0,
           updatedAt: 0,

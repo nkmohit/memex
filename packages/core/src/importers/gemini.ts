@@ -1,4 +1,5 @@
 import { ParsedConversation, ParsedMessage } from "../types.js";
+import { validateParsedConversations } from "../schemas.js";
 
 function toTimestamp(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -31,7 +32,11 @@ function flattenContent(raw: unknown): string | null {
       const parts = obj.parts
         .map((p) => {
           if (typeof p === "string") return p.trim();
-          if (p && typeof p === "object" && typeof (p as Record<string, unknown>).text === "string") {
+          if (
+            p &&
+            typeof p === "object" &&
+            typeof (p as Record<string, unknown>).text === "string"
+          ) {
             return ((p as Record<string, unknown>).text as string).trim();
           }
           return "";
@@ -44,7 +49,11 @@ function flattenContent(raw: unknown): string | null {
       const parts = (obj.content as unknown[])
         .map((p) => {
           if (typeof p === "string") return p.trim();
-          if (p && typeof p === "object" && typeof (p as Record<string, unknown>).text === "string") {
+          if (
+            p &&
+            typeof p === "object" &&
+            typeof (p as Record<string, unknown>).text === "string"
+          ) {
             return ((p as Record<string, unknown>).text as string).trim();
           }
           return "";
@@ -120,7 +129,8 @@ export function parseGeminiConversations(rawJson: unknown): ParsedConversation[]
         (msg.uuid as string | undefined);
       if (!msgId) continue;
 
-      const roleRaw = msg.role ?? msg.sender ?? msg.author ?? (msg.author as Record<string, unknown>)?.role;
+      const roleRaw =
+        msg.role ?? msg.sender ?? msg.author ?? (msg.author as Record<string, unknown>)?.role;
       const role = normalizeRole(roleRaw);
       if (!role) continue;
 
@@ -129,7 +139,8 @@ export function parseGeminiConversations(rawJson: unknown): ParsedConversation[]
       const content = flattenContent(contentRaw ?? msg);
       if (!content) continue;
 
-      const createdRaw = msg.create_time ?? msg.created_at ?? msg.createTime ?? msg.timestamp ?? msg.createdAt;
+      const createdRaw =
+        msg.create_time ?? msg.created_at ?? msg.createTime ?? msg.timestamp ?? msg.createdAt;
       const createdAtMsg = toTimestamp(createdRaw);
 
       messages.push({
@@ -159,5 +170,5 @@ export function parseGeminiConversations(rawJson: unknown): ParsedConversation[]
     });
   }
 
-  return conversations;
+  return validateParsedConversations(conversations);
 }

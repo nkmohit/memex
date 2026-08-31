@@ -69,13 +69,23 @@ describe("parseGrokConversations", () => {
   });
 
   it("defaults title to Untitled", () => {
-    const raw = [{ conversation_id: "k5", messages: [{ message_id: "m1", sender: "user", text: "hi" }] }] as any;
+    const raw = [
+      { conversation_id: "k5", messages: [{ message_id: "m1", sender: "user", text: "hi" }] },
+    ] as any;
     const result = parseGrokConversations(raw);
     expect(result[0].title).toBe("Untitled");
   });
 
   it("converts timestamps", () => {
-    const raw = [{ conversation_id: "k6", create_time: "2026-01-01T00:00:00Z", messages: [{ message_id: "m1", sender: "user", text: "hi", create_time: "2026-01-01T00:00:00Z" }] }] as any;
+    const raw = [
+      {
+        conversation_id: "k6",
+        create_time: "2026-01-01T00:00:00Z",
+        messages: [
+          { message_id: "m1", sender: "user", text: "hi", create_time: "2026-01-01T00:00:00Z" },
+        ],
+      },
+    ] as any;
     const result = parseGrokConversations(raw);
     expect(result[0].createdAt).toBe(new Date("2026-01-01T00:00:00Z").getTime());
   });
@@ -87,7 +97,10 @@ describe("parseGrokConversations", () => {
   });
 
   it("skips missing id", () => {
-    const raw = [{ title: "No id", messages: [{ message_id: "m1", sender: "user", text: "hi" }] }, { conversation_id: "ok", messages: [{ message_id: "m1", sender: "user", text: "hi" }] }] as any;
+    const raw = [
+      { title: "No id", messages: [{ message_id: "m1", sender: "user", text: "hi" }] },
+      { conversation_id: "ok", messages: [{ message_id: "m1", sender: "user", text: "hi" }] },
+    ] as any;
     const result = parseGrokConversations(raw);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("ok");

@@ -1,4 +1,5 @@
 import { ParsedConversation, ParsedMessage } from "../types.js";
+import { validateParsedConversations } from "../schemas.js";
 
 function toMillis(seconds: number | null | undefined): number {
   if (!seconds) return 0;
@@ -59,9 +60,7 @@ function flattenConversation(conv: Record<string, unknown>): ParsedMessage[] {
   return collected.reverse();
 }
 
-export function parseChatGPTConversations(
-  rawJson: unknown[]
-): ParsedConversation[] {
+export function parseChatGPTConversations(rawJson: unknown[]): ParsedConversation[] {
   const conversations: ParsedConversation[] = [];
 
   for (const raw of rawJson) {
@@ -88,5 +87,5 @@ export function parseChatGPTConversations(
     });
   }
 
-  return conversations.filter((c) => c.messageCount > 0);
+  return validateParsedConversations(conversations.filter((c) => c.messageCount > 0));
 }

@@ -77,7 +77,12 @@ describe("parseGeminiConversations", () => {
   it("handles wrapped object with conversations key", () => {
     const raw = {
       conversations: [
-        { conversation_id: "g5", title: "Wrapped", create_time: "2026-01-01T00:00:00Z", messages: [{ id: "m1", role: "user", content: "hi" }] },
+        {
+          conversation_id: "g5",
+          title: "Wrapped",
+          create_time: "2026-01-01T00:00:00Z",
+          messages: [{ id: "m1", role: "user", content: "hi" }],
+        },
       ],
     };
     const result = parseGeminiConversations(raw as any);
@@ -86,13 +91,21 @@ describe("parseGeminiConversations", () => {
   });
 
   it("defaults title to Untitled", () => {
-    const raw = [{ conversation_id: "g6", messages: [{ id: "m1", role: "user", content: "hi" }] }] as any;
+    const raw = [
+      { conversation_id: "g6", messages: [{ id: "m1", role: "user", content: "hi" }] },
+    ] as any;
     const result = parseGeminiConversations(raw);
     expect(result[0].title).toBe("Untitled");
   });
 
   it("converts timestamps seconds to ms", () => {
-    const raw = [{ conversation_id: "g7", create_time: 1704067200, messages: [{ id: "m1", role: "user", content: "hi", create_time: 1704067200 }] }] as any;
+    const raw = [
+      {
+        conversation_id: "g7",
+        create_time: 1704067200,
+        messages: [{ id: "m1", role: "user", content: "hi", create_time: 1704067200 }],
+      },
+    ] as any;
     const result = parseGeminiConversations(raw);
     expect(result[0].createdAt).toBe(1704067200 * 1000);
     expect(result[0].messages[0].createdAt).toBe(1704067200 * 1000);
@@ -105,7 +118,10 @@ describe("parseGeminiConversations", () => {
   });
 
   it("skips missing id or messages", () => {
-    const raw = [{ title: "No id", messages: [{ id: "m1", role: "user", content: "hi" }] }, { conversation_id: "ok", messages: [{ id: "m1", role: "user", content: "hi" }] }] as any;
+    const raw = [
+      { title: "No id", messages: [{ id: "m1", role: "user", content: "hi" }] },
+      { conversation_id: "ok", messages: [{ id: "m1", role: "user", content: "hi" }] },
+    ] as any;
     const result = parseGeminiConversations(raw);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("ok");
