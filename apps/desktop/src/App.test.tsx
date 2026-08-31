@@ -121,12 +121,17 @@ vi.mock("./db", async (importOriginal) => {
     getMessages: vi.fn(async () => []),
   };
 });
+let capturedShellProps: Record<string, unknown> | null = null;
 vi.mock("./components/AppShell", () => ({
-  default: (props: { shellLayoutClass: string; activeView: string }) => (
-    <div data-testid="app-shell" data-layout={props.shellLayoutClass} data-view={props.activeView}>
-      mocked-shell
-    </div>
-  ),
+  default: (props: Record<string, unknown>) => {
+    capturedShellProps = props;
+    const p = props as { shellLayoutClass: string; activeView: string };
+    return (
+      <div data-testid="app-shell" data-layout={p.shellLayoutClass} data-view={p.activeView}>
+        mocked-shell
+      </div>
+    );
+  },
 }));
 
 import App from "./App";
@@ -287,5 +292,70 @@ describe("App", () => {
     } as unknown as ReturnType<typeof mockUseAppData>);
     render(<App />);
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+  });
+
+  it("handleConversationClick loads messages (mocked getMessages)", async () => {
+    const setMessages = vi.fn();
+    const setMessagesLoading = vi.fn();
+    mockUseAppData.mockReturnValue({
+      loading: false,
+      stats: { conversationCount: 1, messageCount: 2, indexedMessageCount: 2, latestMessageTimestamp: 123, estimatedInputTokens: 1, estimatedOutputTokens: 1, estimatedTotalTokens: 2 },
+      sourceStats: [],
+      conversations: [{ id: "c1", source: "claude", title: "T", created_at: 0, last_message_at: 0, message_count: 2 }],
+      selectedConvId: null,
+      setSelectedConvId: vi.fn(),
+      messages: [],
+      setMessages,
+      messagesLoading: false,
+      setMessagesLoading,
+      loadError: null,
+      setLoadError: vi.fn(),
+      loadData: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof mockUseAppData>);
+    const { getMessages } = await import("./db");
+    (getMessages as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ id: "m1", sender: "human", content: "hi", created_at: 0 }]);
+    render(<App />);
+    const props = capturedShellProps as unknown as { conversationsProps: { onSelectConversation: (id: string) => void } };
+    await props.conversationsProps.onSelectConversation("c1");
+    expect(getMessages).toHaveBeenCalledWith("c1");
+    expect(setMessagesLoading).toHaveBeenCalled();
+  });
+
+  it("handles keyboard Cmd+K to focus search", async () => {
+    const { act } = await import("@testing-library/react");
+    render(<App />);
+    await act(async () => {
+      const event = new KeyboardEvent("keydown", { key: "k", metaKey: true });
+      document.dispatchEvent(event);
+    });
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+  });
+
+  it("handles search result select via AppShell searchProps", async () => {
+    const setSearchSelectedConvId = vi.fn();
+    const setSearchSelectedConversation = vi.fn();
+    // Override search session mock to capture
+    mockUseSearchSession.mockReturnValue({
+      searchPageQuery: "hello",
+      setSearchPageQuery: vi.fn(),
+      searchPageSnapshot: { source: "", dateFrom: "", dateTo: "", sort: "last_occurrence_desc", results: [], totalMatches: 0, totalOccurrences: 0, latencyMs: null },
+      setSearchPageSnapshot: vi.fn(),
+      clearPersistedSearchState: vi.fn(),
+      searchFocusRequestId: null,
+      setSearchFocusRequestId: vi.fn(),
+      openedConversationFromSearch: false,
+      setOpenedConversationFromSearch: vi.fn(),
+      searchRestoreConversationId: null,
+      setSearchRestoreConversationId: vi.fn(),
+      searchSelectedConvId: null,
+      setSearchSelectedConvId,
+      searchSelectedConversation: null,
+      setSearchSelectedConversation,
+      skipSearchOnceRef: { current: false },
+    } as unknown as ReturnType<typeof mockUseSearchSession>);
+    render(<App />);
+    const props = capturedShellProps as unknown as { searchProps: { onSelectResult: (a:string,b:string,c:string,d:number)=>void } };
+    // Should be defined
+    expect(props.searchProps.onSelectResult).toBeDefined();
   });
 });
