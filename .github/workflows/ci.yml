@@ -121,6 +121,21 @@ jobs:
           cargo install cargo-audit --locked || true
           cargo audit --ignore RUSTSEC-0000-0000 || echo "cargo audit reported issues (non-blocking for now)"
 
+  gitleaks:
+    name: Gitleaks (SAST)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   sbom:
     name: SBOM + deny
     runs-on: ubuntu-latest

@@ -10,7 +10,13 @@
     "sql:allow-execute",
     "sql:allow-select",
     "dialog:default",
-    "fs:allow-read-text-file",
-    "fs:default"
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "$HOME/Downloads/**" }, { "path": "$HOME/Documents/**" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$HOME/Downloads/**" }, { "path": "$HOME/Documents/**" }]
+    }
   ]
 }
