@@ -65,6 +65,13 @@ jobs:
         working-directory: apps/desktop/src-tauri
         run: cargo check
 
+      - name: Generate SBOM (CycloneDX)
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo install cargo-cyclonedx --locked || true
+          cargo cyclonedx --format json --override-filename sbom.cyclonedx.json || echo "cyclonedx failed (non-blocking)"
+          ls -lh sbom.cyclonedx.json || echo "no SBOM generated"
+
       - name: Extract notes from CHANGELOG
         id: notes
         run: |
@@ -86,6 +93,7 @@ jobs:
           generate_release_notes: true
           files: |
             apps/desktop/dist/**
+            apps/desktop/src-tauri/sbom.cyclonedx.json
 
       - name: Summary
         run: echo "Released ${{ steps.notes.outputs.tag }}"
