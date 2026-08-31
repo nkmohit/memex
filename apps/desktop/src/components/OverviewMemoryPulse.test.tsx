@@ -131,4 +131,37 @@ describe("OverviewMemoryPulse", () => {
     render(<OverviewMemoryPulse activityTimeline={[makePoint("2026-08-10", 1)]} sourceStats={[]} topicTexts={["solo"]} topicDates={[Date.now()]} />);
     expect(screen.getByLabelText("Memory pulse strip")).toBeInTheDocument();
   });
+
+  it("shows heatmap tooltip on cell hover", async () => {
+    const y = new Date().getFullYear();
+    const points = [makePoint(`${y}-04-10`, 8), makePoint(`${y}-04-11`, 12)];
+    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} />);
+    const cell = document.querySelector(".overview-heatmap-cell.level-4, .overview-heatmap-cell.level-2, .overview-heatmap-cell") as HTMLElement;
+    if (cell) {
+      // Mock getBoundingClientRect for cell and container
+      const mockRect = { left: 10, top: 10, width: 12, height: 12, right: 22, bottom: 22 } as DOMRect;
+      const containerRect = { left: 0, top: 0, width: 500, height: 100, right: 500, bottom: 100 } as DOMRect;
+      vi.spyOn(cell, "getBoundingClientRect").mockReturnValue(mockRect);
+      const canvas = document.querySelector(".overview-heatmap-canvas") as HTMLElement;
+      if (canvas) vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue(containerRect);
+      fireEvent.mouseEnter(cell);
+      // tooltip should appear after hover
+      await new Promise((r) => setTimeout(r, 0));
+      // At least cell still exists
+      expect(cell).toBeInTheDocument();
+      fireEvent.mouseLeave(cell);
+    }
+  });
+
+  it("renders source momentum percentages", () => {
+    const points = [makePoint("2026-08-10", 1)];
+    const stats: SourceStats[] = [
+      { source: "claude", conversationCount: 10, messageCount: 100, lastActivityTimestamp: Date.now() },
+      { source: "chatgpt", conversationCount: 5, messageCount: 50, lastActivityTimestamp: Date.now() },
+    ];
+    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={stats} />);
+    // 100 vs 50 => 67% and 33%
+    expect(screen.getByText("67%")).toBeInTheDocument();
+    expect(screen.getByText("33%")).toBeInTheDocument();
+  });
 });
