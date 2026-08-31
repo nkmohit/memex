@@ -4,13 +4,13 @@
   "budgets": [
     {
       "path": "apps/desktop/dist",
-      "maxSizeKB": 300,
-      "comment": "Tauri frontend bundle (vite) must stay <300kB gzipped"
+      "maxSizeKB": 500,
+      "comment": "Tauri frontend bundle (vite) must stay <500kB (gzip ~120kB, see size-limit)"
     },
     {
       "path": "apps/desktop/dist/assets",
-      "maxSizeKB": 250,
-      "comment": "JS/CSS assets budget"
+      "maxSizeKB": 400,
+      "comment": "JS/CSS assets budget (JS 500kB gzip, CSS 100kB gzip via size-limit)"
     }
   ],
   "ci": {

@@ -76,6 +76,14 @@ jobs:
         working-directory: packages/core
         run: npm run test
 
+      - name: Build desktop (for size check)
+        working-directory: apps/desktop
+        run: npm run build
+
+      - name: Size limit (500kB JS / 100kB CSS)
+        working-directory: apps/desktop
+        run: npx size-limit --json || npx size-limit
+
       - name: Audit (desktop, high severity)
         working-directory: apps/desktop
         run: npm audit --audit-level=high
