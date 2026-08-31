@@ -8,7 +8,9 @@ describe("SettingsPanel flags", () => {
     resetFlags();
     try {
       localStorage.clear();
-    } catch {}
+    } catch (_e) {
+      void _e;
+    }
   });
 
   it("renders all flag toggles", () => {

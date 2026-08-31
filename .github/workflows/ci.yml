@@ -123,11 +123,11 @@ jobs:
         working-directory: apps/desktop/src-tauri
         run: cargo clippy -- -D warnings || echo "clippy warnings found"
 
-      - name: Cargo audit (requires cargo-audit)
+      - name: Cargo deny (blocking)
         working-directory: apps/desktop/src-tauri
         run: |
-          cargo install cargo-audit --locked || true
-          cargo audit --ignore RUSTSEC-0000-0000 || echo "cargo audit reported issues (non-blocking for now)"
+          cargo install cargo-deny --locked || true
+          cargo deny check advisories licenses bans sources
 
   gitleaks:
     name: Gitleaks (SAST)
@@ -171,11 +171,9 @@ jobs:
           cargo install cargo-deny --locked || true
           cargo install cargo-cyclonedx --locked || true
 
-      - name: Cargo deny check
+      - name: Cargo deny check (blocking)
         working-directory: apps/desktop/src-tauri
-        run: |
-          cargo deny check advisories || echo "deny advisories check (non-blocking)"
-          cargo deny check licenses || echo "deny licenses check (non-blocking)"
+        run: cargo deny check advisories licenses bans sources
 
       - name: Generate SBOM (CycloneDX)
         working-directory: apps/desktop/src-tauri

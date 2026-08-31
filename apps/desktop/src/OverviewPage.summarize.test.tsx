@@ -8,8 +8,10 @@ const mockGetDashboard = vi.fn();
 const mockSummarize = vi.fn(async () => ["Insight 1", "Insight 2", "Insight 3"]);
 
 vi.mock("./db", () => ({
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore mock signature
   getCachedDashboardSnapshot: (...args: unknown[]) => mockGetCached(...args),
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore mock signature
   getDashboardSnapshot: (...args: unknown[]) => mockGetDashboard(...args),
 }));
@@ -19,6 +21,7 @@ vi.mock("./components/OverviewMemoryPulse", () => ({
 }));
 
 vi.mock("./lib/summarize", () => ({
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore mock signature
   summarizeText: (...args: unknown[]) => mockSummarize(...args),
 }));
@@ -58,7 +61,9 @@ describe("OverviewPage summarize gating", () => {
     flags.resetFlags();
     try {
       localStorage.clear();
-    } catch {}
+    } catch (_e) {
+      void _e;
+    }
     vi.clearAllMocks();
     mockSummarize.mockClear();
     const snap = makeSnapshot();

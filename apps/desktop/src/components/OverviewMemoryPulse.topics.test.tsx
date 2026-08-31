@@ -21,7 +21,9 @@ describe("OverviewMemoryPulse topics (flag gated)", () => {
     flags.resetFlags();
     try {
       localStorage.clear();
-    } catch {}
+    } catch (_e) {
+      void _e;
+    }
     vi.restoreAllMocks();
   });
 
