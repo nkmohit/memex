@@ -148,13 +148,11 @@ describe("ImportPage", () => {
   });
 
   it("retries on load error via Retry button", async () => {
-    mockGetStats
-      .mockRejectedValueOnce(new Error("fail"))
-      .mockResolvedValueOnce({
-        conversationCount: 0,
-        messageCount: 0,
-        latestMessageTimestamp: null,
-      });
+    mockGetStats.mockRejectedValueOnce(new Error("fail")).mockResolvedValueOnce({
+      conversationCount: 0,
+      messageCount: 0,
+      latestMessageTimestamp: null,
+    });
     mockGetSourceStats.mockRejectedValueOnce(new Error("fail")).mockResolvedValueOnce([]);
     render(
       <ImportPage
