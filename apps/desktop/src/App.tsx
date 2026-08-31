@@ -2,10 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { type ActiveView } from "./components/Sidebar";
 import AppShell from "./components/AppShell";
-import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
-import { useThemeMode } from "./hooks/useThemeMode";
-import { useToast } from "./hooks/useToast";
-import { useCopyClipboard } from "./hooks/useCopyClipboard";
 import { useImportState } from "./hooks/useImportState";
 import { useAppData } from "./hooks/useAppData";
 import { useSearchSession } from "./hooks/useSearchSession";
@@ -16,13 +12,20 @@ import { useDataActions } from "./hooks/useDataActions";
 import { useAppShellState } from "./hooks/useAppShellState";
 import { useAppNavigation } from "./hooks/useAppNavigation";
 import { useAppDialogs } from "./hooks/useAppDialogs";
-import ErrorBoundary from "./components/ErrorBoundary";
+import { AppProviders, createAppShellProps, useAppProviders } from "./App.providers";
 
 export default function App() {
-  const { theme, setThemeAndPersist } = useThemeMode();
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const { toasts, pushToast, dismissToast } = useToast();
-  const { copyToast, copyMessageToClipboard, copyConversationToClipboard } = useCopyClipboard();
+  const {
+    theme,
+    setThemeAndPersist,
+    prefersReducedMotion,
+    toasts,
+    pushToast,
+    dismissToast,
+    copyToast,
+    copyMessageToClipboard,
+    copyConversationToClipboard,
+  } = useAppProviders();
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("overview");
   const {
@@ -90,7 +93,6 @@ export default function App() {
     handleCancelImport,
     handleImportSource,
   } = useImportState({ pushToast, loadData, activeSource, sourceLabel, clearingData: false });
-  // temporary clearingData placeholder before hook instantiation — will be overridden
   const [skipOnboarding, setSkipOnboarding] = useState(false);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const convItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -187,160 +189,93 @@ export default function App() {
     clearDataTriggerRef,
     setClearConfirmOpen,
   });
+  const shellProps = createAppShellProps({
+    showOnboarding,
+    theme,
+    setThemeAndPersist,
+    toasts,
+    dismissToast,
+    shellLayoutClass,
+    appDataState,
+    activeView,
+    setActiveView,
+    setImportMenuOpen,
+    clearingData,
+    importing,
+    loading,
+    onClearAllDataClick: handleClearAllDataClick,
+    clearDataTriggerRef,
+    clearConfirmOpen,
+    onCancelClear: () => setClearConfirmOpen(false),
+    onConfirmClear: () => void handleClearAllDataConfirm(),
+    clearConfirmCancelBtnRef,
+    clearConfirmDialogRef,
+    importingSource,
+    importProgress,
+    importError,
+    importResult,
+    importRefreshKey,
+    handleImportSource,
+    handleCancelImport,
+    setImportError,
+    setImportResult,
+    handleOverviewSelectConversation,
+    handleRebuildIndex,
+    setSkipOnboarding,
+    setOnboardingVisible,
+    searchPageQuery,
+    setSearchPageQuery,
+    availableSources,
+    sourceLabel,
+    handleSearchResultSelect,
+    searchSelectedConvId,
+    searchFocusRequestId,
+    searchPageSnapshot,
+    setSearchPageSnapshot,
+    skipSearchOnceRef,
+    searchRestoreConversationId,
+    setSearchRestoreConversationId,
+    setSearchSelectedConvId,
+    setSearchSelectedConversation,
+    setOpenedConversationFromSearch,
+    setSearchFocusRequestId,
+    conversations,
+    selectedConvId,
+    activeSource,
+    sourceStats,
+    convItemRefs,
+    setActiveSource,
+    handleConversationClick,
+    stats,
+    selectedConversation,
+    messages,
+    messagesLoading,
+    openedConversationFromSearch,
+    goBackToSearch,
+    viewerMenuOpen,
+    setViewerMenuOpen,
+    viewerMenuRef,
+    viewerSearchOpen,
+    setViewerSearchOpen,
+    messageSearchQuery,
+    setMessageSearchQuery,
+    viewerSearchInputRef,
+    matchCount,
+    messageMatchCount,
+    currentMatchIndex,
+    goToPrevMatch,
+    goToNextMatch,
+    copyToast,
+    copyMessageToClipboard,
+    copyConversationToClipboard,
+    messageRefs,
+    highlightedMessageId,
+    highlightText,
+    setSelectedConvId,
+  });
   return (
-    <ErrorBoundary>
-      <AppShell
-        showOnboarding={showOnboarding}
-        onboardingProps={{
-          onImport: (s) => void handleImportSource(s),
-          importing,
-          importingSource,
-          onCancelImport: handleCancelImport,
-          importProgress,
-          onSkip: () => {
-            setSkipOnboarding(true);
-            setOnboardingVisible(false);
-            setActiveView("overview");
-            setImportError(null);
-            setImportResult(null);
-          },
-        }}
-        toasts={toasts}
-        dismissToast={dismissToast}
-        shellLayoutClass={shellLayoutClass}
-        appDataState={appDataState}
-        activeView={activeView}
-        setActiveView={setActiveView}
-        setImportMenuOpen={setImportMenuOpen}
-        theme={theme}
-        setThemeAndPersist={setThemeAndPersist}
-        clearingData={clearingData}
-        importing={importing}
-        loading={loading}
-        onClearAllDataClick={handleClearAllDataClick}
-        clearDataTriggerRef={clearDataTriggerRef}
-        clearConfirmOpen={clearConfirmOpen}
-        clearingDataConfirm={clearingData}
-        onCancelClear={() => setClearConfirmOpen(false)}
-        onConfirmClear={() => void handleClearAllDataConfirm()}
-        clearConfirmCancelBtnRef={clearConfirmCancelBtnRef}
-        clearConfirmDialogRef={clearConfirmDialogRef}
-        overviewProps={{
-          onOpenImport: () => setActiveView("import"),
-          onOpenSearch: () => {
-            setOpenedConversationFromSearch(false);
-            setActiveView("search");
-            setSearchFocusRequestId(Date.now());
-          },
-          onSelectConversation: handleOverviewSelectConversation,
-          onRebuildIndex: handleRebuildIndex,
-        }}
-        importProps={{
-          onImport: (s) => void handleImportSource(s),
-          importing,
-          importingSource,
-          onCancelImport: handleCancelImport,
-          importProgress,
-          importError,
-          importResult,
-          onDismissImportError: () => setImportError(null),
-          onDismissImportResult: () => setImportResult(null),
-          refreshKey: importRefreshKey,
-        }}
-        searchProps={{
-          query: searchPageQuery,
-          onQueryChange: setSearchPageQuery,
-          availableSources,
-          sourceLabel,
-          onSelectResult: (c, t, s, l) => void handleSearchResultSelect(c, t, s, l),
-          selectedConversationId: searchSelectedConvId,
-          focusRequestId: searchFocusRequestId,
-          snapshot: searchPageSnapshot,
-          onSnapshotChange: setSearchPageSnapshot,
-          skipSearchOnceRef,
-          restoreSelectedConversationId: searchRestoreConversationId,
-          onRestoreSelectionDone: () => setSearchRestoreConversationId(null),
-          viewer: {
-            open: Boolean(searchSelectedConvId),
-            onClose: () => {
-              setSearchSelectedConvId(null);
-              setSearchSelectedConversation(null);
-              setSelectedConvId(null);
-              setOpenedConversationFromSearch(false);
-            },
-            selectedConversation,
-            messages,
-            messagesLoading,
-            viewerSearchOpen,
-            onOpenViewerSearch: () => setViewerSearchOpen(true),
-            onCloseViewerSearch: () => setViewerSearchOpen(false),
-            messageSearchQuery,
-            onMessageSearchQueryChange: setMessageSearchQuery,
-            viewerSearchInputRef,
-            matchCount,
-            messageMatchCount,
-            currentMatchIndex,
-            onPrevMatch: goToPrevMatch,
-            onNextMatch: goToNextMatch,
-            copyToast,
-            onCopyMessage: (m) =>
-              copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? "")),
-            messageRefs,
-            highlightedMessageId,
-            highlightText,
-          },
-        }}
-        conversationsProps={{
-          conversations,
-          loading,
-          selectedConvId,
-          activeSource,
-          availableSources,
-          sourceStats,
-          convItemRefs,
-          onSelectSource: setActiveSource,
-          onSelectConversation: (id) => {
-            setOpenedConversationFromSearch(false);
-            void handleConversationClick(id);
-          },
-          sourceLabel,
-          viewer: {
-            stats,
-            selectedConversation,
-            messages,
-            messagesLoading,
-            openedConversationFromSearch,
-            onBackToSearch: goBackToSearch,
-            viewerMenuOpen,
-            onToggleViewerMenu: () => setViewerMenuOpen((o) => !o),
-            onCloseViewerMenu: () => setViewerMenuOpen(false),
-            viewerMenuRef,
-            viewerSearchOpen,
-            onOpenViewerSearch: () => setViewerSearchOpen(true),
-            onCloseViewerSearch: () => setViewerSearchOpen(false),
-            messageSearchQuery,
-            onMessageSearchQueryChange: setMessageSearchQuery,
-            viewerSearchInputRef,
-            matchCount,
-            messageMatchCount,
-            currentMatchIndex,
-            onPrevMatch: goToPrevMatch,
-            onNextMatch: goToNextMatch,
-            copyToast,
-            onCopyConversation: () =>
-              copyConversationToClipboard(
-                messages,
-                sourceLabel(selectedConversation?.source ?? "")
-              ),
-            onCopyMessage: (m) =>
-              copyMessageToClipboard(m, sourceLabel(selectedConversation?.source ?? "")),
-            messageRefs,
-            highlightedMessageId,
-            highlightText,
-            sourceLabel,
-          },
-        }}
-      />
-    </ErrorBoundary>
+    <AppProviders>
+      <AppShell {...shellProps} />
+    </AppProviders>
   );
 }
