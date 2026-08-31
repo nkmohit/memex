@@ -208,5 +208,89 @@ describe("importConversations", () => {
     expect(result?.messageCount).toBe(2);
   });
 
+  it("throws for ChatGPT invalid export (non-array)", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    (open as any).mockResolvedValueOnce("/tmp/chatgpt.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify({ not: "array" }));
+    await expect(importConversations("chatgpt")).rejects.toThrow(/Invalid OpenAI/i);
+  });
+
+  it("throws when ChatGPT export has no conversations", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    (open as any).mockResolvedValueOnce("/tmp/chatgpt.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify([]));
+    await expect(importConversations("chatgpt")).rejects.toThrow(/No conversations found/i);
+  });
+
+  it("successfully imports valid ChatGPT export", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    const fixture = [
+      {
+        conversation_id: "c1",
+        title: "Chat Test",
+        create_time: 1704067200,
+        update_time: 1704067200,
+        current_node: "node-2",
+        mapping: {
+          "node-1": { id: "node-1", parent: null, message: { id: "msg-1", author: { role: "user" }, create_time: 1704067200, content: { parts: ["hi"] } } },
+          "node-2": { id: "node-2", parent: "node-1", message: { id: "msg-2", author: { role: "assistant" }, create_time: 1704067300, content: { parts: ["hello"] } } },
+        },
+      },
+    ];
+    (open as any).mockResolvedValueOnce("/tmp/chatgpt.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify(fixture));
+    const result = await importConversations("chatgpt");
+    expect(result?.source).toBe("chatgpt");
+  });
+
+  it("throws when Gemini export has no conversations", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    (open as any).mockResolvedValueOnce("/tmp/gemini.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify([]));
+    await expect(importConversations("gemini")).rejects.toThrow(/No conversations found/i);
+  });
+
+  it("throws when Grok export has no conversations", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    (open as any).mockResolvedValueOnce("/tmp/grok.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify([]));
+    await expect(importConversations("grok")).rejects.toThrow(/No conversations found/i);
+  });
+
+  it("returns null when Gemini user cancels dialog", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    (open as any).mockResolvedValueOnce(null);
+    expect(await importConversations("gemini")).toBeNull();
+  });
+
+  it("returns null when Grok user cancels dialog", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    (open as any).mockResolvedValueOnce(null);
+    expect(await importConversations("grok")).toBeNull();
+  });
+
+  it("returns null when plugin user cancels dialog", async () => {
+    clearPlugins();
+    registerImporter({ id: "cancelplug", label: "Cancel", available: true }, () => []);
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    (open as any).mockResolvedValueOnce(null);
+    expect(await importConversations("cancelplug" as any)).toBeNull();
+  });
+
+  it("throws when plugin export has no conversations", async () => {
+    clearPlugins();
+    registerImporter({ id: "emptyplug", label: "Empty", available: true }, () => []);
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    (open as any).mockResolvedValueOnce("/tmp/empty.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify([{ id: "x" }]));
+    await expect(importConversations("emptyplug" as any)).rejects.toThrow(/No conversations found/i);
+  });
+
   afterEach(() => clearPlugins());
 });
