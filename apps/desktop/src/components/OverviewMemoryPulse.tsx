@@ -4,6 +4,7 @@ import AppSelect from "./AppSelect";
 import type { ActivityHeatmapPoint, SourceStats } from "../db";
 import { SourceIcon, sourceLabel } from "../lib/sourceDisplay";
 import { computeTopTopics, computeTopicTimeline } from "../lib/topics";
+import { isEnabled } from "../lib/flags";
 
 function dayToDate(day: string): Date {
   const [y, m, d] = day.split("-").map((p) => Number(p));
@@ -177,11 +178,13 @@ export default function OverviewMemoryPulse({
   const sourceMessageTotal = sourceStats.reduce((sum, source) => sum + source.messageCount, 0);
 
   const topTopics = useMemo(() => {
+    if (!isEnabled("topicTimeline")) return [];
     if (!topicTexts || topicTexts.length === 0) return [];
     return computeTopTopics(topicTexts, 5);
   }, [topicTexts]);
 
   const topicTimeline = useMemo(() => {
+    if (!isEnabled("topicTimeline")) return [];
     if (!topicTexts || !topicDates || topicTexts.length === 0) return [];
     const items = topicTexts.map((text, i) => ({ text, date: topicDates[i] ?? Date.now() }));
     return computeTopicTimeline(items, 3);
