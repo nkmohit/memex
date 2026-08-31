@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getMessages } from "./db";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { type ActiveView } from "./components/Sidebar";
 import AppShell from "./components/AppShell";
@@ -12,10 +11,11 @@ import { useAppData } from "./hooks/useAppData";
 import { useSearchSession } from "./hooks/useSearchSession";
 import { useViewerSearch } from "./hooks/useViewerSearch";
 import { useClearData } from "./hooks/useClearData";
-import { logger } from "./lib/logger";
 import { getAvailableSources, sourceLabel } from "./lib/sources";
 import { useDataActions } from "./hooks/useDataActions";
 import { useAppShellState } from "./hooks/useAppShellState";
+import { useAppNavigation } from "./hooks/useAppNavigation";
+import { useAppDialogs } from "./hooks/useAppDialogs";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 export default function App() {
@@ -116,119 +116,44 @@ export default function App() {
     handleClearAllDataClick,
     handleClearAllDataConfirm,
   } = clearDataHook;
-  const selectedConversation = useMemo(() => {
-    if (activeView === "search" && searchSelectedConvId)
-      return conversations.find((c) => c.id === searchSelectedConvId) ?? searchSelectedConversation;
-    return conversations.find((c) => c.id === selectedConvId) ?? null;
-  }, [activeView, conversations, searchSelectedConvId, searchSelectedConversation, selectedConvId]);
   useEffect(() => {
     void loadData(activeSource);
   }, [activeSource, loadData]);
-  const handleConversationClick = useCallback(
-    async (convId: string, scrollToMessageId?: string | null) => {
-      setSelectedConvId(convId);
-      setMessagesLoading(true);
-      setHighlightedMessageId(null);
-      try {
-        const data = await getMessages(convId);
-        setMessages(data);
-        if (scrollToMessageId) {
-          setTimeout(() => {
-            const el = messageRefs.current[scrollToMessageId];
-            if (el) {
-              const mark = el.querySelector("mark");
-              (mark || el).scrollIntoView({
-                behavior: prefersReducedMotion ? "auto" : "smooth",
-                block: "center",
-              });
-              setHighlightedMessageId(scrollToMessageId);
-              setTimeout(() => setHighlightedMessageId(null), 2000);
-            }
-          }, 100);
-        }
-      } catch (err) {
-        logger.error("Failed to load messages:", err);
-        setMessages([]);
-      } finally {
-        setMessagesLoading(false);
-      }
-    },
-    [
-      prefersReducedMotion,
-      setHighlightedMessageId,
-      setMessages,
-      setMessagesLoading,
-      setSelectedConvId,
-    ]
-  );
-  useEffect(() => {
-    if (activeView !== "conversations" || !selectedConvId) return;
-    convItemRefs.current[selectedConvId]?.scrollIntoView({
-      block: "nearest",
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-    });
-  }, [activeView, selectedConvId, prefersReducedMotion]);
-  const goBackToSearch = useCallback(() => {
-    if (selectedConvId) setSearchRestoreConversationId(selectedConvId);
-    setOpenedConversationFromSearch(false);
-    skipSearchOnceRef.current = true;
-    setActiveView("search");
-  }, [
+  const {
+    selectedConversation,
+    handleConversationClick,
+    goBackToSearch,
+    handleSearchResultSelect,
+  } = useAppNavigation({
+    activeView,
+    setActiveView,
     selectedConvId,
+    setSelectedConvId,
+    conversations,
+    searchSelectedConvId,
+    searchSelectedConversation,
+    setSearchSelectedConvId,
+    setSearchSelectedConversation,
     setOpenedConversationFromSearch,
+    openedConversationFromSearch,
     setSearchRestoreConversationId,
     skipSearchOnceRef,
-  ]);
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (
-        event.key === "Backspace" &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.altKey &&
-        !(event.target instanceof HTMLInputElement) &&
-        !(event.target instanceof HTMLTextAreaElement)
-      ) {
-        if (activeView === "conversations" && selectedConvId && openedConversationFromSearch) {
-          event.preventDefault();
-          goBackToSearch();
-        }
-      }
-      if (!(event.metaKey || event.ctrlKey)) return;
-      const key = event.key.toLowerCase();
-      if (key === "k") {
-        event.preventDefault();
-        setOpenedConversationFromSearch(false);
-        setActiveView("search");
-        setSearchFocusRequestId(Date.now());
-      }
-      if (key === "f") {
-        event.preventDefault();
-        if (activeView === "conversations" && selectedConvId) {
-          const input = viewerSearchInputRef.current;
-          const focused = input && document.activeElement === input;
-          if (!viewerSearchOpen) setViewerSearchOpen(true);
-          else if (focused) setViewerSearchOpen(false);
-          else {
-            input?.focus();
-            input?.select();
-          }
-        }
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [
-    activeView,
-    selectedConvId,
-    openedConversationFromSearch,
-    goBackToSearch,
-    viewerSearchOpen,
-    setOpenedConversationFromSearch,
-    setSearchFocusRequestId,
+    messages,
+    setMessages,
+    setMessagesLoading,
+    setHighlightedMessageId,
+    messageRefs,
+    convItemRefs,
+    prefersReducedMotion,
     viewerSearchInputRef,
+    viewerSearchOpen,
     setViewerSearchOpen,
-  ]);
+    viewerMenuRef,
+    setViewerMenuOpen,
+    searchPageQuery,
+    setMessageSearchQuery,
+    setSearchFocusRequestId,
+  });
   const { handleRebuildIndex, handleOverviewSelectConversation } = useDataActions({
     pushToast,
     loadData,
@@ -241,31 +166,6 @@ export default function App() {
     setActiveSource,
   });
   const availableSources = useMemo(() => getAvailableSources(sourceStats), [sourceStats]);
-  async function handleSearchResultSelect(
-    convId: string,
-    title: string,
-    source: string,
-    lastOccurrence: number
-  ) {
-    setSearchSelectedConvId(convId);
-    setSelectedConvId(convId);
-    setSearchSelectedConversation({
-      id: convId,
-      source,
-      title,
-      created_at: 0,
-      last_message_at: lastOccurrence,
-      message_count: 0,
-    });
-    setOpenedConversationFromSearch(true);
-    setViewerSearchOpen(true);
-    setMessageSearchQuery(searchPageQuery);
-    await handleConversationClick(convId, null);
-    window.setTimeout(() => {
-      viewerSearchInputRef.current?.focus();
-      viewerSearchInputRef.current?.select();
-    }, 0);
-  }
   const { shellLayoutClass, appDataState, isEmpty } = useAppShellState({
     activeView,
     searchSelectedConvId,
@@ -276,45 +176,17 @@ export default function App() {
     importing,
   });
   const showOnboarding = onboardingVisible && !skipOnboarding;
-  useEffect(() => {
-    if (!loading && isEmpty && !skipOnboarding) setOnboardingVisible(true);
-  }, [isEmpty, loading, skipOnboarding]);
-  useEffect(() => {
-    if (!clearConfirmOpen) return;
-    const id = setTimeout(() => clearConfirmCancelBtnRef.current?.focus(), 0);
-    return () => clearTimeout(id);
-  }, [clearConfirmOpen, clearConfirmCancelBtnRef]);
-  useEffect(() => {
-    if (!clearConfirmOpen) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setClearConfirmOpen(false);
-        clearDataTriggerRef.current?.focus();
-        return;
-      }
-      if (e.key !== "Tab" || !clearConfirmDialogRef.current) return;
-      const dialog = clearConfirmDialogRef.current;
-      const focusable = Array.from(dialog.querySelectorAll<HTMLButtonElement>("button"));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-      if (e.shiftKey) {
-        if (active === first) {
-          e.preventDefault();
-          last?.focus();
-        }
-      } else {
-        if (active === last) {
-          e.preventDefault();
-          first?.focus();
-        }
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [clearConfirmOpen, clearConfirmDialogRef, clearDataTriggerRef, setClearConfirmOpen]);
+  useAppDialogs({
+    loading,
+    isEmpty,
+    skipOnboarding,
+    setOnboardingVisible,
+    clearConfirmOpen,
+    clearConfirmCancelBtnRef,
+    clearConfirmDialogRef,
+    clearDataTriggerRef,
+    setClearConfirmOpen,
+  });
   return (
     <ErrorBoundary>
       <AppShell
