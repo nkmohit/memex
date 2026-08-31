@@ -15,10 +15,8 @@ import { useClearData } from "./hooks/useClearData";
 import { logger } from "./lib/logger";
 import { getAvailableSources, sourceLabel } from "./lib/sources";
 import { useDataActions } from "./hooks/useDataActions";
+import { useAppShellState } from "./hooks/useAppShellState";
 import ErrorBoundary from "./components/ErrorBoundary";
-
-type AppDataState =
-  "bootstrapping" | "ready-empty" | "ready-has-data" | "importing" | "clearing" | "error";
 
 export default function App() {
   const { theme, setThemeAndPersist } = useThemeMode();
@@ -268,32 +266,16 @@ export default function App() {
       viewerSearchInputRef.current?.select();
     }, 0);
   }
-  const searchPanelClosed = activeView === "search" && !searchSelectedConvId;
-  const shellLayoutClass =
-    activeView === "search"
-      ? searchPanelClosed
-        ? "search-layout search-panel-closed"
-        : "search-layout"
-      : activeView === "overview"
-        ? "overview-layout"
-        : activeView === "settings"
-          ? "settings-layout"
-          : activeView === "import"
-            ? "import-layout"
-            : "conversations-layout";
-  const isEmpty = !loading && stats?.conversationCount === 0;
+  const { shellLayoutClass, appDataState, isEmpty } = useAppShellState({
+    activeView,
+    searchSelectedConvId,
+    loading,
+    stats,
+    loadError,
+    clearingData,
+    importing,
+  });
   const showOnboarding = onboardingVisible && !skipOnboarding;
-  const appDataState: AppDataState = loadError
-    ? "error"
-    : clearingData
-      ? "clearing"
-      : importing
-        ? "importing"
-        : loading
-          ? "bootstrapping"
-          : isEmpty
-            ? "ready-empty"
-            : "ready-has-data";
   useEffect(() => {
     if (!loading && isEmpty && !skipOnboarding) setOnboardingVisible(true);
   }, [isEmpty, loading, skipOnboarding]);
