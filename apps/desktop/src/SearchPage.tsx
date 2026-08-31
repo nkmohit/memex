@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import SearchFilters from "./SearchFilters";
 import SearchResultsList from "./SearchResultsList";
 import { useSearchPageQuery } from "./hooks/useSearchPageQuery";
+import { isEnabled } from "./lib/flags";
 import type { SearchResultRow } from "./db";
 
 interface SearchPageProps {
@@ -56,6 +57,9 @@ export default function SearchPage({
   restoreSelectedConversationId = null,
   onRestoreSelectionDone,
 }: SearchPageProps) {
+  const [searchMode, setSearchMode] = useState<"fts" | "hybrid">("fts");
+  const semanticEnabled = isEnabled("semanticSearch");
+  const effectiveMode = semanticEnabled ? searchMode : "fts";
   const {
     source,
     setSource,
@@ -78,7 +82,7 @@ export default function SearchPage({
     queryTooShort,
     MIN_QUERY_LENGTH,
     handleLoadMore,
-  } = useSearchPageQuery({ query, snapshot, skipSearchOnceRef });
+  } = useSearchPageQuery({ query, snapshot, skipSearchOnceRef, mode: effectiveMode });
 
   const [filtersOpen, setFiltersOpen] = useState(() => {
     return Boolean(
@@ -223,6 +227,26 @@ export default function SearchPage({
           onToggleFilters={() => setFiltersOpen((open) => !open)}
           sourceLabel={sourceLabel}
         />
+        {semanticEnabled && (
+          <div className="search-mode-toggle" role="group" aria-label="Search mode">
+            <button
+              type="button"
+              className={`ui-btn ui-btn--secondary ${effectiveMode === "fts" ? "selected" : ""}`}
+              onClick={() => setSearchMode("fts")}
+              aria-pressed={effectiveMode === "fts"}
+            >
+              Keyword
+            </button>
+            <button
+              type="button"
+              className={`ui-btn ui-btn--secondary ${effectiveMode === "hybrid" ? "selected" : ""}`}
+              onClick={() => setSearchMode("hybrid")}
+              aria-pressed={effectiveMode === "hybrid"}
+            >
+              Hybrid
+            </button>
+          </div>
+        )}
 
         <div className="search-meta">
           {queryTooShort ? (

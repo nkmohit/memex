@@ -1,5 +1,6 @@
-import type React from "react";
+import { useEffect, useState } from "react";
 import type { ThemeMode } from "../hooks/useThemeMode";
+import { getFlags, setFlag, type FlagName } from "../lib/flags";
 
 type SettingsPanelProps = {
   theme: ThemeMode;
@@ -20,6 +21,26 @@ export default function SettingsPanel({
   onClearAllDataClick,
   clearDataTriggerRef,
 }: SettingsPanelProps) {
+  const [flags, setFlagsState] = useState(() => getFlags());
+
+  useEffect(() => {
+    setFlagsState(getFlags());
+  }, []);
+
+  const toggleFlag = (name: FlagName) => {
+    const next = !flags[name];
+    setFlag(name, next);
+    setFlagsState((prev) => ({ ...prev, [name]: next }));
+  };
+
+  const flagLabels: Record<FlagName, string> = {
+    semanticSearch: "Semantic search (hybrid FTS + vector)",
+    vector: "Vector embeddings",
+    summarize: "Offline summarize (Insights)",
+    plugins: "Plugins",
+    topicTimeline: "Topic timeline",
+  };
+
   return (
     <main className="settings-main" id="main-content">
       <h1 className="settings-title">Settings</h1>
@@ -36,6 +57,23 @@ export default function SettingsPanel({
               {theme === mode && <span aria-hidden>●</span>}
               {mode.charAt(0).toUpperCase() + mode.slice(1)}
             </button>
+          ))}
+        </div>
+      </div>
+      <div className="settings-section">
+        <h2>Feature flags</h2>
+        <p className="settings-hint">Gated rollout — toggle semantic, summarize, topics.</p>
+        <div className="settings-flags">
+          {(Object.keys(flagLabels) as FlagName[]).map((name) => (
+            <label key={name} className="settings-flag-row">
+              <input
+                type="checkbox"
+                checked={flags[name]}
+                onChange={() => toggleFlag(name)}
+                aria-label={flagLabels[name]}
+              />
+              <span>{flagLabels[name]}</span>
+            </label>
           ))}
         </div>
       </div>
