@@ -22,6 +22,12 @@ export async function getDiagnosticsViaInvoke(): Promise<TauriDiagnostics> {
   }
 }
 
+/** Encrypted at-rest status (Phase 2-2) — wraps `get_diagnostics` invoke, falls back to false (plaintext) when keychain unavailable. */
+export async function isEncryptionEnabled(): Promise<boolean> {
+  const d = await getDiagnosticsViaInvoke();
+  return d.encrypted;
+}
+
 export interface IndexHealth {
   /** Percentage of messages indexed (0–100). 100 when no messages. */
   indexedPct: number;

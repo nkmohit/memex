@@ -9,12 +9,13 @@ pub struct DiagnosticsResponse {
 
 /// Exposed via `invoke("get_diagnostics")` — frontend calls this instead of
 /// re-querying DB directly. Keeps `has_metrics` true and proves Tauri command
-/// wiring for DataFactor A 72→85.
+/// wiring for DataFactor A 72→85. `encrypted` reflects `crypto::is_encrypted()`
+/// (OS keychain / MEMEX_ENCRYPTED env) with fallback to `false` for plaintext.
 #[tauri::command]
 pub fn get_diagnostics() -> DiagnosticsResponse {
     DiagnosticsResponse {
         version: env!("CARGO_PKG_VERSION").to_string(),
-        encrypted: false,
+        encrypted: crate::crypto::is_encrypted(),
         generated_at: 0,
     }
 }

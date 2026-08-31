@@ -25,4 +25,5 @@ serde_json = "1.0.151"
 tauri-plugin-sql = { version = "2.4.0", features = ["sqlite"] }
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-fs = "2.5.1"
+# crypto at-rest: age + tauri-plugin-stronghold (stub uses std XOR, no extra dep yet — swap to age/aes-gcm when stronghold wired)
 

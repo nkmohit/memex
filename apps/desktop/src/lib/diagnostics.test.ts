@@ -145,3 +145,18 @@ describe("getDiagnosticsViaInvoke", () => {
     expect(d.version).toBeDefined();
   });
 });
+
+describe("encryption status (Phase 2-2)", () => {
+  it("getDiagnosticsViaInvoke returns encrypted boolean", async () => {
+    const d = await getDiagnosticsViaInvoke();
+    expect(typeof d.encrypted).toBe("boolean");
+  });
+
+  it("isEncryptionEnabled returns boolean (fallback false in jsdom)", async () => {
+    const { isEncryptionEnabled } = await import("./diagnostics");
+    const enc = await isEncryptionEnabled();
+    expect(typeof enc).toBe("boolean");
+    // In jsdom without Tauri, should be false (plaintext fallback)
+    expect(enc).toBe(false);
+  });
+});
