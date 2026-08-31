@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-31
+
+### Added
+- `db/dashboardCache.ts:89` + `dashboardSnapshot.ts:93` split `db/dashboard.ts:212→45` — cache/version + snapshot queries isolated, 5 tests — A 70→.
+- `db/search.hybrid.test.ts:4` dedicated hybrid specs — paraphrase vacation↔holiday, union dedup, rank blend, FTS baseline — B 72→85.
+- Perf budgets `perf/budgets.json:500` + `size-limit 500kB JS / 100kB CSS` in `package.json:22` + `ci.yml` Build + Size steps — `dist` 499kB / 12kB gz, H 82→88, C 68→.
+
+### Changed
+- Bump `0.7.0→0.8.0` (`apps/desktop/package.json:3`, `src-tauri/Cargo.toml:3`)
+
 ## [0.7.0] - 2026-08-31
 
 ### Added
