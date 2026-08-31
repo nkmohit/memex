@@ -176,7 +176,11 @@ describe("OverviewMemoryPulse", () => {
     render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} />);
     const cells = document.querySelectorAll(".overview-heatmap-cell");
     expect(cells.length).toBeGreaterThan(10);
-    // Check that at least one cell has level-0 and one has level-4
     expect(document.querySelector(".level-0")).toBeInTheDocument();
+  });
+
+  it("handles empty heatmap with no points", () => {
+    render(<OverviewMemoryPulse activityTimeline={[]} sourceStats={[]} topicTexts={[]} />);
+    expect(screen.getByText("No activity for this selected year.")).toBeInTheDocument();
   });
 });

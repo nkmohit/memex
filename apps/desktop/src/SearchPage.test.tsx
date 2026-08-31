@@ -224,11 +224,24 @@ describe("SearchPage", () => {
   it("changes sort and triggers new search", async () => {
     mockSearchMessages.mockResolvedValue({ rows: [], totalMatches: 0, totalOccurrences: 0 });
     render(<SearchPage query="hello" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} snapshot={makeSnapshot({ sort: "relevance" })} onSnapshotChange={vi.fn()} />);
-    // Find sort select (AppSelect with ariaLabel sort) — SearchFilters uses AppSelect for sort
-    // Look for button with sort label
     const btns = screen.getAllByRole("button");
     expect(btns.length).toBeGreaterThan(0);
-    // Verify snapshot sort is respected
     expect(screen.getByLabelText("Search all messages")).toBeInTheDocument();
+  });
+
+  it("handles browse mode with hasQuery false and no results", async () => {
+    mockGetAll.mockResolvedValueOnce({ rows: [], totalMatches: 0 });
+    render(<SearchPage query="" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText(/0 conversations/)).toBeInTheDocument(), { timeout: 2000 });
+  });
+
+  it("displays totalMatches and latency", async () => {
+    mockSearchMessages.mockResolvedValue({
+      rows: [{ conversation_id: "c1", title: "T", source: "claude", snippet: "", snippets: [], created_at: 0, last_occurrence: 1, occurrence_count: 2, message_match_count: 1, rank: -1, first_match_message_id: null }],
+      totalMatches: 1,
+      totalOccurrences: 2,
+    });
+    render(<SearchPage query="hello" onQueryChange={vi.fn()} availableSources={[]} sourceLabel={(s) => s} snapshot={makeSnapshot()} onSnapshotChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText(/1 results/)).toBeInTheDocument(), { timeout: 2000 });
   });
 });
