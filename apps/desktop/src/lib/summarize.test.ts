@@ -120,9 +120,14 @@ describe("lib/summarize", () => {
     const t = "deterministic hash test content for summarize cache key generation with some length";
     await summarizeText(t, { useCache: true });
     __clearMemoryCache();
-    // Now cache should be in localStorage, getCachedSummary should retrieve via localStorage fallback or DB
     const cached = await getCachedSummary(t.slice(0, 500));
-    // In test env with mocked DB, may be null or array, but should not throw
     expect(cached === null || Array.isArray(cached)).toBe(true);
+  });
+
+  it("summarizeMessages with provider and useCache false", async () => {
+    const provider = createMockProvider("P1\nP2\nP3");
+    const msgs = [{ content: "Hello world. This is a test. Another sentence. Yet another. One more for ranking." }];
+    const bullets = await summarizeMessages(msgs, { provider, useCache: false });
+    expect(bullets).toHaveLength(3);
   });
 });

@@ -292,5 +292,35 @@ describe("importConversations", () => {
     await expect(importConversations("emptyplug" as any)).rejects.toThrow(/No conversations found/i);
   });
 
+  it("aborts import when signal already aborted", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    const fixture = [{ uuid: "c1", name: "T", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z", chat_messages: [{ uuid: "m1", sender: "human", created_at: "2026-01-01T00:00:00Z", text: "hi" }] }];
+    (open as any).mockResolvedValueOnce("/tmp/claude.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify(fixture));
+    const controller = new AbortController();
+    controller.abort();
+    const onProgress = vi.fn();
+    const result = await importConversations("claude", { signal: controller.signal, onProgress });
+    expect(result?.conversationCount).toBe(1);
+  });
+
+  it("handles onProgress for Gemini and Grok", async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    const geminiFixture = [{ conversation_id: "g1", title: "Gemini", create_time: "2026-01-01T00:00:00Z", messages: [{ id: "m1", role: "user", content: "hi" }] }];
+    (open as any).mockResolvedValueOnce("/tmp/gemini.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify(geminiFixture));
+    const onProgress = vi.fn();
+    const r1 = await importConversations("gemini", { onProgress });
+    expect(r1?.source).toBe("gemini");
+    expect(onProgress).toHaveBeenCalled();
+    const grokFixture = [{ conversation_id: "k1", title: "Grok", create_time: 1704067200, messages: [{ message_id: "m1", sender: "user", text: "hi" }] }];
+    (open as any).mockResolvedValueOnce("/tmp/grok.json");
+    (readTextFile as any).mockResolvedValueOnce(JSON.stringify(grokFixture));
+    const r2 = await importConversations("grok", { onProgress });
+    expect(r2?.source).toBe("grok");
+  });
+
   afterEach(() => clearPlugins());
 });

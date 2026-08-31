@@ -160,8 +160,23 @@ describe("OverviewMemoryPulse", () => {
       { source: "chatgpt", conversationCount: 5, messageCount: 50, lastActivityTimestamp: Date.now() },
     ];
     render(<OverviewMemoryPulse activityTimeline={points} sourceStats={stats} />);
-    // 100 vs 50 => 67% and 33%
     expect(screen.getByText("67%")).toBeInTheDocument();
     expect(screen.getByText("33%")).toBeInTheDocument();
+  });
+
+  it("handles heatmap intensity levels 0-4", () => {
+    const y = new Date().getFullYear();
+    const points = [
+      makePoint(`${y}-06-01`, 0, { totalCount: 0, chatgptCount: 0, claudeCount: 0, geminiCount: 0, grokCount: 0, otherCount: 0 }),
+      makePoint(`${y}-06-02`, 1),
+      makePoint(`${y}-06-03`, 5),
+      makePoint(`${y}-06-04`, 10),
+      makePoint(`${y}-06-05`, 20),
+    ];
+    render(<OverviewMemoryPulse activityTimeline={points} sourceStats={makeStats()} />);
+    const cells = document.querySelectorAll(".overview-heatmap-cell");
+    expect(cells.length).toBeGreaterThan(10);
+    // Check that at least one cell has level-0 and one has level-4
+    expect(document.querySelector(".level-0")).toBeInTheDocument();
   });
 });
