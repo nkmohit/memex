@@ -12,6 +12,7 @@ import { formatDate, formatTimestamp } from "./utils";
 import OverviewMemoryPulse from "./components/OverviewMemoryPulse";
 import { SourceIcon, sourceLabel } from "./lib/sourceDisplay";
 import { summarizeText } from "./lib/summarize";
+import { isEnabled } from "./lib/flags";
 
 interface OverviewPageProps {
   onOpenImport: () => void;
@@ -108,6 +109,10 @@ export default function OverviewPage({
 
   useEffect(() => {
     if (!snapshot || isEmpty) {
+      setInsights(null);
+      return;
+    }
+    if (!isEnabled("summarize")) {
       setInsights(null);
       return;
     }
