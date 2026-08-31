@@ -1,4 +1,11 @@
 {
+  "name": "memex",
+  "private": true,
+  "packageManager": "npm@11.19.0",
+  "workspaces": [
+    "apps/desktop",
+    "packages/core"
+  ],
   "devDependencies": {
     "@playwright/test": "^1.62.1"
   }
