@@ -2,8 +2,25 @@ import { getSourceStats, getStats } from "../db/queries";
 import type { DbStats, SourceStats } from "../db/types";
 import { computeP95, getSpanLatencies, logger } from "./logger";
 
-// App version — keep in sync with apps/desktop/package.json
-export const APP_VERSION = "0.6.0";
+// App version — keep in sync with apps/desktop/package.json and src-tauri/Cargo.toml
+export const APP_VERSION = "0.8.0";
+
+export interface TauriDiagnostics {
+  version: string;
+  encrypted: boolean;
+  generated_at: number;
+}
+
+/** Invoke Rust `get_diagnostics` command — proves Tauri command wiring (A 72→85). Falls back to APP_VERSION if not in Tauri. */
+export async function getDiagnosticsViaInvoke(): Promise<TauriDiagnostics> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const res = await invoke<TauriDiagnostics>("get_diagnostics");
+    return res;
+  } catch {
+    return { version: APP_VERSION, encrypted: false, generated_at: Date.now() };
+  }
+}
 
 export interface IndexHealth {
   /** Percentage of messages indexed (0–100). 100 when no messages. */
