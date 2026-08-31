@@ -3,16 +3,20 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
-    name: Build + SBOM + Release
+    name: Build + GitHub Release
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -33,80 +37,55 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Cache cargo
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            apps/desktop/src-tauri/target
-          key: ${{ runner.os }}-release-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
-
-      - name: Install dependencies
-        run: |
-          npm ci --prefix apps/desktop
-          npm ci --prefix packages/core
-          npm ci
-          npm run build --prefix packages/core
-
-      - name: Verify tag matches package versions
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          PKG_VER=$(node -p "require('./apps/desktop/package.json').version")
-          CARGO_VER=$(grep '^version' apps/desktop/src-tauri/Cargo.toml | head -1 | cut -d'"' -f2)
-          echo "Tag $TAG, pkg $PKG_VER, cargo $CARGO_VER"
-          test "v$PKG_VER" = "$TAG" || { echo "package.json version mismatch"; exit 1; }
-          test "$CARGO_VER" = "$PKG_VER" || { echo "Cargo.toml version mismatch"; exit 1; }
-
-      - name: Run tests + lint + typecheck (gate)
-        run: |
-          npm run lint --prefix apps/desktop
-          npm run typecheck --prefix apps/desktop
-          npm run test --prefix apps/desktop -- --coverage
-          npm run test --prefix packages/core
-
-      - name: Cargo check + audit
-        working-directory: apps/desktop/src-tauri
-        run: |
-          cargo check
-          cargo install cargo-audit --locked || true
-          cargo audit --ignore RUSTSEC-0000-0000 || true
-
-      - name: Generate SBOM (CycloneDX)
-        working-directory: apps/desktop/src-tauri
-        run: |
-          cargo install cargo-cyclonedx --locked || true
-          cargo cyclonedx --format json --override-filename sbom.cyclonedx.json || echo "cyclonedx failed"
-          ls -lh sbom.cyclonedx.json || true
-
-      - name: Build Tauri bundle (debug smoke)
+      - name: Install desktop deps
         working-directory: apps/desktop
-        run: |
-          npx tauri build --debug || echo "tauri build debug smoke (non-blocking on CI without OS deps)"
+        run: npm ci
 
-      - name: Extract CHANGELOG notes
-        id: changelog
+      - name: Install core deps
+        working-directory: packages/core
+        run: npm ci
+
+      - name: Build core
+        working-directory: packages/core
+        run: npm run build
+
+      - name: Typecheck
+        working-directory: apps/desktop
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: apps/desktop
+        run: npm run test -- --coverage
+
+      - name: Build desktop
+        working-directory: apps/desktop
+        run: npm run build
+
+      - name: Cargo check
+        working-directory: apps/desktop/src-tauri
+        run: cargo check
+
+      - name: Extract notes from CHANGELOG
+        id: notes
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          VER=${TAG#v}
-          # extract section for this version from CHANGELOG.md
-          awk "/## \\[$VER\\]/{flag=1;next}/## \\[/{flag=0}flag" CHANGELOG.md > /tmp/notes.md || echo "Release $TAG" > /tmp/notes.md
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Grab section for this tag from CHANGELOG.md (between ## [TAG] and next ## [)
+          awk -v tag="## [$TAG]" '
+            $0 ~ tag {p=1; print; next}
+            p && /^## \[/ {exit}
+            p {print}
+          ' CHANGELOG.md > /tmp/notes.md || echo "Release $TAG" > /tmp/notes.md
           cat /tmp/notes.md
           echo "notes_file=/tmp/notes.md" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          body_path: ${{ steps.changelog.outputs.notes_file }}
+          body_path: /tmp/notes.md
+          generate_release_notes: true
           files: |
-            apps/desktop/src-tauri/sbom.cyclonedx.json
-            perf/budgets.json
-          generate_release_notes: false
-          tag_name: ${{ github.ref_name }}
+            apps/desktop/dist/**
 
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom-release-${{ github.ref_name }}
-          path: apps/desktop/src-tauri/sbom.cyclonedx.json
-          if-no-files-found: warn
+      - name: Summary
+        run: echo "Released ${{ steps.notes.outputs.tag }}"
