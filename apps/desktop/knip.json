@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/main.tsx", "src/App.tsx"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["src/test/**", "**/*.test.{ts,tsx}", "vite.config.ts"],
+  "ignoreDependencies": [
+    "@tauri-apps/cli",
+    "@tauri-apps/api",
+    "@tauri-apps/plugin-opener",
+    "tailwindcss"
+  ]
+}

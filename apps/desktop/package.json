@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "size": "size-limit",
-    "size:check": "npm run build && npm run size"
+    "size:check": "npm run build && npm run size",
+    "knip": "knip --exclude exports,types,nsExports,nsTypes,duplicates",
+    "knip:check": "knip --no-progress --exclude exports,types,nsExports,nsTypes,duplicates"
   },
   "size-limit": [
     {
@@ -62,6 +64,7 @@
     "eslint-plugin-react-refresh": "^0.5.5",
     "globals": "^17.11.0",
     "jsdom": "^26.0.0",
+    "knip": "^6.33.0",
     "prettier": "^3.4.2",
     "size-limit": "^13.0.3",
     "typescript": "~5.8.3",

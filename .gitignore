@@ -3,6 +3,13 @@ packages/core/dist/*
 
 docs/
 
+# OS
+.DS_Store
+**/.DS_Store
+
+# local plan
+PLAN_*.md
+
 # env
 .env
 .env.local
