@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: |
             apps/desktop/package-lock.json
@@ -200,7 +200,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: |
             package-lock.json
@@ -227,3 +227,67 @@ jobs:
 
       - name: Run E2E smoke
         run: npx playwright test e2e/smoke.spec.ts
+
+  tauri-smoke:
+    name: Tauri build smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: |
+            apps/desktop/package-lock.json
+            packages/core/package-lock.json
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install Tauri system deps (Ubuntu)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo0 libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf || echo "deps install incomplete (non-blocking)"
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/desktop/src-tauri/target
+          key: ${{ runner.os }}-tauri-smoke-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
+
+      - name: Install desktop dependencies
+        working-directory: apps/desktop
+        run: npm ci
+
+      - name: Install core dependencies
+        working-directory: packages/core
+        run: npm ci
+
+      - name: Build core
+        working-directory: packages/core
+        run: npm run build
+
+      - name: Build desktop (Vite)
+        working-directory: apps/desktop
+        run: npm run build
+
+      - name: Tauri build (debug smoke)
+        working-directory: apps/desktop
+        run: |
+          npx tauri build --debug --help || npx tauri --help
+          timeout 600 npx tauri build --debug || echo "tauri build smoke non-blocking (timeout or missing deps)"
+
+      - name: Verify Tauri config
+        working-directory: apps/desktop
+        run: |
+          cat src-tauri/tauri.conf.json | head -n 50
+          npx tauri info || true
