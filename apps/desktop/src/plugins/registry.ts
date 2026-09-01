@@ -6,6 +6,7 @@
  */
 
 import type { ParsedConversation } from "@memex/core";
+import { MAX_PLUGINS, validatePluginText, wrapParser } from "./sandbox";
 
 export interface PluginSourceMeta {
   id: string;
@@ -33,9 +34,11 @@ export function registerImporter(meta: Omit<PluginSourceMeta, "isPlugin">, parse
   if (pluginSources.has(id)) throw new Error(`Plugin source "${id}" already registered`);
   // validate id format
   if (!/^[a-z0-9_-]{2,20}$/.test(id)) throw new Error(`Invalid plugin id "${id}" (2-20 alnum/_/-)`);
+  if (pluginSources.size >= MAX_PLUGINS) throw new Error(`Plugin limit ${MAX_PLUGINS} reached`);
+  const wrapped = wrapParser(parser, id);
   pluginSources.set(id, {
     meta: { ...meta, id, isPlugin: true },
-    parser,
+    parser: wrapped,
   });
 }
 
@@ -82,12 +85,21 @@ export async function loadPlugins(): Promise<number> {
     const entries = await readDir(PLUGIN_DIR);
     for (const entry of entries) {
       if (!entry.name.endsWith(".js")) continue;
+      if (loaded >= MAX_PLUGINS) {
+        console.warn(`[plugins] max ${MAX_PLUGINS} reached, skipping ${entry.name}`);
+        break;
+      }
       const filePath = `${PLUGIN_DIR}/${entry.name}`;
       try {
         const text = await (
           fs as unknown as { readTextFile: (p: string) => Promise<string> }
         ).readTextFile(filePath);
-        // Simple CJS evaluate: provide `registerImporter` as global
+        const validated = validatePluginText(text);
+        if (!validated.ok) {
+          console.warn(`[plugins] rejected ${filePath}: ${validated.reason}`);
+          continue;
+        }
+        // Simple CJS evaluate: provide `registerImporter` as global (sandboxed via validate)
         const fn = new Function("registerImporter", "exports", "module", text);
         const modExports: Record<string, unknown> = {};
         const mod = { exports: modExports };
