@@ -56,6 +56,7 @@ async function runImportChunkTransaction(
   conversations: ParsedConversation[]
 ): Promise<{ conversationCount: number; messageCount: number }> {
   let totalMessages = 0;
+  // eslint-disable-next-line no-useless-assignment -- initial false tracks BEGIN failure
   let began = false;
 
   // Ensure this connection waits for locks (plugin may use a pool; pragma is per-connection)

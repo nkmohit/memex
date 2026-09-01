@@ -236,7 +236,6 @@ export function getAllConversationsForSearch(
     if (typeof opts.dateTo === "number") {
       whereClause += ` AND COALESCE(last_msg_time, 0) <= $${paramIndex}`;
       params.push(opts.dateTo);
-      paramIndex += 1;
     }
 
     const countSql = `SELECT COUNT(*) AS total

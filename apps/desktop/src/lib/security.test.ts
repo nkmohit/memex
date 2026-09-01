@@ -11,7 +11,7 @@ describe("security hardening", () => {
   it("tauri.conf.json has CSP and publisher", async () => {
     const confPath = join(process.cwd(), "src-tauri", "tauri.conf.json");
     const altPath = rootPath("apps", "desktop", "src-tauri", "tauri.conf.json");
-    let raw = "";
+    let raw: string;
     try {
       raw = await readFile(confPath, "utf-8");
     } catch {

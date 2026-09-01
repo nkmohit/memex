@@ -46,7 +46,6 @@ export function buildFtsWhereClause(
   if (typeof opts.dateTo === "number") {
     whereClause += ` AND COALESCE(m.created_at, 0) <= $${paramIndex}`;
     params.push(opts.dateTo);
-    paramIndex += 1;
   }
   return { whereClause, params, titleLikeParam, rawQueryLower };
 }
