@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import { recordSearchLatency as otelRecordSearch, resetOtel } from "./otel";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface Span {
@@ -41,6 +43,13 @@ export function recordSpanLatency(name: string, durationMs: number): void {
   arr.push(durationMs);
   if (arr.length > 1000) arr.shift();
   spanRecords.set(name, arr);
+  if (name === "searchMessages") {
+    try {
+      otelRecordSearch(durationMs);
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export function getSpanLatencies(name: string): number[] {
@@ -56,6 +65,11 @@ export function computeP95(latencies: number[]): number | null {
 
 export function clearSpans(): void {
   spanRecords.clear();
+  try {
+    resetOtel();
+  } catch {
+    // ignore
+  }
 }
 
 export const logger: Logger = {

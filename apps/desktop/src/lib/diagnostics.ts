@@ -1,6 +1,7 @@
 import { getSourceStats, getStats } from "../db/queries";
 import type { DbStats, SourceStats } from "../db/types";
 import { computeP95, getSpanLatencies, logger } from "./logger";
+import { exportOtelMetrics, getSearchLatencies as otelLatencies, getSearchP95 as otelP95 } from "./otel";
 
 // App version — keep in sync with apps/desktop/package.json and src-tauri/Cargo.toml
 export const APP_VERSION = "0.8.0";
@@ -74,11 +75,20 @@ export async function isSearchIndexHealthy(): Promise<boolean> {
 
 export function getPerfStats(): PerfStats {
   const latencies = getSpanLatencies("searchMessages");
+  const otelLat = otelLatencies();
+  // OTEL p95 (Phase 3-2): prefer histogram, fallback to logger spans
+  const p95 = otelP95() ?? computeP95(latencies);
+  const count = otelLat.length > 0 ? otelLat.length : latencies.length;
+  const allLat = otelLat.length > 0 ? otelLat : latencies;
   return {
-    searchP95Ms: computeP95(latencies),
-    searchCount: latencies.length,
-    searchLatencies: latencies,
+    searchP95Ms: p95,
+    searchCount: count,
+    searchLatencies: allLat,
   };
+}
+
+export function getOtelMetrics(): Record<string, unknown> {
+  return exportOtelMetrics();
 }
 
 export async function getDiagnostics(): Promise<Diagnostics> {
