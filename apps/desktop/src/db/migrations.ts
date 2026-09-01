@@ -96,6 +96,21 @@ export function initDatabase(): Promise<void> {
       );
     `);
 
+    // sqlite-vec hybrid (Phase 3-1): try to create vec0 index for native KNN.
+    // Falls back to plain messages_vec + JS scoring when extension not available
+    // (tests / older DBs). Uses cosine distance, 64 dims matching lib/vector.ts.
+    try {
+      await database.execute(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS vec_messages USING vec0(
+          embedding float[64] distance_metric=cosine,
+          message_id TEXT PARTITION KEY,
+          conversation_id TEXT
+        );
+      `);
+    } catch {
+      // sqlite-vec not loaded — keep JS fallback, ignore
+    }
+
     await database.execute(`
       INSERT OR IGNORE INTO app_meta (key, value)
       VALUES ('data_version', '0')

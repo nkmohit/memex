@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cosineSimilarity, embed, hybridScore } from "./vector";
+import { cosineSimilarity, deserializeEmbedding, embed, hybridScore, l2Distance, serializeEmbedding } from "./vector";
 
 describe("lib/vector", () => {
   it("embed is normalized and deterministic", () => {
@@ -39,5 +39,25 @@ describe("lib/vector", () => {
     // pure semantic
     expect(hybridScore(-5, 1, 0)).toBeCloseTo(1, 1);
     expect(hybridScore(-5, -1, 0)).toBeCloseTo(0, 1);
+  });
+
+  it("serialize/deserialize roundtrip preserves vector for sqlite-vec", () => {
+    const v = embed("vacation holiday trip");
+    const blob = serializeEmbedding(v);
+    expect(blob.length).toBe(64 * 4);
+    const restored = deserializeEmbedding(blob);
+    expect(restored.length).toBe(64);
+    // Float32 precision
+    for (let i = 0; i < v.length; i++) expect(restored[i]!).toBeCloseTo(v[i]!, 5);
+    expect(cosineSimilarity(v, restored)).toBeCloseTo(1, 5);
+  });
+
+  it("l2Distance matches cosine for normalized vectors", () => {
+    const a = embed("vacation");
+    const b = embed("holiday trip");
+    const l2 = l2Distance(a, b);
+    const cos = cosineSimilarity(a, b);
+    // For normalized vectors, l2^2 = 2*(1-cos)
+    expect(l2 * l2).toBeCloseTo(2 * (1 - cos), 5);
   });
 });

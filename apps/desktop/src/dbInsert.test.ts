@@ -12,6 +12,7 @@ vi.mock("./db", () => ({
 
 vi.mock("./lib/vector", () => ({
   embed: vi.fn(() => new Array(64).fill(0.1)),
+  serializeEmbedding: vi.fn(() => new Uint8Array(256)),
 }));
 
 import { insertConversations } from "./dbInsert";
@@ -121,6 +122,7 @@ describe("dbInsert", () => {
       .mockResolvedValueOnce(undefined) // messages
       .mockResolvedValueOnce(undefined) // fts
       .mockResolvedValueOnce(undefined) // vec
+      .mockResolvedValueOnce(undefined) // vec_messages (sqlite-vec)
       .mockResolvedValueOnce(undefined); // COMMIT
 
     const res = await insertConversations([makeConv("c1")]);

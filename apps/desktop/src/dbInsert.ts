@@ -1,6 +1,6 @@
 import type { ParsedConversation } from "@memex/core";
 import { getDb, withDbLock } from "./db";
-import { embed } from "./lib/vector";
+import { embed, serializeEmbedding } from "./lib/vector";
 
 const MAX_IMPORT_RETRIES = 6;
 const IMPORT_RETRY_DELAY_MS = 500;
@@ -94,13 +94,15 @@ async function runImportChunkTransaction(
     const messageRows: unknown[] = [];
     const ftsRows: unknown[] = [];
     const vecRows: unknown[] = [];
+    const vecIndexRows: unknown[] = [];
     for (const conv of conversations) {
       for (const msg of conv.messages) {
         messageRows.push(msg.id, msg.conversationId, msg.sender, msg.content, msg.createdAt);
         ftsRows.push(msg.content, conv.title ?? "", msg.conversationId, msg.id);
-        // store embedding as JSON blob for sqlite-vec compatibility (future sqlite-vec will use float32 blob)
+        // store embedding as JSON for plain fallback + float32 blob for vec0
         const vec = embed(msg.content);
         vecRows.push(msg.id, msg.conversationId, JSON.stringify(vec));
+        vecIndexRows.push(serializeEmbedding(vec), msg.id, msg.conversationId);
         totalMessages += 1;
       }
     }
@@ -127,6 +129,15 @@ async function runImportChunkTransaction(
         await db.execute(vecSql, vecRows);
       } catch {
         // messages_vec may not exist on older DBs before migration — ignore
+      }
+      // sqlite-vec index (vec_messages) — ignore if extension not available
+      try {
+        const vecIdxCount = vecIndexRows.length / 3;
+        const vecIdxSql = `INSERT OR REPLACE INTO vec_messages (embedding, message_id, conversation_id)
+          VALUES ${buildPlaceholders(vecIdxCount, 3)}`;
+        await db.execute(vecIdxSql, vecIndexRows);
+      } catch {
+        // vec0 not available — fallback to JS scoring uses messages_vec JSON
       }
     }
 

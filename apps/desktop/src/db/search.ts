@@ -5,6 +5,7 @@ import { clampLimit, clampOffset } from "../lib/validation";
 import { scoreRows } from "../workers/search.worker";
 import { logger } from "../lib/logger";
 import { validateSearchOptions } from "../lib/schemas";
+import { embed, isSqliteVecAvailable, serializeEmbedding } from "../lib/vector";
 
 let searchWorker: Worker | null = null;
 let searchWorkerId = 0;
@@ -90,6 +91,79 @@ import {
   buildSnippetWhereClause,
   buildTotalOccurrencesSql,
 } from "./searchQueryBuilder";
+
+/**
+ * Attempt native sqlite-vec KNN. Returns scored rows or null if extension not
+ * available (tests / older DBs) — caller falls back to JS worker scoring.
+ */
+async function tryVecKnnSearch(
+  database: Awaited<ReturnType<typeof getDb>>,
+  rawQuery: string,
+  k: number
+): Promise<
+  | {
+      conversation_id: string;
+      title: string;
+      source: string;
+      conv_created_at: number;
+      message_id: string;
+      message_created_at: number;
+      content: string;
+      score: number;
+    }[]
+  | null
+> {
+  try {
+    if (!isSqliteVecAvailable()) return null;
+    const qVec = embed(rawQuery);
+    const blob = serializeEmbedding(qVec);
+    // sqlite-vec: KNN via `embedding MATCH ? AND k = ?` — distance in `distance` column
+    // Fallback gracefully when vec_messages not exists or MATCH not supported (FakeDB)
+    const vecRows = await database.select<
+      { message_id: string; distance: number; conversation_id: string }[]
+    >(`SELECT message_id, conversation_id, distance FROM vec_messages WHERE embedding MATCH ? AND k = ? ORDER BY distance`, [blob, k]);
+    if (!Array.isArray(vecRows) || vecRows.length === 0) return null;
+    // Validate vec0 shape — fallback if FakeDB returns non-vec rows (tests)
+    if (typeof (vecRows[0] as unknown as { distance?: unknown })?.distance !== "number") return null;
+    // Hydrate message details for matched ids
+    const ids = vecRows.map((r) => r.message_id);
+    if (ids.length === 0) return null;
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
+    const details = await database.select<
+      {
+        message_id: string;
+        conversation_id: string;
+        content: string;
+        message_created_at: number;
+        title: string;
+        source: string;
+        conv_created_at: number;
+      }[]
+    >(
+      `SELECT m.id AS message_id, m.conversation_id AS conversation_id, m.content AS content,
+              COALESCE(m.created_at, 0) AS message_created_at,
+              COALESCE(c.title, 'Untitled') AS title, c.source AS source,
+              COALESCE(c.created_at, 0) AS conv_created_at
+       FROM messages m JOIN conversations c ON c.id = m.conversation_id
+       WHERE m.id IN (${placeholders})`,
+      ids
+    );
+    const distById = new Map(vecRows.map((r) => [r.message_id, r.distance]));
+    return details.map((d) => ({
+      conversation_id: d.conversation_id,
+      title: d.title,
+      source: d.source,
+      conv_created_at: d.conv_created_at,
+      message_id: d.message_id,
+      message_created_at: d.message_created_at,
+      content: d.content,
+      // distance 0→1, convert to cosine-like score 1-distance
+      score: 1 - (distById.get(d.message_id) ?? 1),
+    }));
+  } catch {
+    return null;
+  }
+}
 
 async function runFtsSearch(
   database: Awaited<ReturnType<typeof getDb>>,
@@ -191,29 +265,6 @@ export function searchMessages(
         const validatedSource = validatedOpts.source;
         const SEMANTIC_THRESHOLD = 0.22;
 
-        // Fetch all messages with conversation join — filtered by source/date in JS
-        // Use a broad query that FakeDB and real sqlite both handle; filter in JS for portability.
-        const allRows = await database.select<
-          {
-            message_id: string;
-            conversation_id: string;
-            content: string;
-            message_created_at: number;
-            title: string;
-            source: string;
-            conv_created_at: number;
-          }[]
-        >(
-          `SELECT m.id AS message_id, m.conversation_id AS conversation_id, m.content AS content,
-                COALESCE(m.created_at, 0) AS message_created_at,
-                COALESCE(c.title, 'Untitled') AS title,
-                c.source AS source,
-                COALESCE(c.created_at, 0) AS conv_created_at
-         FROM messages m
-         JOIN conversations c ON c.id = m.conversation_id`,
-          []
-        );
-
         type Scored = {
           conversation_id: string;
           title: string;
@@ -225,33 +276,75 @@ export function searchMessages(
           score: number;
         };
 
-        // Filter by source/date before scoring; scoring offloaded to worker (fallback sync)
-        const candidates = allRows.filter((row) => {
-          if (validatedSource && row.source !== validatedSource) return false;
-          if (
-            typeof validatedOpts.dateFrom === "number" &&
-            row.message_created_at < validatedOpts.dateFrom
-          )
-            return false;
-          if (
-            typeof validatedOpts.dateTo === "number" &&
-            row.message_created_at > validatedOpts.dateTo
-          )
-            return false;
-          return true;
-        });
+        // Phase 3-1: try native sqlite-vec KNN first, fallback to JS worker
+        let scored: Scored[];
+        const vecKnn = await tryVecKnnSearch(database, rawQuery, safeLimit + safeOffset + 20);
+        if (vecKnn !== null) {
+          const filtered = vecKnn.filter((row) => {
+            if (validatedSource && row.source !== validatedSource) return false;
+            if (
+              typeof validatedOpts.dateFrom === "number" &&
+              row.message_created_at < validatedOpts.dateFrom
+            )
+              return false;
+            if (
+              typeof validatedOpts.dateTo === "number" &&
+              row.message_created_at > validatedOpts.dateTo
+            )
+              return false;
+            return row.score >= SEMANTIC_THRESHOLD;
+          });
+          scored = filtered as Scored[];
+        } else {
+          // Fallback: fetch all messages and score via worker (FakeDB / no vec extension)
+          const allRows = await database.select<
+            {
+              message_id: string;
+              conversation_id: string;
+              content: string;
+              message_created_at: number;
+              title: string;
+              source: string;
+              conv_created_at: number;
+            }[]
+          >(
+            `SELECT m.id AS message_id, m.conversation_id AS conversation_id, m.content AS content,
+                COALESCE(m.created_at, 0) AS message_created_at,
+                COALESCE(c.title, 'Untitled') AS title,
+                c.source AS source,
+                COALESCE(c.created_at, 0) AS conv_created_at
+         FROM messages m
+         JOIN conversations c ON c.id = m.conversation_id`,
+            []
+          );
 
-        const workerScored = await scoreWithWorker(rawQuery, candidates, SEMANTIC_THRESHOLD);
-        const scored: Scored[] = workerScored.map((s) => ({
-          conversation_id: s.conversation_id,
-          title: s.title,
-          source: s.source,
-          conv_created_at: s.conv_created_at,
-          message_id: s.message_id,
-          message_created_at: s.message_created_at,
-          content: s.content,
-          score: s.score,
-        }));
+          const candidates = allRows.filter((row) => {
+            if (validatedSource && row.source !== validatedSource) return false;
+            if (
+              typeof validatedOpts.dateFrom === "number" &&
+              row.message_created_at < validatedOpts.dateFrom
+            )
+              return false;
+            if (
+              typeof validatedOpts.dateTo === "number" &&
+              row.message_created_at > validatedOpts.dateTo
+            )
+              return false;
+            return true;
+          });
+
+          const workerScored = await scoreWithWorker(rawQuery, candidates, SEMANTIC_THRESHOLD);
+          scored = workerScored.map((s) => ({
+            conversation_id: s.conversation_id,
+            title: s.title,
+            source: s.source,
+            conv_created_at: s.conv_created_at,
+            message_id: s.message_id,
+            message_created_at: s.message_created_at,
+            content: s.content,
+            score: s.score,
+          }));
+        }
 
         // Group by conversation
         const grouped = new Map<

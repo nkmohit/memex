@@ -85,6 +85,47 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return Math.max(-1, Math.min(1, dot));
 }
 
+export function l2Distance(a: number[], b: number[]): number {
+  if (a.length !== b.length || a.length === 0) return Infinity;
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0);
+    sum += d * d;
+  }
+  return Math.sqrt(sum);
+}
+
+/**
+ * sqlite-vec interop: serialize float64 normalized vector to Float32 LE blob
+ * as expected by `vec0(embedding float[64])`. Stores as Uint8Array for SQL BLOB.
+ */
+export function serializeEmbedding(vec: number[]): Uint8Array {
+  const buf = new ArrayBuffer(vec.length * 4);
+  const view = new DataView(buf);
+  for (let i = 0; i < vec.length; i++) view.setFloat32(i * 4, vec[i] ?? 0, true);
+  return new Uint8Array(buf);
+}
+
+export function deserializeEmbedding(blob: Uint8Array | ArrayBuffer | number[]): number[] {
+  if (Array.isArray(blob)) return [...blob];
+  const u8 = blob instanceof Uint8Array ? blob : new Uint8Array(blob as ArrayBuffer);
+  if (u8.length % 4 !== 0) return Array.from(u8).map((v) => v / 255);
+  const view = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  const out: number[] = [];
+  for (let i = 0; i < u8.length / 4; i++) out.push(view.getFloat32(i * 4, true));
+  return out;
+}
+
+/** Detect sqlite-vec availability (stub: env MEMEX_VEC=1 or plugin loaded). */
+export function isSqliteVecAvailable(): boolean {
+  try {
+    if (typeof process !== "undefined" && (process as unknown as { env?: Record<string, string> }).env?.MEMEX_VEC === "1") return true;
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
 /**
  * Hybrid score: weighted blend of FTS rank (converted to 0..1 similarity) and semantic similarity.
  * ftsScore: higher is better (we convert -rank -> score). semanticScore: cosine -1..1.
@@ -98,4 +139,4 @@ export function hybridScore(ftsRank: number, semanticScore: number, alpha = 0.5)
 }
 
 /** For debug / test: expose groups */
-export const _internal = { DIM, SYNONYM_GROUPS, GROUP_BY_TOKEN, hashToken, tokenize };
+export const _internal = { DIM, SYNONYM_GROUPS, GROUP_BY_TOKEN, hashToken, tokenize, serializeEmbedding: serializeEmbedding, deserializeEmbedding: deserializeEmbedding };
