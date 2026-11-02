@@ -5,12 +5,13 @@ Thanks for considering a contribution! This guide covers the minimal workflow to
 ## Quick start
 
 ```bash
-# 1. Clone and use Node 20
-nvm use || fnm use # or ensure node --version is 20.x
+# 1. Clone and use Node 22 (see CI; Vite 8 / jsdom 30)
+nvm use || fnm use # or ensure node --version is 22.x
 
-# 2. Install
-npm ci --prefix apps/desktop
-npm ci --prefix packages/core
+# 2. Install once from the workspace root. Do not run `npm ci` inside
+# apps/desktop or packages/core — that reinstalls only that workspace
+# and deletes the other packages' dependencies.
+npm ci
 npm run build --prefix packages/core
 
 # 3. Fresh verification (must all pass)

@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { recordSearchLatency, getSearchP95, getSearchLatencies, getSearchSummary, resetOtel, exportOtelMetrics, startOtelSpan } from "./otel";
+import {
+  recordSearchLatency,
+  getSearchP95,
+  getSearchLatencies,
+  getSearchSummary,
+  resetOtel,
+  exportOtelMetrics,
+  startOtelSpan,
+} from "./otel";
 import { clearSpans, recordSpanLatency } from "./logger";
 
 describe("lib/otel p95", () => {

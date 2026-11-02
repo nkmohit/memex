@@ -16,7 +16,7 @@ jobs:
   release:
     name: Build + GitHub Release
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -26,23 +26,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
-          cache-dependency-path: |
-            apps/desktop/package-lock.json
-            packages/core/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
 
-      - name: Install desktop deps
-        working-directory: apps/desktop
-        run: npm ci
-
-      - name: Install core deps
-        working-directory: packages/core
+      - name: Install workspace dependencies
         run: npm ci
 
       - name: Build core
@@ -60,6 +53,22 @@ jobs:
       - name: Build desktop
         working-directory: apps/desktop
         run: npm run build
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
 
       - name: Cargo check
         working-directory: apps/desktop/src-tauri

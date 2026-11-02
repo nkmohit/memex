@@ -24,16 +24,9 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: |
-            apps/desktop/package-lock.json
-            packages/core/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install desktop dependencies
-        working-directory: apps/desktop
-        run: npm ci
-
-      - name: Install core dependencies
-        working-directory: packages/core
+      - name: Install workspace dependencies
         run: npm ci
 
       - name: Build core (required for desktop imports)
@@ -46,7 +39,7 @@ jobs:
 
       - name: Lint (core)
         working-directory: packages/core
-        run: npm run lint --if-present || echo "core lint not configured"
+        run: npm run lint
 
       - name: Format check (desktop)
         working-directory: apps/desktop
@@ -84,18 +77,13 @@ jobs:
         working-directory: apps/desktop
         run: npx size-limit --json || npx size-limit
 
-      - name: Audit (desktop, high severity)
-        working-directory: apps/desktop
-        run: npm audit --audit-level=high
-
-      - name: Audit (core)
-        working-directory: packages/core
+      - name: Audit (high severity)
         run: npm audit --audit-level=high
 
   rust-check:
     name: Rust check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -115,6 +103,22 @@ jobs:
             apps/desktop/src-tauri/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
 
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
+
       - name: Cargo check
         working-directory: apps/desktop/src-tauri
         run: cargo check
@@ -126,7 +130,7 @@ jobs:
       - name: Cargo deny (blocking)
         working-directory: apps/desktop/src-tauri
         run: |
-          cargo install cargo-deny --locked || true
+          cargo install cargo-deny --version 0.20.2 --locked
           cargo deny check advisories licenses bans sources
 
   gitleaks:
@@ -168,7 +172,7 @@ jobs:
 
       - name: Install cargo-deny and cargo-cyclonedx
         run: |
-          cargo install cargo-deny --locked || true
+          cargo install cargo-deny --version 0.20.2 --locked
           cargo install cargo-cyclonedx --locked || true
 
       - name: Cargo deny check (blocking)
@@ -202,20 +206,9 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: |
-            package-lock.json
-            apps/desktop/package-lock.json
-            packages/core/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install root dependencies (playwright)
-        run: npm ci
-
-      - name: Install desktop dependencies
-        working-directory: apps/desktop
-        run: npm ci
-
-      - name: Install core dependencies
-        working-directory: packages/core
+      - name: Install workspace dependencies
         run: npm ci
 
       - name: Build core
@@ -241,19 +234,28 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: |
-            apps/desktop/package-lock.json
-            packages/core/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
 
-      - name: Install Tauri system deps (Ubuntu)
+      - name: Install Tauri Linux dependencies
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo0 libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf || echo "deps install incomplete (non-blocking)"
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
 
       - name: Cache cargo
         uses: actions/cache@v6
@@ -264,12 +266,7 @@ jobs:
             apps/desktop/src-tauri/target
           key: ${{ runner.os }}-tauri-smoke-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
 
-      - name: Install desktop dependencies
-        working-directory: apps/desktop
-        run: npm ci
-
-      - name: Install core dependencies
-        working-directory: packages/core
+      - name: Install workspace dependencies
         run: npm ci
 
       - name: Build core
@@ -282,9 +279,7 @@ jobs:
 
       - name: Tauri build (debug smoke)
         working-directory: apps/desktop
-        run: |
-          npx tauri build --debug --help || npx tauri --help
-          timeout 600 npx tauri build --debug || echo "tauri build smoke non-blocking (timeout or missing deps)"
+        run: npx tauri build --debug --no-bundle
 
       - name: Verify Tauri config
         working-directory: apps/desktop

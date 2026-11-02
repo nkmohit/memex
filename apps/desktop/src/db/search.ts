@@ -121,10 +121,14 @@ async function tryVecKnnSearch(
     // Fallback gracefully when vec_messages not exists or MATCH not supported (FakeDB)
     const vecRows = await database.select<
       { message_id: string; distance: number; conversation_id: string }[]
-    >(`SELECT message_id, conversation_id, distance FROM vec_messages WHERE embedding MATCH ? AND k = ? ORDER BY distance`, [blob, k]);
+    >(
+      `SELECT message_id, conversation_id, distance FROM vec_messages WHERE embedding MATCH ? AND k = ? ORDER BY distance`,
+      [blob, k]
+    );
     if (!Array.isArray(vecRows) || vecRows.length === 0) return null;
     // Validate vec0 shape — fallback if FakeDB returns non-vec rows (tests)
-    if (typeof (vecRows[0] as unknown as { distance?: unknown })?.distance !== "number") return null;
+    if (typeof (vecRows[0] as unknown as { distance?: unknown })?.distance !== "number")
+      return null;
     // Hydrate message details for matched ids
     const ids = vecRows.map((r) => r.message_id);
     if (ids.length === 0) return null;

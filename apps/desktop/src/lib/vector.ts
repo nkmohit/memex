@@ -119,7 +119,11 @@ export function deserializeEmbedding(blob: Uint8Array | ArrayBuffer | number[]):
 /** Detect sqlite-vec availability (stub: env MEMEX_VEC=1 or plugin loaded). */
 export function isSqliteVecAvailable(): boolean {
   try {
-    if (typeof process !== "undefined" && (process as unknown as { env?: Record<string, string> }).env?.MEMEX_VEC === "1") return true;
+    if (
+      typeof process !== "undefined" &&
+      (process as unknown as { env?: Record<string, string> }).env?.MEMEX_VEC === "1"
+    )
+      return true;
   } catch {
     // ignore
   }
@@ -139,4 +143,12 @@ export function hybridScore(ftsRank: number, semanticScore: number, alpha = 0.5)
 }
 
 /** For debug / test: expose groups */
-export const _internal = { DIM, SYNONYM_GROUPS, GROUP_BY_TOKEN, hashToken, tokenize, serializeEmbedding: serializeEmbedding, deserializeEmbedding: deserializeEmbedding };
+export const _internal = {
+  DIM,
+  SYNONYM_GROUPS,
+  GROUP_BY_TOKEN,
+  hashToken,
+  tokenize,
+  serializeEmbedding: serializeEmbedding,
+  deserializeEmbedding: deserializeEmbedding,
+};

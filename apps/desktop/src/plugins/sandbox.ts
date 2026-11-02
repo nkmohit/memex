@@ -38,7 +38,8 @@ const BANNED_PATTERNS: { re: RegExp; reason: string }[] = [
 
 export function validatePluginText(text: string): { ok: boolean; reason?: string } {
   if (typeof text !== "string") return { ok: false, reason: "not string" };
-  if (text.length > MAX_PLUGIN_SIZE) return { ok: false, reason: `exceeds ${MAX_PLUGIN_SIZE} bytes` };
+  if (text.length > MAX_PLUGIN_SIZE)
+    return { ok: false, reason: `exceeds ${MAX_PLUGIN_SIZE} bytes` };
   if (text.length === 0) return { ok: false, reason: "empty" };
   for (const { re, reason } of BANNED_PATTERNS) {
     if (re.test(text)) return { ok: false, reason: `banned: ${reason}` };

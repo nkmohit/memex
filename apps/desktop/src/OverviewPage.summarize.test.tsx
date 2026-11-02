@@ -38,7 +38,12 @@ function makeSnapshot(): DashboardSnapshot {
       estimatedTotalTokens: 300,
     },
     sourceStats: [
-      { source: "claude", conversationCount: 1, messageCount: 6, lastActivityTimestamp: Date.now() },
+      {
+        source: "claude",
+        conversationCount: 1,
+        messageCount: 6,
+        lastActivityTimestamp: Date.now(),
+      },
     ],
     recentConversations: [
       {
@@ -74,7 +79,14 @@ describe("OverviewPage summarize gating", () => {
   it("shows Insights bullets when summarize enabled", async () => {
     vi.spyOn(flags, "isEnabled").mockImplementation(() => true);
     const { default: OverviewPage } = await import("./OverviewPage");
-    render(<OverviewPage onOpenImport={vi.fn()} onOpenSearch={vi.fn()} onSelectConversation={vi.fn()} onRebuildIndex={vi.fn()} />);
+    render(
+      <OverviewPage
+        onOpenImport={vi.fn()}
+        onOpenSearch={vi.fn()}
+        onSelectConversation={vi.fn()}
+        onRebuildIndex={vi.fn()}
+      />
+    );
     await waitFor(() => expect(screen.getByText("Insight 1")).toBeInTheDocument());
     expect(mockSummarize).toHaveBeenCalled();
   });
@@ -82,8 +94,17 @@ describe("OverviewPage summarize gating", () => {
   it("shows fallback and does not call summarize when flag disabled", async () => {
     vi.spyOn(flags, "isEnabled").mockImplementation((name) => name !== "summarize");
     const { default: OverviewPage } = await import("./OverviewPage");
-    render(<OverviewPage onOpenImport={vi.fn()} onOpenSearch={vi.fn()} onSelectConversation={vi.fn()} onRebuildIndex={vi.fn()} />);
-    await waitFor(() => expect(screen.getByText(/AI insight cards will surface/)).toBeInTheDocument());
+    render(
+      <OverviewPage
+        onOpenImport={vi.fn()}
+        onOpenSearch={vi.fn()}
+        onSelectConversation={vi.fn()}
+        onRebuildIndex={vi.fn()}
+      />
+    );
+    await waitFor(() =>
+      expect(screen.getByText(/AI insight cards will surface/)).toBeInTheDocument()
+    );
     await new Promise((r) => setTimeout(r, 150));
     expect(mockSummarize).not.toHaveBeenCalled();
   });

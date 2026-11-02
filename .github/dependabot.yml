@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/apps/desktop"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -20,15 +20,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-
-  - package-ecosystem: "npm"
-    directory: "/packages/core"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "npm"
 
   - package-ecosystem: "cargo"
     directory: "/apps/desktop/src-tauri"

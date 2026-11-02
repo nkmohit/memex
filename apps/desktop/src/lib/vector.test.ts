@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { cosineSimilarity, deserializeEmbedding, embed, hybridScore, l2Distance, serializeEmbedding } from "./vector";
+import {
+  cosineSimilarity,
+  deserializeEmbedding,
+  embed,
+  hybridScore,
+  l2Distance,
+  serializeEmbedding,
+} from "./vector";
 
 describe("lib/vector", () => {
   it("embed is normalized and deterministic", () => {

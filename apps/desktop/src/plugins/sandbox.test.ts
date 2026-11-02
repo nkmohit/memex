@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { validatePluginText, isSafePluginCode, wrapParser, MAX_PLUGIN_SIZE, MAX_PARSER_CONVERSATIONS } from "./sandbox";
+import {
+  validatePluginText,
+  isSafePluginCode,
+  wrapParser,
+  MAX_PLUGIN_SIZE,
+  MAX_PARSER_CONVERSATIONS,
+} from "./sandbox";
 import { clearPlugins, registerImporter, getPluginSources, getPluginParser } from "./registry";
 
 describe("plugins/sandbox", () => {
@@ -39,7 +45,8 @@ describe("plugins/sandbox", () => {
   });
 
   it("wrapParser enforces output limits", () => {
-    const parser = () => new Array(MAX_PARSER_CONVERSATIONS + 1).fill({ id: "c", messages: [] }) as any;
+    const parser = () =>
+      new Array(MAX_PARSER_CONVERSATIONS + 1).fill({ id: "c", messages: [] }) as any;
     const wrapped = wrapParser(parser, "big");
     expect(() => wrapped([])).toThrow(/exceeds/);
   });
@@ -56,7 +63,18 @@ describe("plugins/sandbox", () => {
     }
     expect(getPluginSources()).toHaveLength(3);
     const parser = () =>
-      [{ id: "c1", externalId: "c1", source: "p0", title: "T", createdAt: 0, updatedAt: 0, messageCount: 0, messages: [] }] as any;
+      [
+        {
+          id: "c1",
+          externalId: "c1",
+          source: "p0",
+          title: "T",
+          createdAt: 0,
+          updatedAt: 0,
+          messageCount: 0,
+          messages: [],
+        },
+      ] as any;
     registerImporter({ id: "wrapTest", label: "Wrap", available: true }, parser);
     const wrappedParser = getPluginParser("wrapTest");
     expect(wrappedParser).toBeDefined();
