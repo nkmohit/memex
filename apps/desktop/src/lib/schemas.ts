@@ -62,7 +62,6 @@ export const SearchOptionsSchema = z.object({
     .enum(["relevance", "last_occurrence_desc", "occurrence_count_desc", "title_az", "title_za"])
     .optional()
     .default("last_occurrence_desc"),
-  mode: z.enum(["fts", "semantic", "hybrid"]).optional().default("fts"),
 });
 
 export type ValidatedSearchOptions = z.infer<typeof SearchOptionsSchema>;
@@ -129,7 +128,7 @@ export function validateSearchOptions(opts: unknown): ValidatedSearchOptions {
   if (!parsed.success) {
     throw new ImportValidationError("Invalid search options", parsed.error.issues);
   }
-  // zod default handling ensures sort/mode defaults
+  // zod default handling ensures sort defaults
   return parsed.data as ValidatedSearchOptions;
 }
 

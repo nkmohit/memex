@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- README, `NEXT_TIER.md`, `TICKETS.md`, `ARCHITECTURE.md`, `SECURITY.md`, `THREAT_MODEL.md`, `FUTURE.md`, and `docs/plugins.md` now describe the code that is in the tree.
+- Search rank is FTS5 `bm25(messages_fts, 1.0, 5.0, 0.0, 0.0)` (content, title, unindexed ids). Older notes that said “BM25” were written before this expression existed.
+- The 0.4.0 note “cargo audit in CI” does not match `.github/workflows/ci.yml`. The Rust advisory check in CI is `cargo deny`.
+
+### Changed
+- Conversation search rank is the minimum per-message `bm25()` score, with the title column weighted 5 and the body weighted 1.
+
+### Removed
+- XOR helpers (`src-tauri/src/crypto.rs`, `src/lib/crypto.ts`) and the `encrypted` diagnostics field.
+- Plugin regex denylist (`plugins/sandbox.ts`). `loadPlugins()` no longer reads or evaluates files.
+- Synonym-hash search (`lib/vector.ts`, `src-tauri/src/vector.rs`, `messages_vec`, search worker, Hybrid toggle, `semanticSearch` / `vector` flags).
+
 ## [0.8.0] - 2026-08-31
 
 ### Added

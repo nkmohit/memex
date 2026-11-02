@@ -1,12 +1,12 @@
 /**
- * Plugin registry — extensible importers via `~/.memex/plugins/*.js`.
- * Plugins are CommonJS modules that call `registerImporter(meta, parser)`.
- * The registry merges plugin sources into `IMPORT_SOURCES` at runtime.
- * See `docs/plugins.md` for authoring guide.
+ * In-memory importer registry.
+ * Callers (tests, and `importer.ts` for unknown source ids) register parsers
+ * with `registerImporter`. Disk plugin files are not loaded.
  */
 
 import type { ParsedConversation } from "@memex/core";
-import { MAX_PLUGINS, validatePluginText, wrapParser } from "./sandbox";
+
+const MAX_PLUGINS = 20;
 
 export interface PluginSourceMeta {
   id: string;
@@ -25,7 +25,6 @@ export interface PluginRegistration {
 }
 
 const pluginSources = new Map<string, PluginRegistration>();
-const PLUGIN_DIR = "~/.memex/plugins";
 
 export function registerImporter(meta: Omit<PluginSourceMeta, "isPlugin">, parser: ParserFn): void {
   if (!meta.id || !meta.label) throw new Error("Plugin meta must have id and label");
@@ -35,10 +34,9 @@ export function registerImporter(meta: Omit<PluginSourceMeta, "isPlugin">, parse
   // validate id format
   if (!/^[a-z0-9_-]{2,20}$/.test(id)) throw new Error(`Invalid plugin id "${id}" (2-20 alnum/_/-)`);
   if (pluginSources.size >= MAX_PLUGINS) throw new Error(`Plugin limit ${MAX_PLUGINS} reached`);
-  const wrapped = wrapParser(parser, id);
   pluginSources.set(id, {
     meta: { ...meta, id, isPlugin: true },
-    parser: wrapped,
+    parser,
   });
 }
 
@@ -68,51 +66,9 @@ export function getAllSources(
   return [...builtin, ...getPluginSources()];
 }
 
-/**
- * Load plugins from disk via Tauri FS (browser fallback: no-op).
- * Each file should be a CommonJS module exporting `registerImporter`.
- * In tests, this is mocked to load in-memory plugins.
- */
-export async function loadPlugins(): Promise<number> {
-  let loaded = 0;
-  try {
-    // Dynamic import to avoid hard dependency in tests where plugin-fs not available
-    const fs = await import("@tauri-apps/plugin-fs");
-    // `readDir` may not exist in older plugin-fs; guard
-    const readDir = (fs as unknown as { readDir?: (path: string) => Promise<{ name: string }[]> })
-      .readDir;
-    if (!readDir) return 0;
-    const entries = await readDir(PLUGIN_DIR);
-    for (const entry of entries) {
-      if (!entry.name.endsWith(".js")) continue;
-      if (loaded >= MAX_PLUGINS) {
-        console.warn(`[plugins] max ${MAX_PLUGINS} reached, skipping ${entry.name}`);
-        break;
-      }
-      const filePath = `${PLUGIN_DIR}/${entry.name}`;
-      try {
-        const text = await (
-          fs as unknown as { readTextFile: (p: string) => Promise<string> }
-        ).readTextFile(filePath);
-        const validated = validatePluginText(text);
-        if (!validated.ok) {
-          console.warn(`[plugins] rejected ${filePath}: ${validated.reason}`);
-          continue;
-        }
-        // Simple CJS evaluate: provide `registerImporter` as global (sandboxed via validate)
-        const fn = new Function("registerImporter", "exports", "module", text);
-        const modExports: Record<string, unknown> = {};
-        const mod = { exports: modExports };
-        fn(registerImporter, modExports, mod);
-        loaded += 1;
-      } catch (err) {
-        console.warn(`[plugins] failed to load ${filePath}`, err);
-      }
-    }
-  } catch {
-    // Tauri not available (browser/tests) — no-op
-  }
-  return loaded;
+/** Disk plugin loading was removed with the sandbox stub. Always returns 0. */
+export function loadPlugins(): Promise<number> {
+  return Promise.resolve(0);
 }
 
-export const __internal = { PLUGIN_DIR, pluginSources };
+export const __internal = { pluginSources, MAX_PLUGINS };

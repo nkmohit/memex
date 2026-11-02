@@ -12,25 +12,18 @@ export const APP_VERSION = "0.8.0";
 
 export interface TauriDiagnostics {
   version: string;
-  encrypted: boolean;
   generated_at: number;
 }
 
-/** Invoke Rust `get_diagnostics` command — proves Tauri command wiring (A 72→85). Falls back to APP_VERSION if not in Tauri. */
+/** Invoke Rust `get_diagnostics`. Falls back to APP_VERSION when not running inside Tauri. */
 export async function getDiagnosticsViaInvoke(): Promise<TauriDiagnostics> {
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     const res = await invoke<TauriDiagnostics>("get_diagnostics");
     return res;
   } catch {
-    return { version: APP_VERSION, encrypted: false, generated_at: Date.now() };
+    return { version: APP_VERSION, generated_at: Date.now() };
   }
-}
-
-/** Encrypted at-rest status (Phase 2-2) — wraps `get_diagnostics` invoke, falls back to false (plaintext) when keychain unavailable. */
-export async function isEncryptionEnabled(): Promise<boolean> {
-  const d = await getDiagnosticsViaInvoke();
-  return d.encrypted;
 }
 
 export interface IndexHealth {

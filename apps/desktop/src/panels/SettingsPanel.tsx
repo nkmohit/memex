@@ -34,10 +34,7 @@ export default function SettingsPanel({
   };
 
   const flagLabels: Record<FlagName, string> = {
-    semanticSearch: "Semantic search (hybrid FTS + vector)",
-    vector: "Vector embeddings",
-    summarize: "Offline summarize (Insights)",
-    plugins: "Plugins",
+    summarize: "Extractive summary (Insights)",
     topicTimeline: "Topic timeline",
   };
 
@@ -62,7 +59,7 @@ export default function SettingsPanel({
       </div>
       <div className="settings-section">
         <h2>Feature flags</h2>
-        <p className="settings-hint">Gated rollout — toggle semantic, summarize, topics.</p>
+        <p className="settings-hint">Local toggles for the summary and topic list.</p>
         <div className="settings-flags">
           {(Object.keys(flagLabels) as FlagName[]).map((name) => (
             <label key={name} className="settings-flag-row">

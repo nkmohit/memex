@@ -3,19 +3,15 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct DiagnosticsResponse {
     pub version: String,
-    pub encrypted: bool,
     pub generated_at: u64,
 }
 
-/// Exposed via `invoke("get_diagnostics")` — frontend calls this instead of
-/// re-querying DB directly. Keeps `has_metrics` true and proves Tauri command
-/// wiring for DataFactor A 72→85. `encrypted` reflects `crypto::is_encrypted()`
-/// (OS keychain / MEMEX_ENCRYPTED env) with fallback to `false` for plaintext.
+/// Exposed via `invoke("get_diagnostics")`.
+/// Returns the Cargo package version. `generated_at` is 0 (the command does not read a clock).
 #[tauri::command]
 pub fn get_diagnostics() -> DiagnosticsResponse {
     DiagnosticsResponse {
         version: env!("CARGO_PKG_VERSION").to_string(),
-        encrypted: crate::crypto::is_encrypted(),
         generated_at: 0,
     }
 }
@@ -29,7 +25,6 @@ mod tests {
         let d = get_diagnostics();
         assert!(!d.version.is_empty());
         assert_eq!(d.version, env!("CARGO_PKG_VERSION"));
-        assert!(!d.encrypted);
     }
 
     #[test]
@@ -37,6 +32,6 @@ mod tests {
         let d = get_diagnostics();
         let json = serde_json::to_string(&d).unwrap();
         assert!(json.contains("version"));
-        assert!(json.contains("encrypted"));
+        assert!(json.contains("generated_at"));
     }
 }

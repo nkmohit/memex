@@ -22,14 +22,12 @@ export interface UseSearchPageQueryOptions {
   query: string;
   snapshot: SearchPageSnapshot;
   skipSearchOnceRef?: MutableRefObject<boolean>;
-  mode?: "fts" | "semantic" | "hybrid";
 }
 
 export function useSearchPageQuery({
   query,
   snapshot,
   skipSearchOnceRef,
-  mode,
 }: UseSearchPageQueryOptions) {
   const MIN_QUERY_LENGTH = 3;
   const PAGE_SIZE = 50;
@@ -60,9 +58,8 @@ export function useSearchPageQuery({
       dateFrom: toStartOfDayTimestamp(dateFrom),
       dateTo: toEndOfDayTimestamp(dateTo),
       sort,
-      mode,
     }),
-    [source, dateFrom, dateTo, sort, mode]
+    [source, dateFrom, dateTo, sort]
   );
 
   useEffect(() => {

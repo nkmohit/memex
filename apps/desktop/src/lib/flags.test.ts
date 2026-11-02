@@ -21,35 +21,30 @@ describe("lib/flags", () => {
 
   it("returns defaults when no storage", () => {
     const flags = getFlags();
-    expect(flags.semanticSearch).toBe(true);
-    expect(flags.vector).toBe(true);
     expect(flags.summarize).toBe(true);
-    expect(flags.plugins).toBe(true);
     expect(flags.topicTimeline).toBe(true);
   });
 
   it("setFlag toggles and persists", () => {
-    setFlag("vector", false);
-    expect(isEnabled("vector")).toBe(false);
-    expect(getFlags().vector).toBe(false);
-    // persisted (when localStorage available)
+    setFlag("summarize", false);
+    expect(isEnabled("summarize")).toBe(false);
+    expect(getFlags().summarize).toBe(false);
     if (typeof localStorage !== "undefined") {
       const raw = localStorage.getItem("memex:flags");
-      if (raw) expect(raw).toContain("vector");
+      if (raw) expect(raw).toContain("summarize");
     }
   });
 
   it("setFlags merges partial", () => {
-    setFlags({ summarize: false, plugins: false });
+    setFlags({ summarize: false });
     expect(isEnabled("summarize")).toBe(false);
-    expect(isEnabled("plugins")).toBe(false);
-    expect(isEnabled("vector")).toBe(true);
+    expect(isEnabled("topicTimeline")).toBe(true);
   });
 
   it("resetFlags restores defaults and clears storage", () => {
-    setFlag("vector", false);
+    setFlag("summarize", false);
     resetFlags();
-    expect(isEnabled("vector")).toBe(true);
+    expect(isEnabled("summarize")).toBe(true);
     if (typeof localStorage !== "undefined") {
       expect(localStorage.getItem("memex:flags")).toBeNull();
     }
@@ -59,8 +54,8 @@ describe("lib/flags", () => {
     const d1 = getFlagDefaults();
     const d2 = getFlagDefaults();
     expect(d1).toEqual(d2);
-    d1.vector = false;
-    expect(getFlagDefaults().vector).toBe(true);
+    d1.summarize = false;
+    expect(getFlagDefaults().summarize).toBe(true);
   });
 
   it("isEnabled is case for all flags", () => {
@@ -133,29 +128,24 @@ describe("lib/flags", () => {
     // should not throw
     expect(() =>
       __internal.writeStorage({
-        semanticSearch: true,
-        vector: true,
         summarize: true,
-        plugins: true,
         topicTimeline: true,
       })
     ).not.toThrow();
     expect(() => resetFlags()).not.toThrow();
-    expect(() => setFlag("vector", false)).not.toThrow();
+    expect(() => setFlag("summarize", false)).not.toThrow();
     vi.stubGlobal("localStorage", orig);
     resetFlags();
   });
 
   it("getFlags returns cloned copy not reference", () => {
     const a = getFlags();
-    a.vector = false as unknown as boolean;
-    expect(isEnabled("vector")).toBe(true);
+    a.summarize = false as unknown as boolean;
+    expect(isEnabled("summarize")).toBe(true);
   });
 
   it("isEnabled false for unknown fallback (edge)", () => {
-    // isEnabled with missing flag via memoryFlags corruption simulation
-    // just ensure getFlags includes all 5
     const flags = getFlags();
-    expect(Object.keys(flags)).toHaveLength(5);
+    expect(Object.keys(flags)).toHaveLength(2);
   });
 });

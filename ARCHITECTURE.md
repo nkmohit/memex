@@ -1,73 +1,63 @@
 # Architecture
 
-## Overview
-
-Memex is a local-first Tauri 2 + React 19 desktop app that imports, indexes, and searches AI chat exports (Claude, ChatGPT) via SQLite FTS5.
+Memex is a local Tauri 2 and React 19 app. It imports AI chat JSON (Claude, ChatGPT, Gemini, Grok) and searches it with SQLite FTS5.
 
 ```
-packages/core (pure parsers) ──► apps/desktop (Tauri + Vite)
-        │                              │
-        │ parseClaude/gpt              │  SQLite memex.db
-        └──────────► importer ──► db ──► FTS5 (BM25)
-                                     ├─ queries.ts (stats, sourceStats, conversations)
-                                     ├─ search.ts (ranked snippets)
-                                     ├─ dashboard.ts (data_version + cache)
-                                     └─ connection.ts (withDbLock)
-                         hooks (useAppData, useImportState, useViewerSearch …)
-                         components (AppShell, OverviewMemoryPulse, SearchPage)
-                         lib (logger, validation, diagnostics, errorTracking, sourceDisplay)
+packages/core (parsers) ──► apps/desktop (Tauri + Vite 8)
+        │                         │
+        │ parse*                  │  SQLite memex.db
+        └──────────► importer ──► db ──► messages_fts
+                                    ├─ queries.ts (stats, sources, conversations)
+                                    ├─ search.ts + searchQueryBuilder.ts
+                                    ├─ dashboard*.ts (data_version + cache)
+                                    └─ connection.ts (withDbLock)
+                        hooks (useAppData, useImportState, useViewerSearch, …)
+                        components (AppShell, OverviewMemoryPulse, SearchPage)
+                        lib (logger, validation, schemas, diagnostics, errorTracking, sourceDisplay)
 ```
 
 ## Modules
 
-- **DB layer** `apps/desktop/src/db/` (<500 LOC/file)
-  - `connection.ts` — serialized IPC via `withDbLock`
-  - `migrations.ts` — PRAGMA + CREATE + FTS5 + backfill
-  - `queries.ts` — `getStats`/`getSourceStats`/`getConversations`/`getMessages`/`clearAllData`
-  - `search.ts` — `searchMessages` (ranked CTE, BM25, snippet highlighting, validation `clampLimit`/`sanitizeSource`)
-  - `dashboard.ts` — `data_version` + `dashboard_cache` + `buildDashboardSnapshot` + `getCachedDashboardSnapshot`
-  - `types.ts`/`helpers.ts` — shared types + `normalizeQuery`
+- **DB** `apps/desktop/src/db/`
+  - `connection.ts` — serialized access via `withDbLock`
+  - `migrations.ts` — pragmas, tables, FTS5, backfill when messages exist and `messages_fts` is empty
+  - `queries.ts` — stats, source stats, conversations, messages, clear
+  - `search.ts` — `searchMessages` runs FTS5 only
+  - `searchQueryBuilder.ts` — SQL fragments. Conversation `rank` is `MIN(bm25(messages_fts, 1.0, 5.0, 0.0, 0.0))` (content, title, then the two UNINDEXED id columns). `bm25()` runs in a `MATERIALIZED` CTE so SQLite accepts it next to the joins
+  - `dashboard.ts`, `dashboardCache.ts`, `dashboardSnapshot.ts`
+  - `types.ts`, `helpers.ts` — `normalizeQuery` appends `*` to each token
 
-- **Core parsers** `packages/core/src/importers/` — pure, tested `parseClaudeConversations` / `parseChatGPTConversations`, consumed via `file:../../packages/core` as `@memex/core`.
+- **Parsers** `packages/core/src/importers/` — `parseClaudeConversations`, `parseChatGPTConversations`, `parseGeminiConversations`, `parseGrokConversations`. The desktop app depends on the built package `@memex/core`.
 
-- **Hooks** `apps/desktop/src/hooks/`
-  - `useAppData` — cached snapshot → fresh stats/source/conversations
-  - `useImportState` — `importConversations` + `markDataChanged` + progress + abort
-  - `useViewerSearch` — occurrence scan + `highlightText` → `<mark>`, next/prev, scroll-into-view
-  - `useToast`/`useCopyClipboard`/`useClearData`/`useDataActions`/`useSearchSession` etc.
+- **Hooks** `apps/desktop/src/hooks/` — data load, import, viewer find-in-conversation, theme, toasts, search session.
 
-- **UI** `components/AppShell.tsx` shell routing (overview/import/search/conversations/settings) wrapped in `ErrorBoundary`; `OverviewPage.tsx` + `OverviewMemoryPulse.tsx` (heatmap); `SearchPage.tsx` + `SearchResultsList.tsx`; `panels/*`.
+- **UI** — `AppShell` routes overview, import, search, conversations, and settings, wrapped in `ErrorBoundary`. Search results set `content-visibility: auto` on rows; they are not virtualized by a windowing library. Settings flags in `localStorage` (`lib/flags.ts`) are `summarize` and `topicTimeline`.
+
+- **Plugins** — `plugins/registry.ts` keeps an in-memory importer map used by tests and by `importer.ts` for unknown source ids. `loadPlugins()` returns 0.
+
+- **Rust** — `src-tauri/src/lib.rs` registers SQL, opener, dialog, and FS plugins, plus `get_diagnostics` (package version and `generated_at: 0`).
 
 ## Data flow
 
-1. Import: `importer.ts` → `IMPORT_SOURCES` → `parseClaude`/`parseChatGPT` → `dbInsert.ts` → `markDataChanged()` bumps `data_version`.
-2. Search: `normalizeQuery` → `searchMessages` → FTS5 `messages_fts` rank → snippets + `last_occurrence`.
-3. Dashboard: `getCachedDashboardSnapshot` (memory → SQLite cache → rebuild) → `OverviewMemoryPulse` heatmap.
+1. Import: dialog `open` → `readTextFile` → parser → `dbInsert.ts` → `markDataChanged()` increments `data_version`.
+2. Search: `normalizeQuery` → FTS `MATCH` → grouped rows and up to three `snippet()` strings.
+3. Overview: cached snapshot, then fresh stats. Topic lines use `lib/topics.ts` when `topicTimeline` is enabled. “Insights” uses `lib/summarize.ts` when `summarize` is enabled.
 
-## Observability (local-only, no outbound)
+## Observability
 
-| Signal | Source | Covered in |
-|--------|--------|------------|
-| Message/conversation counts, indexedPct | `db/queries:getStats` via `lib/diagnostics.computeIndexHealth` | `diagnostics.test.ts` 9 tests |
-| Source breakdown | `db/queries:getSourceStats` | `OverviewMemoryPulse` |
-| Activity timeline | `db/queries:getActivityHeatmapTimeline` | `dashboard.ts` |
-| Errors | `lib/errorTracking.reportError` + `ErrorBoundary` | `ErrorBoundary.test.tsx` 4 tests |
-| Logs | `lib/logger.ts` `[memex:level]` gated by `TAURI_DEBUG` | `logger.ts:91%` |
-
-All computed locally from SQLite + `localStorage`. `has_metrics` refers to these.
+All of this stays on device. `lib/otel.ts` records durations in an array. `lib/errorTracking.ts` logs through `logger`. There is no Sentry (or other) client in `package.json`.
 
 ## Security boundaries
 
-- Input validation at DB boundary `lib/validation.ts` (`sanitizeSource`, `clampLimit`, `sanitizeSort`, `sanitizeDateRange`, `sanitizeQuery` 100% cov).
-- `Cargo.lock` + `package-lock.json` committed, `npm audit --audit-level=high` + `cargo audit` in CI, Dependabot weekly.
-- No secrets in repo, `.env` gitignored, Tauri CSP in `tauri.conf.json`.
+See `SECURITY.md` and `THREAT_MODEL.md`. Short version: CSP is set; FS reads are limited to Downloads and Documents; SQL values go through bound parameters and `lib/validation.ts`; the database file is plaintext; the app does not evaluate plugin files.
 
-## Testing & CI
+## Tests and CI
 
-- Vitest + jsdom + Testing Library, `33` spec files `195` tests, `80.42%` lines (`70/60` gate in `vite.config.ts`), `db.integration.test.ts` for import→search.
-- CI: `lint` + `format:check` + `typecheck` + `test` + `coverage` + `integration` + `cargo check/clippy/audit`.
-- Reproducible dev: `.devcontainer`, `Dockerfile.dev`, `.nvmrc` Node 20, `npm ci`.
+- Vitest. Desktop environment is jsdom. Core environment is node.
+- `db.integration.test.ts` stubs `@tauri-apps/plugin-sql` with `FakeDB`. It does not link SQLite.
+- CI jobs: lint/typecheck/test/coverage/size-limit/audit, rust check + deny, gitleaks, SBOM attempt, the Playwright smoke file, and a debug Tauri build without a bundle. `cargo clippy` is allowed to fail the step without failing the job (`|| echo`). `cargo audit` is not a step.
+- `.nvmrc` is Node 22, matching CI. The devcontainer and `Dockerfile.dev` install Node 20.
 
-## File size guard
+## Size
 
-No file >500 LOC (max `App.tsx 489`, `SearchPage 483`). Splits via `D` epic keep review mineable.
+There is no automated line-count gate.

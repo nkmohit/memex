@@ -118,16 +118,14 @@ describe("getDiagnosticsViaInvoke", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns invoke result when Tauri available", async () => {
-    const mockInvoke = vi
-      .fn()
-      .mockResolvedValue({ version: "0.8.0", encrypted: false, generated_at: 123 });
+    const mockInvoke = vi.fn().mockResolvedValue({ version: "0.8.0", generated_at: 123 });
     vi.doMock("@tauri-apps/api/core", () => ({ invoke: mockInvoke }));
     // dynamic import is inside function, need to mock via vi.mock hoist — fallback to testing via manual invoke mock
     // Instead test fallback path by not mocking invoke (will catch and return APP_VERSION)
     const d = await getDiagnosticsViaInvoke();
     // In jsdom without Tauri, it falls back
     expect(d.version).toBeDefined();
-    expect(typeof d.encrypted).toBe("boolean");
+    expect(typeof d.generated_at).toBe("number");
   });
 
   it("falls back to APP_VERSION when invoke throws", async () => {
@@ -136,27 +134,11 @@ describe("getDiagnosticsViaInvoke", () => {
     }));
     const d = await getDiagnosticsViaInvoke();
     expect(d.version).toBe(APP_VERSION);
-    expect(d.encrypted).toBe(false);
     expect(d.generated_at).toBeGreaterThan(0);
   });
 
   it("falls back when module not found", async () => {
     const d = await getDiagnosticsViaInvoke();
     expect(d.version).toBeDefined();
-  });
-});
-
-describe("encryption status (Phase 2-2)", () => {
-  it("getDiagnosticsViaInvoke returns encrypted boolean", async () => {
-    const d = await getDiagnosticsViaInvoke();
-    expect(typeof d.encrypted).toBe("boolean");
-  });
-
-  it("isEncryptionEnabled returns boolean (fallback false in jsdom)", async () => {
-    const { isEncryptionEnabled } = await import("./diagnostics");
-    const enc = await isEncryptionEnabled();
-    expect(typeof enc).toBe("boolean");
-    // In jsdom without Tauri, should be false (plaintext fallback)
-    expect(enc).toBe(false);
   });
 });

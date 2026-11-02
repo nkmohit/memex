@@ -23,7 +23,7 @@ npm run test --prefix packages/core
 npm run build --prefix apps/desktop
 ```
 
-Alternatively, open the devcontainer: `Reopen in Container` in VS Code — it auto-installs Node 20 + Rust stable and runs the verification.
+The devcontainer (`.devcontainer/devcontainer.json`) and `apps/desktop/Dockerfile.dev` install Node 20 and run `npm ci` inside each workspace. CI and `.nvmrc` use Node 22 and a single root `npm ci`. Prefer the root install when you are not inside that container.
 
 ## Environment
 

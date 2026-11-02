@@ -1,31 +1,42 @@
 # Threat Model — Memex
 
 ## Assets
-- Local SQLite DB (`conversations`, `messages`, `messages_fts`, `messages_vec`, `dashboard_cache`) — user’s AI conversation history.
-- Imported JSON/zip exports from Claude/ChatGPT/Gemini/Grok.
+
+- Local SQLite file: `conversations`, `messages`, `messages_fts`, `app_meta`, `dashboard_cache`.
+- JSON exports the user chooses to import (Claude, ChatGPT, Gemini, Grok shapes).
 
 ## Actors
-- **User** (trusted) — imports own data, searches locally.
-- **Importer** (untrusted input) — zip/JSON may contain traversal or injection attempts.
-- **Plugin** (semi-trusted) — `~/.memex/plugins/*.js` author.
+
+- **User.** Imports their own files and searches locally.
+- **Import file.** Untrusted JSON. The app reads it as text and runs the matching parser. It does not unpack archives.
+- **In-process parser.** `registerImporter` stores a function the importer will call for an unknown source id. Nothing reads `~/.memex/plugins`.
 
 ## Boundaries
-- Tauri frontend (React, `localhost:1420`) ↔ Rust backend (Tauri IPC, `tauri-plugin-sql`).
-- FS allowlist: only `$HOME/Downloads` (import dialog) + `~/.memex/plugins` (plugin load).
 
-## Mitigations
-| Threat | Mitigation |
-|--------|------------|
-| Zip slip | `importer.ts` validates zip entry paths (`!entry.includes("..")`), rejects absolute. |
-| FTS injection | `normalizeQuery` + `sanitizeSource` + `clampLimit/Offset`, `messages_fts MATCH $1` parameterized. |
-| XSS snippet | `renderHighlightedSnippet` splits on `<mark>`/`</mark>`, no innerHTML. |
-| XSS CSP | `tauri.conf.json` `csp` default-src self. |
-| Supply chain | `cargo deny`, `cargo audit`, `npm audit`, SBOM `cargo cyclonedx`. |
-| Secret leak | `gitleaks` + `trivy` in CI, `.env` gitignored. |
+- React UI (`localhost:1420` in dev) talks to SQLite through `@tauri-apps/plugin-sql`.
+- Rust commands: `get_diagnostics` only (`src-tauri/src/commands/diagnostics.rs`).
+- FS capability: read text and exists under `$HOME/Downloads/**` and `$HOME/Documents/**`. No plugin-directory grant.
 
-## Out of Scope
-- OS-level compromise, keychain theft, physical access.
+## Mitigations that exist
 
-## Future
-- At-rest encryption via `age` + `tauri-plugin-stronghold` (see NEXT_TIER Tier1 encrypted at-rest).
-- Signed updater artifacts via `TAURI_SIGNING_PRIVATE_KEY`.
+| Threat | What the code does |
+| --- | --- |
+| Unexpected source string in search | `sanitizeSource` allows known source ids |
+| Huge limit/offset | `clampLimit`, `clampOffset` |
+| FTS query shape | `normalizeQuery` builds prefix tokens; the `MATCH` text is a bound parameter |
+| HTML in snippets | `renderHighlightedSnippet` splits on `<mark>` markers and uses React text nodes |
+| CSP | `app.security.csp` in `tauri.conf.json` |
+| Dependency advisories | `npm audit` (high) and `cargo deny` in CI; gitleaks on the git history |
+| Secrets in the repo | `.env` is gitignored. `.env.example` only documents `TAURI_DEV_HOST` |
+
+## Not mitigated here
+
+- The SQLite file is plaintext on disk.
+- There is no disk plugin loader.
+- `cargo audit` and Trivy are not CI jobs. Clippy and CycloneDX do not fail the build.
+- Release artifacts are not signed by this workflow.
+- `generated_at` on the Rust diagnostics command is always `0`.
+
+## Not in this product
+
+At-rest encryption (`age`, Stronghold, SQLCipher) and signed updater artifacts. They are not implemented. `FUTURE.md` is the list of other product ideas.
