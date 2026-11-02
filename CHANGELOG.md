@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - README, `NEXT_TIER.md`, `TICKETS.md`, `ARCHITECTURE.md`, `SECURITY.md`, `THREAT_MODEL.md`, `FUTURE.md`, and `docs/plugins.md` now describe the code that is in the tree.
 - Search rank is the occurrence-count expression in `searchQueryBuilder.ts`, not FTS5 `bm25()`. Entries below that say “BM25” were written ahead of that function.
-- “Semantic” / hybrid search is the synonym hash in `lib/vector.ts`, not `sqlite-vec` or an embedding model.
-- `crypto.rs` is XOR plus an env flag. The database file is plaintext.
-- `plugins/sandbox.ts` is a regex denylist. The app does not call `loadPlugins()`.
 - The 0.4.0 note “cargo audit in CI” does not match `.github/workflows/ci.yml`. The Rust advisory check in CI is `cargo deny`.
+
+### Removed
+- XOR helpers (`src-tauri/src/crypto.rs`, `src/lib/crypto.ts`) and the `encrypted` diagnostics field.
+- Plugin regex denylist (`plugins/sandbox.ts`). `loadPlugins()` no longer reads or evaluates files.
+- Synonym-hash search (`lib/vector.ts`, `src-tauri/src/vector.rs`, `messages_vec`, search worker, Hybrid toggle, `semanticSearch` / `vector` flags).
 
 ## [0.8.0] - 2026-08-31
 

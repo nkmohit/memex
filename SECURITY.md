@@ -1,6 +1,6 @@
 # Security Policy
 
-## Versions in the repo
+## Supported Versions
 
 | File | Version field |
 | --- | --- |
@@ -9,7 +9,7 @@
 | `apps/desktop/src-tauri/tauri.conf.json` | 0.6.0 |
 | `packages/core/package.json` | 0.1.0 |
 
-There is no separate support matrix beyond what is on the default branch.
+These are the version strings checked into the repo. The project does not publish a separate support window. See `THREAT_MODEL.md` for how the local app is bounded.
 
 ## Reporting a vulnerability
 
@@ -23,11 +23,10 @@ Use GitHub Security Advisories for this repository. The address `security@memex.
 - FTS queries use bound parameters (`$1`, `$2`, …). `sanitizeSource` limits the source filter. `clampLimit` / `clampOffset` bound page size.
 - Snippet strings that contain the literal markers `<mark>` and `</mark>` are split in `renderHighlightedSnippet` and rendered as React children.
 
-## What is not a security control
+## What is not protected
 
-- **At-rest encryption.** `crypto.rs` XORs with a caller-supplied key. `get_diagnostics` reports `encrypted: true` when the environment variable `MEMEX_ENCRYPTED` is `1` or `true`. The database connection never applies a key. XOR is not confidentiality for the SQLite file.
-- **Plugin sandbox.** `plugins/sandbox.ts` is a regex denylist (`process`, `require`, `fetch`, and similar). `loadPlugins()` compiles the file with `new Function` and passes `registerImporter`. The regexes do not define a sandbox. The function is not called on startup. The FS allowlist does not include `~/.memex/plugins`.
-- **`messages_vec`.** Stores the hash embedder output. It is not encryption and not access control.
+- **At rest.** `memex.db` is a normal SQLite file. The app has no encryption module.
+- **Plugins.** There is no plugin evaluator. `loadPlugins()` returns 0. In-memory `registerImporter` is for callers in the same JS realm (used by tests).
 
 ## Supply chain checks that CI runs
 

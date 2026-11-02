@@ -10,11 +10,6 @@ vi.mock("./db", () => ({
   withDbLock: (fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock("./lib/vector", () => ({
-  embed: vi.fn(() => new Array(64).fill(0.1)),
-  serializeEmbedding: vi.fn(() => new Uint8Array(256)),
-}));
-
 import { insertConversations } from "./dbInsert";
 
 function makeConv(id: string, msgCount = 1): ParsedConversation {
@@ -60,10 +55,8 @@ describe("dbInsert", () => {
       expect.stringContaining("INSERT INTO messages_fts"),
       expect.anything()
     );
-    expect(mockExecute).toHaveBeenCalledWith(
-      expect.stringContaining("messages_vec"),
-      expect.anything()
-    );
+    const sqls = mockExecute.mock.calls.map((call) => String(call[0]));
+    expect(sqls.some((sql) => sql.includes("messages_vec"))).toBe(false);
   });
 
   it("handles empty array", async () => {
@@ -121,8 +114,6 @@ describe("dbInsert", () => {
       .mockResolvedValueOnce(undefined) // delete fts
       .mockResolvedValueOnce(undefined) // messages
       .mockResolvedValueOnce(undefined) // fts
-      .mockResolvedValueOnce(undefined) // vec
-      .mockResolvedValueOnce(undefined) // vec_messages (sqlite-vec)
       .mockResolvedValueOnce(undefined); // COMMIT
 
     const res = await insertConversations([makeConv("c1")]);
@@ -132,16 +123,6 @@ describe("dbInsert", () => {
   it("throws on non-busy error immediately", async () => {
     mockExecute.mockRejectedValueOnce(new Error("syntax error"));
     await expect(insertConversations([makeConv("c1")])).rejects.toThrow("syntax error");
-  });
-
-  it("ignores messages_vec error (older DB)", async () => {
-    // Make vec insert throw, but should still commit
-    mockExecute.mockImplementation(async (sql: string) => {
-      if (sql.includes("messages_vec")) throw new Error("no such table");
-      return;
-    });
-    const res = await insertConversations([makeConv("c1")]);
-    expect(res.conversationCount).toBe(1);
   });
 
   it("handles chunkSize clamping and conversation with no messages", async () => {

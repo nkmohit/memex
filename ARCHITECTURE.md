@@ -20,9 +20,9 @@ packages/core (parsers) ──► apps/desktop (Tauri + Vite 8)
 
 - **DB** `apps/desktop/src/db/`
   - `connection.ts` — serialized access via `withDbLock`
-  - `migrations.ts` — pragmas, tables, FTS5, backfill when messages exist and `messages_fts` is empty. Also creates `messages_vec` and tries `vec0` (that statement fails closed when the extension is absent)
+  - `migrations.ts` — pragmas, tables, FTS5, backfill when messages exist and `messages_fts` is empty
   - `queries.ts` — stats, source stats, conversations, messages, clear
-  - `search.ts` — `searchMessages`. Default path is FTS. `mode: "semantic" | "hybrid"` scores rows with `lib/vector.ts` (hash + synonym list), optionally after a `vec_messages` query that only runs when `MEMEX_VEC=1`
+  - `search.ts` — `searchMessages` runs FTS5 only
   - `searchQueryBuilder.ts` — SQL fragments. Conversation `rank` is `(-1 * summed raw-query occurrences) + title LIKE boost (-5 or 0)`, not `bm25()`
   - `dashboard.ts`, `dashboardCache.ts`, `dashboardSnapshot.ts`
   - `types.ts`, `helpers.ts` — `normalizeQuery` appends `*` to each token
@@ -31,16 +31,16 @@ packages/core (parsers) ──► apps/desktop (Tauri + Vite 8)
 
 - **Hooks** `apps/desktop/src/hooks/` — data load, import, viewer find-in-conversation, theme, toasts, search session.
 
-- **UI** — `AppShell` routes overview, import, search, conversations, and settings, wrapped in `ErrorBoundary`. Search results set `content-visibility: auto` on rows; they are not virtualized by a windowing library. Settings exposes feature flags stored in `localStorage` (`lib/flags.ts`).
+- **UI** — `AppShell` routes overview, import, search, conversations, and settings, wrapped in `ErrorBoundary`. Search results set `content-visibility: auto` on rows; they are not virtualized by a windowing library. Settings flags in `localStorage` (`lib/flags.ts`) are `summarize` and `topicTimeline`.
 
-- **Plugins** — `plugins/registry.ts` keeps an in-memory importer map. `loadPlugins()` can read `~/.memex/plugins/*.js` and evaluate them after `plugins/sandbox.ts` regex checks. No UI module calls `loadPlugins()`.
+- **Plugins** — `plugins/registry.ts` keeps an in-memory importer map used by tests and by `importer.ts` for unknown source ids. `loadPlugins()` returns 0.
 
-- **Rust** — `src-tauri/src/lib.rs` registers SQL, opener, dialog, and FS plugins, plus `get_diagnostics`. `crypto.rs` is the XOR helper used by that command. `vector.rs` duplicates the JS hash embedder and is not called from `search.ts` (the UI path uses the JS module).
+- **Rust** — `src-tauri/src/lib.rs` registers SQL, opener, dialog, and FS plugins, plus `get_diagnostics` (package version and `generated_at: 0`).
 
 ## Data flow
 
-1. Import: dialog `open` → `readTextFile` → parser → `dbInsert.ts` → `markDataChanged()` increments `data_version`. Insert also writes `messages_vec` JSON from `embed()`.
-2. Search: `normalizeQuery` → FTS `MATCH` → grouped rows and up to three `snippet()` strings. Semantic mode loads message text and scores it in-process (or via `workers/search.worker.ts` when `Worker` exists).
+1. Import: dialog `open` → `readTextFile` → parser → `dbInsert.ts` → `markDataChanged()` increments `data_version`.
+2. Search: `normalizeQuery` → FTS `MATCH` → grouped rows and up to three `snippet()` strings.
 3. Overview: cached snapshot, then fresh stats. Topic lines use `lib/topics.ts` when `topicTimeline` is enabled. “Insights” uses `lib/summarize.ts` when `summarize` is enabled.
 
 ## Observability
@@ -49,7 +49,7 @@ All of this stays on device. `lib/otel.ts` records durations in an array. `lib/e
 
 ## Security boundaries
 
-See `SECURITY.md` and `THREAT_MODEL.md`. Short version: CSP is set; FS reads are limited to Downloads and Documents; SQL values go through bound parameters and `lib/validation.ts`; the database file is not encrypted; plugin evaluation is not a sandbox and is not wired up.
+See `SECURITY.md` and `THREAT_MODEL.md`. Short version: CSP is set; FS reads are limited to Downloads and Documents; SQL values go through bound parameters and `lib/validation.ts`; the database file is plaintext; the app does not evaluate plugin files.
 
 ## Tests and CI
 
@@ -60,4 +60,4 @@ See `SECURITY.md` and `THREAT_MODEL.md`. Short version: CSP is set; FS reads are
 
 ## Size
 
-There is no automated line-count gate. `apps/desktop/src/db/search.ts` is over 500 lines because the FTS path and the semantic/hybrid path both live there.
+There is no automated line-count gate.

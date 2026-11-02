@@ -26,10 +26,11 @@ describe("SettingsPanel flags", () => {
       />
     );
     expect(screen.getByText("Feature flags")).toBeInTheDocument();
-    expect(screen.getByLabelText("Semantic search (hybrid FTS + vector)")).toBeInTheDocument();
-    expect(screen.getByLabelText("Vector embeddings")).toBeInTheDocument();
-    expect(screen.getByLabelText("Offline summarize (Insights)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Extractive summary (Insights)")).toBeInTheDocument();
     expect(screen.getByLabelText("Topic timeline")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Semantic search (hybrid FTS + vector)")).toBeNull();
+    expect(screen.queryByLabelText("Vector embeddings")).toBeNull();
+    expect(screen.queryByLabelText("Plugins")).toBeNull();
   });
 
   it("toggles flag on click", () => {
@@ -44,10 +45,10 @@ describe("SettingsPanel flags", () => {
         clearDataTriggerRef={{ current: null }}
       />
     );
-    const checkbox = screen.getByLabelText("Vector embeddings") as HTMLInputElement;
-    const initial = isEnabled("vector");
+    const checkbox = screen.getByLabelText("Extractive summary (Insights)") as HTMLInputElement;
+    const initial = isEnabled("summarize");
     fireEvent.click(checkbox);
-    expect(isEnabled("vector")).toBe(!initial);
+    expect(isEnabled("summarize")).toBe(!initial);
     expect(checkbox.checked).toBe(!initial);
   });
 });

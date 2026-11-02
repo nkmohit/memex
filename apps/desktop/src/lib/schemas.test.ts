@@ -95,10 +95,9 @@ describe("schemas", () => {
   });
 
   describe("SearchOptionsSchema", () => {
-    it("defaults sort and mode", () => {
+    it("defaults sort", () => {
       const v = validateSearchOptions({});
       expect(v.sort).toBe("last_occurrence_desc");
-      expect(v.mode).toBe("fts");
     });
     it("sanitizes source via sanitizeSource", () => {
       const v = validateSearchOptions({ source: "CLAUDE" });

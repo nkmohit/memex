@@ -11,16 +11,6 @@ export function initDatabase(): Promise<void> {
 
     await database.execute("PRAGMA journal_mode = WAL");
     await database.execute("PRAGMA busy_timeout = 30000");
-    // Encrypted at-rest (Phase 2-2): when OS keychain available, DB is opened via
-    // `PRAGMA key = '<key-from-stronghold>'` or age-encrypted file. Stub checks
-    // `MEMEX_ENCRYPTED` env via Rust `crypto::is_encrypted()` / `diagnostics.encrypted`.
-    // Fallback to plaintext when keychain unavailable (tests).
-    try {
-      // No-op in stub: real impl would `PRAGMA key` here if `isEncrypted()` true.
-      await database.execute("SELECT 1");
-    } catch {
-      // fallback to plaintext — keep DB usable in tests without keychain
-    }
 
     const cols = await database.select<{ name: string }[]>("PRAGMA table_info(conversations)");
     const colNames = cols.map((c: { name: string }) => c.name);
@@ -86,30 +76,6 @@ export function initDatabase(): Promise<void> {
         updated_at INTEGER NOT NULL
       );
     `);
-
-    await database.execute(`
-      CREATE TABLE IF NOT EXISTS messages_vec (
-        message_id TEXT PRIMARY KEY,
-        conversation_id TEXT NOT NULL,
-        embedding BLOB NOT NULL,
-        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
-      );
-    `);
-
-    // sqlite-vec hybrid (Phase 3-1): try to create vec0 index for native KNN.
-    // Falls back to plain messages_vec + JS scoring when extension not available
-    // (tests / older DBs). Uses cosine distance, 64 dims matching lib/vector.ts.
-    try {
-      await database.execute(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS vec_messages USING vec0(
-          embedding float[64] distance_metric=cosine,
-          message_id TEXT PARTITION KEY,
-          conversation_id TEXT
-        );
-      `);
-    } catch {
-      // sqlite-vec not loaded — keep JS fallback, ignore
-    }
 
     await database.execute(`
       INSERT OR IGNORE INTO app_meta (key, value)

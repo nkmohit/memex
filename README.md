@@ -24,11 +24,9 @@ Data stays in `memex.db` on the machine. The app does not ship an account system
 
 ## Not implemented
 
-These names show up in code or older docs. They are not the features they sound like:
-
-- **Encryption.** `src-tauri/src/crypto.rs` and `src/lib/crypto.ts` XOR bytes with a repeating key. The database is opened as plaintext. There is no OS keychain, `age`, or SQLCipher `PRAGMA key`.
-- **Plugin sandbox.** `plugins/sandbox.ts` rejects source text that matches a regex denylist. `loadPlugins()` would then run the file with `new Function`. The app never calls `loadPlugins()`, and `capabilities/default.json` does not allow reading `~/.memex/plugins`. See `docs/plugins.md`.
-- **Semantic / vector search.** `lib/vector.ts` and `src-tauri/src/vector.rs` hash tokens into 64 buckets and boost a hard-coded synonym list (`vacation`/`holiday`, and similar). `messages_vec` stores that JSON. `CREATE VIRTUAL TABLE ... vec0` is attempted and ignored when the extension is missing. `sqlite-vec` is not a dependency. The Search page "Hybrid" toggle runs this scorer when the `semanticSearch` flag is on.
+- **Encryption.** The SQLite file is plaintext. There is no keychain, `age`, or SQLCipher path.
+- **Plugin sandbox and disk plugins.** `registerImporter` only keeps parsers registered in process. `loadPlugins()` returns 0 and does not read or evaluate files. See `docs/plugins.md`.
+- **Semantic / vector search.** Search is FTS5 only. There is no embedding table and no Hybrid toggle.
 - **Signed updater bundles, SBOM as a release gate, Trivy, `cargo audit`, zip-import hardening, `fast-check` fuzzing.** See `SECURITY.md`.
 
 `FUTURE.md` lists ideas that are not in the product.
@@ -53,7 +51,7 @@ These names show up in code or older docs. They are not the features they sound 
 | Search latency samples and an in-process p95 | `lib/logger.ts` spans and `lib/otel.ts` |
 | Errors | `reportError` writes `logger.error` only |
 
-`getDiagnosticsViaInvoke` calls the Tauri command `get_diagnostics`, which returns the Cargo package version, `encrypted` from the XOR helper's `MEMEX_ENCRYPTED` env check, and `generated_at: 0`. Outside Tauri it returns version `0.8.0` and `encrypted: false`.
+`getDiagnosticsViaInvoke` calls the Tauri command `get_diagnostics`, which returns the Cargo package version and `generated_at: 0`. Outside Tauri it returns version `0.8.0` and the current time.
 
 ## Database (simplified)
 
@@ -62,8 +60,6 @@ These names show up in code or older docs. They are not the features they sound 
 **messages:** `id`, `conversation_id`, `sender`, `content`, `created_at`
 
 **messages_fts** (FTS5): `content`, `title`, `conversation_id` UNINDEXED, `message_id` UNINDEXED
-
-**messages_vec:** `message_id`, `conversation_id`, `embedding` (JSON from the hash embedder above)
 
 **app_meta** and **dashboard_cache:** data version and cached overview payload
 
@@ -102,4 +98,4 @@ npm run dev         # frontend only
 
 ## Contributing
 
-`CONTRIBUTING.md`. Commits use Conventional Commits. `CHANGELOG.md` records releases. The `[Unreleased]` note there corrects older entries that called the ranker BM25 or the hash embedder semantic search.
+`CONTRIBUTING.md`. Commits use Conventional Commits. `CHANGELOG.md` records releases. Older changelog lines that say BM25 or semantic search describe the ranker and the removed hash embedder, not the current search path.

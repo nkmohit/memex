@@ -2,9 +2,9 @@
 
 Not implemented. Nothing in this list is a committed feature.
 
-- Semantic search that uses a real embedding model (the hash in `lib/vector.ts` is a stub, not this item)
+- Semantic search with an embedding model
 - Encryption of `memex.db`
-- A plugin loader that the app actually calls, with an isolation boundary stronger than a regex denylist
+- A plugin loader with a real isolation boundary
 - Floating recall window
 - Knowledge graph
 - Canonical memory / governance layer

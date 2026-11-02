@@ -16,13 +16,16 @@ Git history still has the old ticket text if you need the original wording.
 - `db.integration.test.ts` uses an in-memory `FakeDB`. It does not open a SQLite file. CI still runs that file as its own step.
 - Root install is `npm ci` (workspaces). Per-package `npm ci` is what the devcontainer and `Dockerfile.dev` still run.
 
-## Stubs (do not describe these as done features)
+## Removed (were stubs)
 
-- **T-encryption:** `crypto.rs` XOR and `diagnostics.encrypted`. Plaintext database.
-- **T-sandbox:** `plugins/sandbox.ts` regex list. `loadPlugins()` is not called from the UI. `docs/plugins.md` describes the functions; it does not describe a loaded plugin directory.
-- **T-semantic:** `semanticSearch` / `vector` flags, `lib/vector.ts`, `vector.rs`, hybrid mode in `search.ts`. Synonym hash, not embeddings.
-- **T-llm:** `summarize.ts` is extractive. The settings flag is `summarize`.
-- **T-otel:** in-process histogram only.
+- XOR helpers `crypto.rs` / `lib/crypto.ts`, and the `encrypted` field on `get_diagnostics`.
+- `plugins/sandbox.ts` and disk evaluation inside `loadPlugins()` (the function now returns 0).
+- `semanticSearch` and `vector` flags, the Search Hybrid toggle, `lib/vector.ts`, `vector.rs`, `messages_vec`, and `workers/search.worker.ts`.
+
+## Still easy to over-read
+
+- **Summaries.** `summarize.ts` picks sentences by word frequency. The settings flag is `summarize`.
+- **Metrics.** `lib/otel.ts` is an in-process histogram.
 
 ## Explicitly not in the product
 

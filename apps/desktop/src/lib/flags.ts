@@ -1,20 +1,17 @@
 /**
- * Feature flags — localStorage gated rollout.
- * Allows progressive delivery of semanticSearch, vector, summarize, etc.
- * Persisted in localStorage under `memex:flags`, defaults false for safety.
+ * Feature flags persisted in localStorage under `memex:flags`.
+ * `summarize` gates the extractive insights block.
+ * `topicTimeline` gates the TF-IDF month list.
  */
 
-export type FlagName = "semanticSearch" | "vector" | "summarize" | "plugins" | "topicTimeline";
+export type FlagName = "summarize" | "topicTimeline";
 
 export type Flags = Record<FlagName, boolean>;
 
 const STORAGE_KEY = "memex:flags";
 
 const DEFAULTS: Flags = {
-  semanticSearch: true,
-  vector: true,
   summarize: true,
-  plugins: true,
   topicTimeline: true,
 };
 
