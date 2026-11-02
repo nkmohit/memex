@@ -12,5 +12,11 @@ export default tseslint.config(
     rules: {
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
+  },
+  {
+    files: ["**/*.test.{ts,js}", "**/*.spec.{ts,js}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
   }
 );

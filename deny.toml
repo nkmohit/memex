@@ -3,15 +3,15 @@ targets = []
 
 [advisories]
 version = 2
-vulnerability = "deny"
-unmaintained = "warn"
+# cargo-deny 0.18+ takes a scope here, not a lint level. `none` matches the
+# previous non-blocking `warn`: unmaintained advisories do not fail CI.
+# Vulnerabilities still fail the check (the old `vulnerability = "deny"`).
+unmaintained = "none"
 yanked = "warn"
-notice = "warn"
 ignore = []
 
 [licenses]
 version = 2
-unlicensed = "deny"
 allow = [
   "MIT",
   "Apache-2.0",
@@ -26,8 +26,6 @@ allow = [
   "MPL-2.0",
   "CDDL-1.0",
 ]
-copyleft = "warn"
-allow-osi-fsf-free = "either"
 confidence-threshold = 0.8
 
 [licenses.private]

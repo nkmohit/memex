@@ -1,7 +1,11 @@
 import { getSourceStats, getStats } from "../db/queries";
 import type { DbStats, SourceStats } from "../db/types";
 import { computeP95, getSpanLatencies, logger } from "./logger";
-import { exportOtelMetrics, getSearchLatencies as otelLatencies, getSearchP95 as otelP95 } from "./otel";
+import {
+  exportOtelMetrics,
+  getSearchLatencies as otelLatencies,
+  getSearchP95 as otelP95,
+} from "./otel";
 
 // App version — keep in sync with apps/desktop/package.json and src-tauri/Cargo.toml
 export const APP_VERSION = "0.8.0";
