@@ -18,7 +18,7 @@ Built with React 19, Vite 8, Tauri 2, and SQLite FTS5.
 - In-process search-latency histogram (`lib/otel.ts`, `lib/logger.ts`). Nothing is exported off the machine.
 - Caught React errors logged locally (`lib/errorTracking.ts`, `ErrorBoundary`). No outbound reporter.
 
-Search ranking is a per-conversation term-count: more case-insensitive occurrences of the raw query string produce a lower `rank`, and a title `LIKE` match subtracts 5. Sort `relevance` orders by that value ascending. This is not SQLite FTS5 `bm25()`.
+Search ranking uses SQLite FTS5 `bm25()`. Column weights are content `1.0`, title `5.0`, and `0.0` for the unindexed id columns. A conversation's rank is the best (lowest) message score. Sort `relevance` orders by that value ascending. Occurrence counts are still returned for display.
 
 Data stays in `memex.db` on the machine. The app does not ship an account system or a network telemetry client.
 
@@ -98,4 +98,4 @@ npm run dev         # frontend only
 
 ## Contributing
 
-`CONTRIBUTING.md`. Commits use Conventional Commits. `CHANGELOG.md` records releases. Older changelog lines that say BM25 or semantic search describe the ranker and the removed hash embedder, not the current search path.
+`CONTRIBUTING.md`. Commits use Conventional Commits. `CHANGELOG.md` records releases.

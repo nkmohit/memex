@@ -23,7 +23,7 @@ packages/core (parsers) ──► apps/desktop (Tauri + Vite 8)
   - `migrations.ts` — pragmas, tables, FTS5, backfill when messages exist and `messages_fts` is empty
   - `queries.ts` — stats, source stats, conversations, messages, clear
   - `search.ts` — `searchMessages` runs FTS5 only
-  - `searchQueryBuilder.ts` — SQL fragments. Conversation `rank` is `(-1 * summed raw-query occurrences) + title LIKE boost (-5 or 0)`, not `bm25()`
+  - `searchQueryBuilder.ts` — SQL fragments. Conversation `rank` is `MIN(bm25(messages_fts, 1.0, 5.0, 0.0, 0.0))` (content, title, then the two UNINDEXED id columns). `bm25()` runs in a `MATERIALIZED` CTE so SQLite accepts it next to the joins
   - `dashboard.ts`, `dashboardCache.ts`, `dashboardSnapshot.ts`
   - `types.ts`, `helpers.ts` — `normalizeQuery` appends `*` to each token
 

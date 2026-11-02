@@ -224,7 +224,7 @@ class FakeDB {
       }
       return [{ total } as any] as any;
     }
-    if (s.includes("with ranked_rows as")) {
+    if (s.includes("ranked_rows as")) {
       // searchMessages main query - simplified to return one row per conversation that matches
       const q = String(params[0] ?? "")
         .replace(/\*/g, "")

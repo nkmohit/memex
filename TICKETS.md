@@ -10,6 +10,7 @@ Git history still has the old ticket text if you need the original wording.
 - Structured logger (`lib/logger.ts`) and DB helpers split under `apps/desktop/src/db/` (`connection`, `migrations`, `queries`, `search`, `searchQueryBuilder`, `dashboard`, `dashboardCache`, `dashboardSnapshot`).
 - Importers for Claude, ChatGPT, Gemini, and Grok.
 - Input checks in `lib/validation.ts` and `lib/schemas.ts`.
+- FTS5 `bm25()` ranking in `buildRankedRowsSql` (weights `1.0, 5.0, 0.0, 0.0`). `searchQueryBuilder.bm25.test.ts` checks order on a small SQLite fixture.
 - Local diagnostics and a React error boundary. Errors are logged locally.
 - Source labels and icons go through `lib/sourceDisplay.tsx`.
 - Overview heatmap from `getActivityHeatmapTimeline`.
@@ -29,7 +30,6 @@ Git history still has the old ticket text if you need the original wording.
 
 ## Explicitly not in the product
 
-- FTS5 `bm25()` as the rank expression (rank is occurrence math in `buildRankedRowsSql`).
 - At-rest encryption, Stronghold, `age`, SQLCipher.
 - A sandbox that can safely evaluate third-party JS.
 - `sqlite-vec` / ONNX semantic search.

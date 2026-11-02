@@ -82,10 +82,24 @@ describe("searchQueryBuilder", () => {
       const sql = buildTotalOccurrencesSql("messages_fts MATCH $1");
       expect(sql).toContain("COALESCE");
     });
-    it("rankedRows sql uses orderBy/limit/offset", () => {
+    it("rankedRows sql uses bm25 weights, orderBy, limit, and offset", () => {
       const sql = buildRankedRowsSql("messages_fts MATCH $1", "rank ASC", 20, 5);
+      expect(sql).toContain("bm25(messages_fts, 1.0, 5.0, 0.0, 0.0)");
+      expect(sql).toContain("AS MATERIALIZED");
+      expect(sql).toContain("MIN(row_rank) AS rank");
       expect(sql).toContain("ORDER BY rank ASC");
       expect(sql).toContain("LIMIT 20 OFFSET 5");
+    });
+    it("keeps source and date filters outside the FTS-only bm25 query", () => {
+      const sql = buildRankedRowsSql(
+        "messages_fts MATCH $1 AND c.source = $4 AND COALESCE(m.created_at, 0) >= $5",
+        "rank ASC",
+        10,
+        0
+      );
+      const ftsOnly = sql.slice(0, sql.indexOf("ranked_rows"));
+      expect(ftsOnly).not.toContain("c.source");
+      expect(sql).toContain("WHERE c.source = $4 AND COALESCE(m.created_at, 0) >= $5");
     });
   });
 });

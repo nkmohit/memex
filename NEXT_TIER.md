@@ -8,7 +8,7 @@ Package versions in tree: desktop `0.8.0` (`apps/desktop/package.json`, `src-tau
 
 - npm workspaces (`apps/desktop`, `packages/core`) and a root `package-lock.json`. CI runs `npm ci` at the root on Node 22.
 - Four importers: Claude, ChatGPT, Gemini, Grok, with unit tests under `packages/core/src/importers/`.
-- SQLite FTS5 search, prefix tokens, snippets, source and date filters. Rank is term-count plus a title `LIKE` boost (`db/searchQueryBuilder.ts`), not `bm25()`.
+- SQLite FTS5 search, prefix tokens, snippets, source and date filters. Rank is `bm25(messages_fts, 1.0, 5.0, 0.0, 0.0)` (`db/searchQueryBuilder.ts`): body weight 1, title weight 5.
 - Diagnostics, local error logging, an in-process latency histogram, a TF-IDF topic helper, and an extractive three-bullet summary.
 - ESLint 10, Prettier, TypeScript 6 (desktop) / 5.9 (core), Vite 8, Vitest 4, jsdom 30 (desktop) / 26 (core), React 19, Tailwind 4, `@vitejs/plugin-react` 6, `eslint-plugin-react-hooks` 7.
 - Coverage thresholds 70/60/70/70. CI also runs format check, core tests, `size-limit`, `npm audit` (high), `cargo check`, `cargo deny` (advisories, licenses, bans, sources), gitleaks, a non-blocking `cargo clippy`, a non-blocking CycloneDX attempt, a Playwright file that does not drive the UI (`e2e/smoke.spec.ts`), and `tauri build --debug --no-bundle`.
@@ -35,7 +35,6 @@ XOR encryption, the plugin regex denylist, the synonym-hash “semantic” searc
 
 Labeled so they are not read as shipped work:
 
-- SQLite FTS5 `bm25()` ranking (the query builder still uses occurrence counts).
 - Encryption at rest (keychain, `age`, SQLCipher).
 - A plugin runtime with a real isolation boundary.
 - Embedding search (`sqlite-vec`, ONNX, or otherwise).
